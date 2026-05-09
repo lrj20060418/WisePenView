@@ -14,7 +14,7 @@ import { WALLET_TARGET_TYPE, WALLET_TOKEN_TX_TYPE } from '@/constants/wallet';
 import { useGroupService, useWalletService } from '@/contexts/ServicesContext';
 import { useAppMessage } from '@/hooks/useAppMessage';
 import type { WalletTransactionKind, WalletTransactionRecord } from '@/types/wallet';
-import { formatCompactNumber } from '@/utils/number';
+import { formatCompactNumber } from '@/utils/format/formatNumber';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import { formatTimestampToDateTime } from '@/utils/format/formatTime';
 import type { ComputeWalletProps, ComputeWalletRef } from './index.type';

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { usePagination } from 'ahooks';
 import type { GroupMember } from '@/types/group';
 import type { MemberListProps } from './index.type';
-import { toIdString } from '@/utils/number';
+import { normalizeId } from '@/utils/normalize/normalizeId';
 import MemberListToolbar from './MemberListToolbar';
 import MemberListTable from './MemberListTable';
 import {
@@ -83,7 +83,7 @@ const MemberList: React.FC<MemberListProps> = ({
   };
 
   const selectedMemberIds = useMemo(
-    () => selectedRowKeys.map((k) => toIdString(k)),
+    () => selectedRowKeys.map((k) => normalizeId(k)),
     [selectedRowKeys]
   );
 

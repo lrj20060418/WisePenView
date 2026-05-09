@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { normalizeTagGroupId } from '@/utils/normalizeTagGroupId';
+import { normalizeTagGroupId } from '@/utils/normalize/normalizeTagGroupId';
 
 import { zustandSessionStorage } from './sessionStorage';
 
