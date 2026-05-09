@@ -1,14 +1,12 @@
-import Axios from '@/utils/Axios';
+import { DocumentApi } from '@/apis/document';
+import { ResourceItemApi } from '@/apis/resource';
 import {
   DOCUMENT_ALLOWED_EXTENSIONS,
   DOCUMENT_MAX_FILE_BYTES,
   type DocumentAllowedExtension,
 } from '@/constants/document';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
 import { computeFileMd5 } from '@/utils/computeFileMd5';
 import { putOssPresignedUrl } from '@/utils/ossPresignedPut';
-import { serializeRepeatKeyQuery } from '@/utils/serializeRepeatKeyQuery';
 import type {
   DocDisplayInfoResponse,
   DocumentUploadInitRequestBody,
@@ -18,8 +16,6 @@ import type {
   UploadDocumentParams,
   UploadDocumentResult,
 } from './index.type';
-
-const DOCUMENT_UPLOAD_INIT_TIMEOUT_MS = 30_000;
 
 const parseExtension = (fileName: string): string => {
   const i = fileName.lastIndexOf('.');
@@ -47,14 +43,11 @@ const assertDocumentUploadAllowed = (file: File): void => {
 const initUpload = async (
   body: DocumentUploadInitRequestBody
 ): Promise<DocumentUploadInitResponse> => {
-  const res = (await Axios.post('/document/uploadDoc', body, {
-    timeout: DOCUMENT_UPLOAD_INIT_TIMEOUT_MS,
-  })) as ApiResponse<DocumentUploadInitResponse>;
-  checkResponse(res);
-  if (res.data == null) {
+  const res = await DocumentApi.uploadDoc(body);
+  if (res == null) {
     throw new Error('上传初始化无数据');
   }
-  return res.data;
+  return res;
 };
 
 const uploadDocument = async (params: UploadDocumentParams): Promise<UploadDocumentResult> => {
@@ -103,53 +96,31 @@ const uploadDocument = async (params: UploadDocumentParams): Promise<UploadDocum
 };
 
 const retryConvert = async (documentId: string): Promise<void> => {
-  const res = (await Axios.post('/document/retryDocConvert', null, {
-    params: { documentId },
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  await DocumentApi.retryDocConvert({ documentId });
 };
 
 const deleteDocument = async (documentId: string): Promise<void> => {
-  const res = (await Axios.post('/resource/item/removeResources', null, {
-    params: { resourceIds: [documentId] },
-    paramsSerializer: serializeRepeatKeyQuery,
-  })) as ApiResponse<void>;
-  checkResponse(res);
+  await ResourceItemApi.removeResources({ resourceIds: [documentId] });
 };
 
 const listPendingDocs = async (): Promise<PendingDocItem[]> => {
-  const res = (await Axios.get('/document/listPendingDocs')) as ApiResponse<PendingDocItem[]>;
-  checkResponse(res);
-  return res.data ?? [];
+  return (await DocumentApi.listPendingDocs()) ?? [];
 };
 
 const syncPendingDocStatus = async (documentId: string): Promise<void> => {
-  const res = (await Axios.post('/document/syncDocStatus', null, {
-    params: { documentId },
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  await DocumentApi.syncDocStatus({ documentId });
 };
 
 const retryPendingDoc = async (documentId: string): Promise<void> => {
-  const res = (await Axios.post('/document/retryDocProcess', null, {
-    params: { documentId },
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  await DocumentApi.retryDocProcess({ documentId });
 };
 
 const cancelPendingDoc = async (documentId: string): Promise<void> => {
-  const res = (await Axios.post('/document/cancelDocProcess', null, {
-    params: { documentId },
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  await DocumentApi.cancelDocProcess({ documentId });
 };
 
 const getDocInfo = async (resourceId: string): Promise<DocDisplayInfoResponse> => {
-  const res = (await Axios.get('/document/getDocInfo', {
-    params: { resourceId },
-  })) as ApiResponse<DocDisplayInfoResponse>;
-  checkResponse(res);
-  return res.data;
+  return DocumentApi.getDocInfo({ resourceId }) as Promise<DocDisplayInfoResponse>;
 };
 export const createDocumentServices = (): IDocumentService => ({
   uploadDocument,

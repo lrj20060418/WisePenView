@@ -1,7 +1,5 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
 import { USERNAME_PATTERN } from '@/constants/user';
-import type { ApiResponse } from '@/types/api';
+import { AuthApi } from '@/apis/auth';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -14,16 +12,14 @@ import { clearAllServiceCaches } from '@/services/cacheRegistry';
 import { emitAuthSyncEvent } from '@/utils/authSync';
 
 const login = async (params: LoginRequest) => {
-  const res = (await Axios.post('/auth/login', params)) as ApiResponse;
-  checkResponse(res);
+  await AuthApi.login(params);
   clearAllServiceCaches();
   clearAllZustandStores();
   emitAuthSyncEvent('LOGIN');
 };
 
 const logout = async () => {
-  const res = (await Axios.post('/auth/logout')) as ApiResponse;
-  checkResponse(res);
+  await AuthApi.logout();
   clearAllServiceCaches();
   clearAllZustandStores();
   emitAuthSyncEvent('LOGOUT');
@@ -33,18 +29,15 @@ const register = async (params: RegisterRequest) => {
   if (!USERNAME_PATTERN.test(params.username)) {
     throw new Error('用户名必须是4-20位字母、数字或下划线');
   }
-  const res = (await Axios.post('/auth/register', params)) as ApiResponse;
-  checkResponse(res);
+  await AuthApi.register(params);
 };
 
 const resetPassword = async (params: ResetPasswordRequest) => {
-  const res = (await Axios.post('/auth/forgot-password/email', params)) as ApiResponse;
-  checkResponse(res);
+  await AuthApi.forgotPasswordEmail(params);
 };
 
 const newPassword = async (params: NewPasswordRequest) => {
-  const res = (await Axios.post('/auth/forgot-password/reset', params)) as ApiResponse;
-  checkResponse(res);
+  await AuthApi.forgotPasswordReset(params);
 };
 
 export const createAuthServices = (): IAuthService => ({

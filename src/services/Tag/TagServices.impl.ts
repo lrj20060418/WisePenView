@@ -1,7 +1,5 @@
-import type { ApiResponse } from '@/types/api';
-import Axios from '@/utils/Axios';
+import { ResourceTagApi } from '@/apis/resource';
 import { normalizeTagGroupId } from '@/utils/normalizeTagGroupId';
-import { checkResponse } from '@/utils/response';
 import type { IResourceService } from '@/services/Resource/index.type';
 import { RESOURCE_SORT_BY, RESOURCE_SORT_DIR } from '@/services/Resource/index.type';
 import { registerServiceCacheCleaner } from '@/services/cacheRegistry';
@@ -80,12 +78,9 @@ export const createTagServices = (deps: TagServicesDeps): ITagService => {
     }
 
     const params = normalizedGroupId ? { groupId: normalizedGroupId } : undefined;
-    const res = (await Axios.get('/resource/tag/getTagTree', { params })) as ApiResponse<
-      TagTreeResponse[]
-    >;
-    checkResponse(res);
+    const data = (await ResourceTagApi.getTagTree(params)) as TagTreeResponse[];
     // 剥离路径型（folder）与系统保留前缀（`.` 开头）
-    const nonFolderRoots: TagTreeNode[] = (res.data ?? []).filter(
+    const nonFolderRoots: TagTreeNode[] = (data ?? []).filter(
       (item) => !(item.tagName && item.tagName.startsWith('/'))
     );
     const roots: TagTreeNode[] = filterHiddenTags(nonFolderRoots);
@@ -100,21 +95,18 @@ export const createTagServices = (deps: TagServicesDeps): ITagService => {
   };
 
   const updateTag = async (params: TagUpdateRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/changeTag', params)) as ApiResponse;
-    checkResponse(res);
+    await ResourceTagApi.changeTag(params);
     clearTagTreeCache(params.groupId);
   };
 
   const addTag = async (params: TagCreateRequest): Promise<string> => {
-    const res = (await Axios.post('/resource/tag/addTag', params)) as ApiResponse<string>;
-    checkResponse(res);
+    const data = await ResourceTagApi.addTag(params);
     clearTagTreeCache(params.groupId);
-    return res.data ?? '';
+    return data ?? '';
   };
 
   const deleteTag = async (params: TagDeleteRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/removeTag', params)) as ApiResponse;
-    checkResponse(res);
+    await ResourceTagApi.removeTag(params);
     clearTagTreeCache(params.groupId);
   };
 
@@ -142,8 +134,7 @@ export const createTagServices = (deps: TagServicesDeps): ITagService => {
   };
 
   const moveTag = async (params: TagMoveRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/moveTag', params)) as ApiResponse;
-    checkResponse(res);
+    await ResourceTagApi.moveTag(params);
     clearTagTreeCache(params.groupId);
   };
 

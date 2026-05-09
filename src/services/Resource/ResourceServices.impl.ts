@@ -3,22 +3,19 @@ import type {
   GetGroupResourceRequest,
   GetUserResourcesRequest,
   RenameResourceRequest,
-  UpdateResourcePathRequest,
   UpdateResourceTagsRequest,
 } from './index.type';
 import { TAG_QUERY_LOGIC_MODE } from './index.type';
 import type { IResourceService } from './index.type';
-import Axios from '@/utils/Axios';
-import { serializeRepeatKeyQuery } from '@/utils/serializeRepeatKeyQuery';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
+import { ResourceItemApi } from '@/apis/resource';
+import type { ListResourceItemsApiRequest } from '@/apis/resource/index.type';
 import { useRecentFilesStore } from '@/store';
 
 const requestResourceItemList = async (
   params: GetUserResourcesRequest,
-  queryOverrides: Record<string, unknown> = {}
+  queryOverrides: Partial<ListResourceItemsApiRequest> = {}
 ): Promise<ResourceListPage> => {
-  const query: Record<string, unknown> = {
+  const query: ListResourceItemsApiRequest = {
     page: params.page,
     size: params.size,
     sortBy: params.sortBy,
@@ -32,12 +29,7 @@ const requestResourceItemList = async (
   if (params.tagIds != null && params.tagIds.length > 0) {
     query.tagIds = params.tagIds;
   }
-  const res = (await Axios.get('/resource/item/listResources', {
-    params: query,
-    paramsSerializer: serializeRepeatKeyQuery,
-  })) as ApiResponse<ResourceListPage>;
-  checkResponse(res);
-  const d = res.data;
+  const d = await ResourceItemApi.listResources(query);
   return {
     list: d?.list ?? [],
     total: d?.total ?? 0,
@@ -56,27 +48,18 @@ const getGroupResources = async (params: GetGroupResourceRequest): Promise<Resou
 };
 
 const renameResource = async (params: RenameResourceRequest): Promise<void> => {
-  const res = (await Axios.post('/resource/item/renameResource', params)) as ApiResponse;
-  checkResponse(res);
+  await ResourceItemApi.renameResource(params);
   // 重命名成功后，更新最近文件列表的文件名
   useRecentFilesStore.getState().updateFileName(params.resourceId, params.newName);
 };
 
-/** 当前 resource.openapi.json 未收录「资源归属路径」变更接口，仍对接既有 /resource/move */
-const updateResourcePath = async (params: UpdateResourcePathRequest): Promise<void> => {
-  const res = (await Axios.post('/resource/move', params)) as ApiResponse;
-  checkResponse(res);
-};
-
 const updateResourceTags = async (params: UpdateResourceTagsRequest): Promise<void> => {
-  const res = (await Axios.post('/resource/item/changeResourceTags', params)) as ApiResponse;
-  checkResponse(res);
+  await ResourceItemApi.changeResourceTags(params);
 };
 
 export const createResourceServices = (): IResourceService => ({
   getUserResources,
   getGroupResources,
   renameResource,
-  updateResourcePath,
   updateResourceTags,
 });

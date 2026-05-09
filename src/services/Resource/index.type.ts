@@ -19,7 +19,6 @@ export interface IResourceService {
   getUserResources(params: GetUserResourcesRequest): Promise<ResourceListPage>;
   getGroupResources(params: GetGroupResourceRequest): Promise<ResourceListPage>;
   renameResource(params: RenameResourceRequest): Promise<void>;
-  updateResourcePath(params: UpdateResourcePathRequest): Promise<void>;
   updateResourceTags(params: UpdateResourceTagsRequest): Promise<void>;
 }
 
@@ -52,17 +51,6 @@ export type ResourceSortDir = (typeof RESOURCE_SORT_DIR)[keyof typeof RESOURCE_S
 export interface RenameResourceRequest {
   resourceId: string;
   newName: string;
-}
-
-/**
- * 更新资源归属路径（移动文件到文件夹）
- * 注意：resource.openapi.json 当前未声明该能力，实现层仍请求 /resource/move
- */
-export interface UpdateResourcePathRequest {
-  resourceId: string;
-  /** 目标路径，如 '/' 或 '/documents/notes' */
-  path: string;
-  groupId?: string;
 }
 
 /** 更新资源用户标签（对齐 OpenAPI ResourceUpdateTagsRequest，POST /resource/item/updateTags） */

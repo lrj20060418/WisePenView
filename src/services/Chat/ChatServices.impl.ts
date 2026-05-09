@@ -1,6 +1,4 @@
-import type { ApiResponse } from '@/types/api';
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
+import { ChatApi, ChatSessionApi } from '@/apis/chat';
 import { useCurrentChatSessionStore, useNewChatSessionStore, useNoteSelectionStore } from '@/store';
 import type {
   ChatSession,
@@ -16,13 +14,12 @@ import type {
 } from './index.type';
 
 const getModels = async (): Promise<ModelListResponse> => {
-  const res = (await Axios.get('/chat/model/listModels')) as ApiResponse<ModelListResponse>;
-  checkResponse(res);
+  const data = await ChatApi.listModels();
 
   return {
-    standard_models: res.data?.standard_models ?? [],
-    advanced_models: res.data?.advanced_models ?? [],
-    other_models: res.data?.other_models ?? [],
+    standard_models: data?.standard_models ?? [],
+    advanced_models: data?.advanced_models ?? [],
+    other_models: data?.other_models ?? [],
   };
 };
 
@@ -32,16 +29,11 @@ const createSession = async (params?: CreateSessionRequest): Promise<ChatSession
     payload.title = params.title;
   }
 
-  const res = (await Axios.post(
-    '/chat/session/createSession',
-    payload
-  )) as ApiResponse<ChatSession>;
-  checkResponse(res);
-
-  if (!res.data) {
+  const data = await ChatSessionApi.createSession(payload);
+  if (!data) {
     throw new Error('创建会话失败');
   }
-  return res.data;
+  return data;
 };
 
 const renameSession = async (params: RenameSessionRequest): Promise<ChatSession> => {
@@ -50,37 +42,28 @@ const renameSession = async (params: RenameSessionRequest): Promise<ChatSession>
     payload.new_title = params.newTitle;
   }
 
-  const res = (await Axios.post('/chat/session/renameSession', payload, {
-    params: { session_id: params.sessionId },
-  })) as ApiResponse<ChatSession>;
-  checkResponse(res);
-
-  if (!res.data) {
+  const data = await ChatSessionApi.renameSession({
+    sessionId: params.sessionId,
+    newTitle: payload.new_title,
+  });
+  if (!data) {
     throw new Error('重命名会话失败');
   }
-  return res.data;
+  return data;
 };
 
 const deleteSession = async (params: DeleteSessionRequest): Promise<void> => {
-  const res = (await Axios.post('/chat/session/deleteSession', undefined, {
-    params: { session_id: params.sessionId },
-  })) as ApiResponse<null>;
-  checkResponse(res);
+  await ChatSessionApi.deleteSession({ sessionId: params.sessionId });
   useCurrentChatSessionStore.getState().clearCurrentSessionById(params.sessionId);
   useNewChatSessionStore.getState().clearNewChatSessionById(params.sessionId);
   useNoteSelectionStore.getState().clearSelectedText(params.sessionId);
 };
 
 const listSessions = async (params?: ListSessionsRequest): Promise<PageResult<ChatSession>> => {
-  const res = (await Axios.get('/chat/session/listSessions', {
-    params: {
-      page: params?.page,
-      size: params?.size,
-    },
-  })) as ApiResponse<PageResult<ChatSession>>;
-  checkResponse(res);
-
-  const payload = res.data;
+  const payload = await ChatSessionApi.listSessions({
+    page: params?.page,
+    size: params?.size,
+  });
   return {
     list: payload?.list ?? [],
     total: payload?.total ?? 0,
@@ -93,16 +76,11 @@ const listSessions = async (params?: ListSessionsRequest): Promise<PageResult<Ch
 const listHistoryMessages = async (
   params: ListHistoryMessagesRequest
 ): Promise<PageResult<MessageResponse>> => {
-  const res = (await Axios.get('/chat/session/listHistoryMessages', {
-    params: {
-      session_id: params.sessionId,
-      page: params.page,
-      size: params.size,
-    },
-  })) as ApiResponse<PageResult<MessageResponse>>;
-  checkResponse(res);
-
-  const payload = res.data;
+  const payload = await ChatSessionApi.listHistoryMessages({
+    sessionId: params.sessionId,
+    page: params.page,
+    size: params.size,
+  });
   return {
     list: payload?.list ?? [],
     total: payload?.total ?? 0,

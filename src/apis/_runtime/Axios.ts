@@ -3,7 +3,15 @@ import axios from 'axios';
 import { clearAllZustandStores } from '@/store';
 import { clearAllServiceCaches } from '@/services/cacheRegistry';
 import { emitAuthSyncEvent } from '@/utils/authSync';
-import { awaitAddrReady, getApiBaseURL, notifyAddrFailure } from '@/utils/apiServerAddr';
+import {
+  awaitAddrReady,
+  getApiBaseURL,
+  initApiServerAddrRuntime,
+  notifyAddrFailure,
+} from '@/apis/_runtime/apiServerAddr';
+
+// 初始化 API 服务器地址运行时
+initApiServerAddrRuntime();
 
 const Axios = axios.create({
   timeout: 5000,

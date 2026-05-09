@@ -1,10 +1,8 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
 import { toIdString } from '@/utils/number';
 import { formatTimestampToDate } from '@/utils/time';
 import { mapRoleCodeToGroupMemberRole } from '@/constants/group';
 import type { Group, GroupFileOrgLogic, GroupMemberList, GroupResConfig } from '@/types/group';
-import type { ApiResponse } from '@/types/api';
+import { GroupApi, GroupMemberApi, GroupResConfigApi } from '@/apis/group';
 import type {
   FetchGroupListRequest,
   FetchGroupListResponse,
@@ -38,11 +36,7 @@ const fetchGroupList = async (
   params: FetchGroupListRequest
 ): Promise<{ groups: Group[]; total: number }> => {
   const { groupRoleFilter, page, size } = params;
-  const res = (await Axios.get('/group/list', {
-    params: { groupRoleFilter, page, size },
-  })) as ApiResponse<FetchGroupListResponse>;
-  checkResponse(res);
-  const payload = res.data;
+  const payload = (await GroupApi.list({ groupRoleFilter, page, size })) as FetchGroupListResponse;
   const list = (payload?.list ?? []) as unknown as GroupRaw[];
   return {
     groups: list.map(normalizeGroup),
@@ -52,32 +46,25 @@ const fetchGroupList = async (
 
 const fetchGroupInfo = async (groupId: string): Promise<Group> => {
   const myRole = await fetchMyRoleInGroup(groupId);
-  const res: ApiResponse<Group> = await (myRole === 'MEMBER'
-    ? Axios.get('/group/getGroupBaseInfo', { params: { groupId } })
-    : Axios.get('/group/getGroupDetailInfo', { params: { groupId } }));
-  checkResponse(res);
-  if (!res.data) throw new Error('获取小组详情失败');
-  return normalizeGroup(res.data as unknown as GroupRaw);
+  const data: Group | null = await (myRole === 'MEMBER'
+    ? GroupApi.getGroupBaseInfo({ groupId })
+    : GroupApi.getGroupDetailInfo({ groupId }));
+  if (!data) throw new Error('获取小组详情失败');
+  return normalizeGroup(data as unknown as GroupRaw);
 };
 
 const getGroupWalletInfo = async (params: GetGroupWalletInfoRequest): Promise<number> => {
   const { groupId } = params;
   if (!groupId) throw new Error('小组 ID 不能为空');
-  const res = (await Axios.get('/group/getGroupDetailInfo', {
-    params: { groupId },
-  })) as ApiResponse<Group>;
-  checkResponse(res);
-  if (!res.data) throw new Error('获取小组钱包信息失败');
-  return res.data.tokenBalance ?? 0;
+  const data = await GroupApi.getGroupDetailInfo({ groupId });
+  if (!data) throw new Error('获取小组钱包信息失败');
+  return data.tokenBalance ?? 0;
 };
 
 const fetchGroupResConfig = async (groupId: string): Promise<GroupResConfig> => {
-  const res = (await Axios.get('/resource/groupConfig/getConfig', {
-    params: { groupId },
-  })) as ApiResponse<{ groupId?: string | number; fileOrgLogic?: string }>;
-  checkResponse(res);
-  if (!res.data) throw new Error('获取小组资源配置失败');
-  const { fileOrgLogic, groupId: gid } = res.data;
+  const data = await GroupResConfigApi.getConfig({ groupId });
+  if (!data) throw new Error('获取小组资源配置失败');
+  const { fileOrgLogic, groupId: gid } = data;
   if (!isGroupFileOrgLogic(fileOrgLogic)) {
     throw new Error('资源配置格式异常');
   }
@@ -88,14 +75,11 @@ const fetchGroupResConfig = async (groupId: string): Promise<GroupResConfig> => 
 };
 
 const updateGroupResConfig = async (params: UpdateGroupResConfigRequest) => {
-  const res = (await Axios.post('/resource/groupConfig/changeConfig', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupResConfigApi.changeConfig(params);
 };
 
 const createGroup = async (params: CreateGroupRequest): Promise<string> => {
-  const res = (await Axios.post('/group/addGroup', params)) as ApiResponse<string>;
-  checkResponse(res);
-  const payload = res.data;
+  const payload = await GroupApi.addGroup(params);
   if (payload == null) {
     throw new Error('创建小组失败');
   }
@@ -107,13 +91,11 @@ const createGroup = async (params: CreateGroupRequest): Promise<string> => {
 };
 
 const editGroup = async (params: EditGroupRequest) => {
-  const res = (await Axios.post('/group/changeGroup', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupApi.changeGroup(params);
 };
 
 const deleteGroup = async (params: DeleteGroupRequest) => {
-  const res = (await Axios.post('/group/removeGroup', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupApi.removeGroup(params);
 };
 
 const fetchGroupMembers = async (
@@ -121,14 +103,14 @@ const fetchGroupMembers = async (
   page: number,
   size: number
 ): Promise<GroupMemberList> => {
-  const res = (await Axios.get('/group/member/list', {
-    params: { groupId, page, size },
-  })) as ApiResponse<FetchGroupMembersResponse>;
-  checkResponse(res);
-  if (!res.data) {
+  const data = (await GroupMemberApi.list({
+    groupId,
+    page,
+    size,
+  })) as FetchGroupMembersResponse | null;
+  if (!data) {
     return { members: [], total: 0 };
   }
-  const data = res.data;
   return {
     members: (data.list ?? []).map(mapGroupMemberRawResponse),
     total: Number(data.total) || 0,
@@ -136,33 +118,26 @@ const fetchGroupMembers = async (
 };
 
 const fetchMyRoleInGroup = async (groupId: string): Promise<'OWNER' | 'ADMIN' | 'MEMBER'> => {
-  const res = (await Axios.get('/group/member/getMyRole', {
-    params: { groupId },
-  })) as ApiResponse<number | { role: number }>;
-  checkResponse(res);
-  const roleNum = typeof res.data === 'number' ? res.data : res.data?.role;
+  const data = await GroupMemberApi.getMyRole(groupId);
+  const roleNum = typeof data === 'number' ? data : data?.role;
   if (roleNum == null || roleNum < 0) throw new Error('获取角色失败');
   return mapRoleCodeToGroupMemberRole(roleNum);
 };
 
 const joinGroup = async (params: JoinGroupRequest) => {
-  const res = (await Axios.post('/group/joinGroup', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupApi.joinGroup(params);
 };
 
 const quitGroup = async (params: QuitGroupRequest) => {
-  const res = (await Axios.post('/group/member/quit', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupMemberApi.quit(params);
 };
 
 const updateMemberRole = async (params: UpdateMemberRoleRequest) => {
-  const res = (await Axios.post('/group/member/changeRole', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupMemberApi.changeRole(params);
 };
 
 const kickMembers = async (params: KickMembersRequest) => {
-  const res = (await Axios.post('/group/member/kick', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupMemberApi.kick(params);
 };
 
 export const createGroupServices = (): IGroupService => ({

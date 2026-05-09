@@ -4,7 +4,6 @@ export type {
   GetUserResourcesRequest,
   RenameResourceRequest,
   ResourceListPage,
-  UpdateResourcePathRequest,
   UpdateResourceTagsRequest,
   TagQueryLogicMode,
   ResourceSortBy,

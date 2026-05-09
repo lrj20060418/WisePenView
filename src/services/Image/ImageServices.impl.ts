@@ -1,6 +1,4 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
+import { StorageApi } from '@/apis/storage';
 import type {
   IImageService,
   ImageStorageRecord,
@@ -22,12 +20,10 @@ const uploadImage = async (params: ImageUploadRequest): Promise<ImageUploadResul
     formData.append('bizTag', params.bizTag);
   }
 
-  const res = (await Axios.post('/storage/imageUpload', formData, {
-    timeout: IMAGE_UPLOAD_TIMEOUT_MS,
-  })) as ApiResponse<ImageStorageRecord>;
-
-  checkResponse(res);
-  const record = res.data;
+  const record = (await StorageApi.imageUpload(
+    formData,
+    IMAGE_UPLOAD_TIMEOUT_MS
+  )) as ImageStorageRecord;
   return {
     record,
     publicUrl: buildImagePublicUrl(record),

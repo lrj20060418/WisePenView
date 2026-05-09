@@ -1,7 +1,5 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
 import { toIdString } from '@/utils/number';
-import type { ApiResponse } from '@/types/api';
+import { UserApi } from '@/apis/user';
 import type { User } from '@/types/user';
 import { registerServiceCacheCleaner } from '@/services/cacheRegistry';
 import type {
@@ -30,26 +28,18 @@ const toUserSafe = (data: GetUserInfoResponse): CachedUserSafe => {
 
 /** 全量拉取，为 Account 等页服务，不缓存 */
 const getFullUserInfo = async (): Promise<GetUserInfoResponse> => {
-  const res = (await Axios.get('/user/getUserInfo')) as ApiResponse<GetUserInfoResponse>;
-  checkResponse(res);
-  return res.data;
+  return UserApi.getUserInfo() as Promise<GetUserInfoResponse>;
 };
 
 const sendEmailVerify = async (params: SendEmailVerifyRequest): Promise<void> => {
-  const res = (await Axios.post('/user/verify/initiateEmailVerify', null, {
-    params: { email: params.email },
-  })) as ApiResponse;
-  checkResponse(res);
+  await UserApi.initiateEmailVerify({ email: params.email });
 };
 
 const initiateUISVerify = async (params: InitiateUISVerifyRequest): Promise<void> => {
-  const res = (await Axios.post('/user/verify/initiateFudanUISVerify', null, {
-    params: {
-      uisAccount: params.uisAccount,
-      uisPassword: params.uisPassword,
-    },
-  })) as ApiResponse;
-  checkResponse(res);
+  await UserApi.initiateFudanUISVerify({
+    uisAccount: params.uisAccount,
+    uisPassword: params.uisPassword,
+  });
 };
 
 const normalizeFudanUISVerifyData = (raw: unknown): FudanUISVerifyStatusData => {
@@ -71,16 +61,12 @@ const normalizeFudanUISVerifyData = (raw: unknown): FudanUISVerifyStatusData => 
 };
 
 const checkFudanUISVerify = async (): Promise<FudanUISVerifyStatusData> => {
-  const res = (await Axios.get('/user/verify/checkFudanUISVerify')) as ApiResponse<unknown>;
-  checkResponse(res);
-  return normalizeFudanUISVerifyData(res.data);
+  const data = await UserApi.checkFudanUISVerify();
+  return normalizeFudanUISVerifyData(data);
 };
 
 const confirmEmailVerify = async (params: ConfirmEmailVerifyRequest): Promise<void> => {
-  const res = (await Axios.get('/user/verify/checkEmailVerify', {
-    params: { token: params.token },
-  })) as ApiResponse;
-  checkResponse(res);
+  await UserApi.checkEmailVerify({ token: params.token });
 };
 
 export const createUserServices = (): IUserService => {
@@ -122,24 +108,17 @@ export const createUserServices = (): IUserService => {
     if (params.degreeLevel !== undefined) userProfilePayload.degreeLevel = params.degreeLevel;
     if (params.academicTitle !== undefined) userProfilePayload.academicTitle = params.academicTitle;
 
-    const tasks: Promise<ApiResponse<unknown>>[] = [];
+    const tasks: Promise<unknown>[] = [];
     if (Object.keys(userInfoPayload).length > 0) {
-      tasks.push(
-        Axios.put('/user/changeUserInfo', userInfoPayload) as Promise<ApiResponse<unknown>>
-      );
+      tasks.push(UserApi.changeUserInfo(userInfoPayload));
     }
     if (Object.keys(userProfilePayload).length > 0) {
-      tasks.push(
-        Axios.put('/user/changeUserProfile', userProfilePayload) as Promise<ApiResponse<unknown>>
-      );
+      tasks.push(UserApi.changeUserProfile(userProfilePayload));
     }
     if (tasks.length === 0) {
       return;
     }
-    const results = await Promise.all(tasks);
-    results.forEach((res) => {
-      checkResponse(res);
-    });
+    await Promise.all(tasks);
 
     cachedUserInfo = null;
   };

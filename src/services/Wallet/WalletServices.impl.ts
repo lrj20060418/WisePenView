@@ -1,10 +1,8 @@
 /**
  * 钱包 Service：/user/wallet/*，成功码与全局一致 `code === 200`。
  */
-import Axios from '@/utils/Axios';
 import { WALLET_LIST_TX_TYPE_QUERY_VALUE, WALLET_TX_TAB_MERGE_FETCH_CAP } from '@/constants/wallet';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
+import { UserWalletApi } from '@/apis/user';
 import type { WalletTransactionKind, WalletTransactionRecord } from '@/types/wallet';
 import type {
   GetWalletInfoResponse,
@@ -115,11 +113,7 @@ const mapTransactionRow = (row: Record<string, unknown>): WalletTransactionRecor
 };
 
 const getUserWalletInfo = async (): Promise<GetWalletInfoResponse> => {
-  const res = (await Axios.get('/user/wallet/getUserWalletInfo')) as ApiResponse<
-    Record<string, unknown>
-  >;
-  checkResponse(res);
-  const data = res.data ?? {};
+  const data = (await UserWalletApi.getUserWalletInfo()) ?? {};
   const tokenBalance = toNum(
     data.tokenBalance ?? data.TokenBalance ?? data.balance ?? data.Balance,
     0
@@ -129,10 +123,9 @@ const getUserWalletInfo = async (): Promise<GetWalletInfoResponse> => {
 };
 
 const redeemVoucher = async (params: RedeemVoucherRequest): Promise<void> => {
-  const res = (await Axios.post('/user/wallet/redeemVoucher', {
+  await UserWalletApi.redeemVoucher({
     voucherCode: params.voucherCode,
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  });
 };
 
 const listTransactions = async (
@@ -153,11 +146,9 @@ const listTransactions = async (
       query.type = typeName;
     }
   }
-  const res = (await Axios.get('/user/wallet/listTransactions', {
-    params: query,
-  })) as ApiResponse<Record<string, unknown>>;
-  checkResponse(res);
-  const data = (res.data ?? {}) as Record<string, unknown>;
+  const data = (await UserWalletApi.listTransactions(
+    query as Record<string, string | number>
+  )) as Record<string, unknown>;
   const rawList = data.list ?? data.records ?? [];
   const list = Array.isArray(rawList) ? rawList : [];
   const records = list
@@ -193,12 +184,11 @@ const listMergedTransactions = async (
 const transferTokenBetweenGroupAndUser = async (
   params: TransferTokenBetweenGroupAndUserRequest
 ): Promise<void> => {
-  const res = (await Axios.post('/user/wallet/transferTokenBetweenGroupAndUser', {
+  await UserWalletApi.transferTokenBetweenGroupAndUser({
     groupId: String(params.groupId),
     tokenCount: params.tokenCount,
     tokenTransferType: params.tokenTransferType,
-  })) as ApiResponse<unknown>;
-  checkResponse(res);
+  });
 };
 
 export const createWalletServices = (): IWalletService => ({

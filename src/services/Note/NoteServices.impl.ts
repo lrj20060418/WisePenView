@@ -7,39 +7,31 @@ import type {
   GetNoteInfoRequest,
   NoteInfoDisplayData,
 } from './index.type';
-import Axios from '@/utils/Axios';
+import { NoteApi } from '@/apis/note';
+import { ResourceItemApi } from '@/apis/resource';
 import { formatTimestampToDateTime } from '@/utils/time';
-import { serializeRepeatKeyQuery } from '@/utils/serializeRepeatKeyQuery';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
 import type { NoteInfoResponse } from '@/types/note';
 import { useNoteSelectionStore, useRecentFilesStore } from '@/store';
 
 // syncTitle是一个resource的工作，但是语义上属于note服务
 const syncTitle = async (params: SyncTitleRequest): Promise<void> => {
   const { resourceId, newName } = params;
-  const res = (await Axios.post('/resource/item/renameResource', {
+  await ResourceItemApi.renameResource({
     resourceId,
     newName,
-  })) as ApiResponse;
-  checkResponse(res);
+  });
   useRecentFilesStore.getState().updateFileName(resourceId, newName);
 };
 
 const createNote = async (params: CreateNoteRequest): Promise<CreateNoteResponse> => {
-  const res = (await Axios.post('/note/addNote', params)) as ApiResponse<string>;
-  checkResponse(res);
+  const resourceId = await NoteApi.addNote(params);
   return {
-    resourceId: res.data || undefined,
+    resourceId: resourceId || undefined,
   };
 };
 
 const deleteNote = async (params: DeleteNoteRequest): Promise<void> => {
-  const res = (await Axios.post('/resource/item/removeResources', null, {
-    params: { resourceIds: params.resourceIds },
-    paramsSerializer: serializeRepeatKeyQuery,
-  })) as ApiResponse<void>;
-  checkResponse(res);
+  await ResourceItemApi.removeResources({ resourceIds: params.resourceIds });
   for (const resourceId of params.resourceIds) {
     useRecentFilesStore.getState().removeFile(resourceId);
     useNoteSelectionStore.getState().clearSelectedText(resourceId);
@@ -47,9 +39,7 @@ const deleteNote = async (params: DeleteNoteRequest): Promise<void> => {
 };
 
 const getNoteInfoDisplay = async (params: GetNoteInfoRequest): Promise<NoteInfoDisplayData> => {
-  const res = (await Axios.get('/note/getNoteInfo', { params })) as ApiResponse<NoteInfoResponse>;
-  checkResponse(res);
-  const noteInfoData = res.data;
+  const noteInfoData = (await NoteApi.getNoteInfo(params)) as NoteInfoResponse;
   if (!noteInfoData?.resourceInfo || !noteInfoData?.noteInfo) {
     throw new Error('笔记不存在或已被删除');
   }

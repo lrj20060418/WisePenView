@@ -1,6 +1,4 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
-import type { ApiResponse } from '@/types/api';
+import { ResourceTagApi } from '@/apis/resource';
 import type { IResourceService } from '@/services/Resource/index.type';
 import type { TagTreeResponse } from '@/services/Tag/index.type';
 import type {
@@ -20,10 +18,9 @@ export const createStickerServices = (deps: StickerServicesDeps): IStickerServic
   const { resourceService } = deps;
 
   const getStickerList = async (): Promise<Sticker[]> => {
-    const res = (await Axios.get('/resource/tag/getTagTree')) as ApiResponse<TagTreeResponse[]>;
-    checkResponse(res);
+    const data = (await ResourceTagApi.getTagTree()) as TagTreeResponse[];
     // 过滤掉路径型（`/` 开头）与系统保留前缀（`.` 开头，例如 `.Trash`）
-    const stickers = (res.data ?? [])
+    const stickers = (data ?? [])
       .filter((node) => {
         const name = node.tagName ?? '';
         return name !== '' && !name.startsWith('/') && !name.startsWith('.');
@@ -33,25 +30,22 @@ export const createStickerServices = (deps: StickerServicesDeps): IStickerServic
   };
 
   const addSticker = async (params: AddStickerRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/addTag', {
+    await ResourceTagApi.addTag({
       tagName: params.stickerName,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
   };
 
   const updateSticker = async (params: UpdateStickerRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/changeTag', {
+    await ResourceTagApi.changeTag({
       targetTagId: params.stickerId,
       tagName: params.stickerName,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
   };
 
   const deleteSticker = async (params: DeleteStickerRequest): Promise<void> => {
-    const res = (await Axios.post('/resource/tag/removeTag', {
+    await ResourceTagApi.removeTag({
       targetTagId: params.stickerId,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
   };
 
   const updateResourceStickers = async (params: UpdateResourceStickersRequest): Promise<void> => {

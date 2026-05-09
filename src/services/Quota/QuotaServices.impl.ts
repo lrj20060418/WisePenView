@@ -1,7 +1,5 @@
-import Axios from '@/utils/Axios';
-import { checkResponse } from '@/utils/response';
 import { toIdString } from '@/utils/number';
-import type { ApiResponse } from '@/types/api';
+import { GroupMemberApi } from '@/apis/group';
 import type { UserGroupQuota } from '@/types/quota';
 import type { GroupQuotaInfo } from '@/types/quota';
 import type { SetGroupQuotaRequest } from './index.type';
@@ -17,11 +15,10 @@ const fetchUserGroupQuotas = async (
   page: number,
   pageSize: number
 ): Promise<{ quotas: UserGroupQuota[]; total: number }> => {
-  const res = (await Axios.get('/group/member/getAllMyGroupTokenInfo', {
-    params: { page, size: pageSize },
-  })) as ApiResponse<Record<string, unknown>>;
-  checkResponse(res);
-  const data = (res.data ?? {}) as Record<string, unknown>;
+  const data = (await GroupMemberApi.getAllMyGroupTokenInfo({
+    page,
+    size: pageSize,
+  })) as Record<string, unknown>;
   const rawList = data.list ?? data.records ?? [];
   const list = Array.isArray(rawList) ? rawList : [];
   const quotas: UserGroupQuota[] = list
@@ -46,11 +43,7 @@ const fetchUserGroupQuotas = async (
 };
 
 const fetchGroupQuota = async (groupId: string | number): Promise<GroupQuotaInfo> => {
-  const res = (await Axios.get('/group/member/getGroupToken', {
-    params: { groupId },
-  })) as ApiResponse<{ TokenUsed?: number; TokenLimit?: number }>;
-  checkResponse(res);
-  const data = res.data;
+  const data = await GroupMemberApi.getGroupToken({ groupId });
   return {
     used: data?.TokenUsed ?? 0,
     limit: data?.TokenLimit ?? 0,
@@ -58,8 +51,7 @@ const fetchGroupQuota = async (groupId: string | number): Promise<GroupQuotaInfo
 };
 
 const setGroupQuota = async (params: SetGroupQuotaRequest) => {
-  const res = (await Axios.post('/group/member/changeTokenLimit', params)) as ApiResponse;
-  checkResponse(res);
+  await GroupMemberApi.changeTokenLimit(params);
 };
 
 export const createQuotaServices = (): IQuotaService => ({

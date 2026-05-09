@@ -74,10 +74,6 @@ const renameResource = async (params: RenameResourceRequest): Promise<void> => {
   useRecentFilesStore.getState().updateFileName(params.resourceId, params.newName);
 };
 
-const updateResourcePath = async (): Promise<void> => {
-  await delay(150);
-};
-
 const updateResourceTags = async (): Promise<void> => {
   await delay(150);
 };
@@ -86,6 +82,5 @@ export const ResourceServicesMock: IResourceService = {
   getUserResources,
   getGroupResources,
   renameResource,
-  updateResourcePath,
   updateResourceTags,
 };

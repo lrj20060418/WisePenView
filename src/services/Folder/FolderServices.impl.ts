@@ -1,11 +1,9 @@
-import type { ApiResponse } from '@/types/api';
 import type { ResourceItem } from '@/types/resource';
 import type { Folder, FolderListByPathResponse } from '@/types/folder';
 import { mapTagToFolder } from '@/types/folder';
 import type { TagTreeResponse } from '@/services/Tag/index.type';
-import Axios from '@/utils/Axios';
+import { ResourceTagApi } from '@/apis/resource';
 import { normalizeTagGroupId } from '@/utils/normalizeTagGroupId';
-import { checkResponse } from '@/utils/response';
 import type { IResourceService } from '@/services/Resource/index.type';
 import { RESOURCE_SORT_BY, RESOURCE_SORT_DIR } from '@/services/Resource/index.type';
 import { useTrashTagStore } from '@/store';
@@ -77,11 +75,10 @@ export const createFolderServices = (deps: FolderServicesDeps): IFolderService =
     if (cached) {
       return cached;
     }
-    const res = (await Axios.get('/resource/tag/getTagTree', {
-      params: normalizedGroupId ? { groupId: normalizedGroupId } : undefined,
-    })) as ApiResponse<TagTreeResponse[]>;
-    checkResponse(res);
-    const tags = res.data ?? [];
+    const tags =
+      ((await ResourceTagApi.getTagTree(
+        normalizedGroupId ? { groupId: normalizedGroupId } : undefined
+      )) as TagTreeResponse[]) ?? [];
     // `.Trash` 与 `/` 同级，属于 Folder 域；拉树时顺带同步 trashTagId
     syncTrashTagIdToStore(normalizedGroupId, tags);
     const rootTag = tags.find((t) => t.tagName === '/');
@@ -135,11 +132,10 @@ export const createFolderServices = (deps: FolderServicesDeps): IFolderService =
 
   const renameFolder = async (folder: Folder, newName: string): Promise<void> => {
     const newPathName = '/' + newName;
-    const res = (await Axios.post('/resource/tag/changeTag', {
+    await ResourceTagApi.changeTag({
       targetTagId: folder.tagId,
       tagName: newPathName,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
     clearFolderTreeCache(folder.groupId);
   };
 
@@ -154,21 +150,19 @@ export const createFolderServices = (deps: FolderServicesDeps): IFolderService =
       throw new Error('未找到回收站标签，无法删除文件夹');
     }
 
-    const res = (await Axios.post('/resource/tag/moveTag', {
+    await ResourceTagApi.moveTag({
       targetTagId: folder.tagId,
       newParentId: trashTagId,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
     clearFolderTreeCache(folder.groupId);
   };
 
   const createFolder = async (parentFolder: Folder, folderName: string): Promise<void> => {
     const newPathName = `/${folderName}`;
-    const res = (await Axios.post('/resource/tag/addTag', {
+    await ResourceTagApi.addTag({
       parentId: parentFolder.tagId,
       tagName: newPathName,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
     clearFolderTreeCache();
   };
 
@@ -183,11 +177,10 @@ export const createFolderServices = (deps: FolderServicesDeps): IFolderService =
       if (!current.parentId) break;
       current = getFolderById(current.parentId, current.groupId);
     }
-    const res = (await Axios.post('/resource/tag/moveTag', {
+    await ResourceTagApi.moveTag({
       targetTagId: folder.tagId,
       newParentId: newParentFolder.tagId,
-    })) as ApiResponse;
-    checkResponse(res);
+    });
     clearFolderTreeCache();
   };
 

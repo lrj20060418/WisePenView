@@ -43,6 +43,11 @@ export default defineConfig([
               message:
                 '项目约定禁止使用 antd message 静态方法，请改为 App.useApp() 或 useAppMessage() 返回的实例方法。',
             },
+            {
+              name: '@/apis/_runtime/Axios',
+              message:
+                '禁止直接 import Axios，请通过 `@/apis/*` 调用；仅 `src/apis/_runtime/request.ts` 允许直接使用。',
+            },
           ],
           patterns: [
             {
@@ -107,6 +112,13 @@ export default defineConfig([
     // Service 工厂的唯一合法装配入口：只有 registry.impl.ts 可以 import createXxxServices。
     // 请勿扩大此白名单，否则"分层 + 显式注入"约束将被破坏。
     files: ['src/contexts/ServicesContext/registry.impl.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // API 运行时是唯一允许直连 Axios 的入口。
+    files: ['src/apis/_runtime/request.ts'],
     rules: {
       'no-restricted-imports': 'off',
     },
