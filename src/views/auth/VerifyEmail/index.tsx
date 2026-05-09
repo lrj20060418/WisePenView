@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
 import { Alert, Button, Modal, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useUserService } from '@/contexts/ServicesContext';
+import { useUserService } from '@/services';
 import type { ConfirmEmailVerifyRequest } from '@/services/User';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import auth from '../Auth.module.less';

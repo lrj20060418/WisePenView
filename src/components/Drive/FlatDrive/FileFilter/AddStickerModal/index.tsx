@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Modal, Input } from 'antd';
 import { useRequest } from 'ahooks';
-import { useStickerService } from '@/contexts/ServicesContext';
+import { useStickerService } from '@/services';
 import { useAppMessage } from '@/hooks/useAppMessage';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import { validateReservedName } from '@/utils/tag/validateReservedName';

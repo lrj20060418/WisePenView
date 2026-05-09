@@ -4,7 +4,7 @@ import { Checkbox, Form, Typography, Input, Button, Modal } from 'antd';
 import { RiUserLine, RiLockLine } from 'react-icons/ri';
 import { Link, useNavigate } from 'react-router-dom';
 import ServiceAgreement from '@/components/ServiceAgreement/index';
-import { useAuthService } from '@/contexts/ServicesContext';
+import { useAuthService } from '@/services';
 import { USERNAME_MAX_LENGTH, USERNAME_PATTERN, USERNAME_PATTERN_MESSAGE } from '@/constants/user';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import auth from '../Auth.module.less';

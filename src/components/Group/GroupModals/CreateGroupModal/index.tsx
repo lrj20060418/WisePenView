@@ -3,7 +3,7 @@ import { Modal, Button, Form, Input, Radio, Select, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { useRequest } from 'ahooks';
 import { LuUpload } from 'react-icons/lu';
-import { useGroupService, useImageService, useUserService } from '@/contexts/ServicesContext';
+import { useGroupService, useImageService, useUserService } from '@/services';
 import type { CreateGroupRequest } from '@/services/Group';
 import type { GroupFileOrgLogic } from '@/types/group';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';

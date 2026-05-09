@@ -3,7 +3,7 @@ import { Modal, Button, Form, Input, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { useRequest } from 'ahooks';
 import { LuUpload } from 'react-icons/lu';
-import { useGroupService, useImageService } from '@/contexts/ServicesContext';
+import { useGroupService, useImageService } from '@/services';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import { createBeforeUploadImageWithinLimit } from '@/utils/image/uploadLimit';
 import { useAppMessage } from '@/hooks/useAppMessage';

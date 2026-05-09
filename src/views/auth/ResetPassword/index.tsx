@@ -3,7 +3,7 @@ import { useRequest } from 'ahooks';
 import { Alert, Form, Typography, Input, Button } from 'antd';
 import { RiMailLine } from 'react-icons/ri';
 import { Link } from 'react-router-dom';
-import { useAuthService } from '@/contexts/ServicesContext';
+import { useAuthService } from '@/services';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import auth from '../Auth.module.less';
 import type { ResetPasswordRequest } from '@/services/Auth';

@@ -12,7 +12,7 @@ import {
   AssignQuotaModal,
 } from './Modals';
 import styles from './style.module.less';
-import { useGroupService } from '@/contexts/ServicesContext';
+import { useGroupService } from '@/services';
 import { useAppMessage } from '@/hooks/useAppMessage';
 
 const MemberList: React.FC<MemberListProps> = ({
