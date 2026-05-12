@@ -8,7 +8,7 @@ import {
 import { clearAllServiceCaches } from '@/domains/_shared/cacheRegistry';
 import { clearAllZustandStores } from '@/store';
 import { emitAuthChangeEvent } from '@/utils/auth/authChange';
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 
 // 初始化 API 服务器地址运行时
 initApiServerAddrRuntime();
@@ -18,10 +18,16 @@ const Axios = axios.create({
   withCredentials: true,
 });
 
+const devDeveloperHeader = import.meta.env.DEV ? import.meta.env.VITE_X_DEVELOPER.trim() : '';
+
 // baseURL 逐次读最新值；addr 可疑不可达时短暂等探测收敛，避免排队请求继续撞旧地址。
 Axios.interceptors.request.use(async (config) => {
   await awaitAddrReady();
   config.baseURL = getApiBaseURL();
+  if (devDeveloperHeader) {
+    config.headers = AxiosHeaders.from(config.headers);
+    config.headers.set('x-developer', devDeveloperHeader);
+  }
   return config;
 });
 

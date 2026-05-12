@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   // dev / mock 模式（单一 host[:port]）
   readonly VITE_API_SERVER_ADDR: string;
+  // dev 模式下可选：非空时请求头自动附带 x-developer
+  readonly VITE_X_DEVELOPER: string;
   // production 模式（双 host[:port] + ping 探针路径 + 探测超时）
   readonly VITE_API_SERVER_ADDR_INTRANET: string;
   readonly VITE_API_SERVER_ADDR_EXTRANET: string;
