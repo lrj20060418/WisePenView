@@ -1,5 +1,5 @@
 import { useRequest, useUnmount } from 'ahooks';
-import { Alert, Button, Result, Spin } from 'antd';
+import { Alert, Button, Result, Segmented, Spin } from 'antd';
 import React, { useCallback, useRef, useState } from 'react';
 import { RiArrowLeftDoubleLine, RiMenuLine } from 'react-icons/ri';
 import { Link, useParams } from 'react-router-dom';
@@ -15,9 +15,12 @@ import type { NoteOutlineItem } from '@/components/Note/NoteOutline/index.type';
 import NoteTitle from '@/components/Note/NoteTitle';
 import { useNoteService } from '@/domains';
 import type { NoteInfoDisplayData } from '@/domains/Note';
+import type { AiDiffDisplayMode } from '@/domains/Note/enum';
+import { AI_DIFF_DISPLAY_MODE, AI_DIFF_DISPLAY_MODE_LABELS } from '@/domains/Note/enum';
 import { RESOURCE_TYPE } from '@/domains/Resource/enum';
 import { useSmoothFlag } from '@/hooks/useSmoothFlag';
 import { useNoteSession } from '@/session/note/useNoteSession';
+import { useAiDiffDisplayStore } from '@/store';
 import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import styles from './style.module.less';
 
@@ -32,6 +35,8 @@ const NoteViewConnected: React.FC<NoteViewConnectedProps> = ({
   resourceId,
   noteInfoDisplay,
 }) => {
+  const aiDiffDisplayMode = useAiDiffDisplayStore((state) => state.displayMode);
+  const setAiDiffDisplayMode = useAiDiffDisplayStore((state) => state.setDisplayMode);
   const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const titleAnchorRef = useRef<HTMLDivElement>(null);
@@ -82,6 +87,20 @@ const NoteViewConnected: React.FC<NoteViewConnectedProps> = ({
     noteInfoDisplay.noteTitle?.trim() && noteInfoDisplay.noteTitle.trim() !== '未命名笔记'
       ? noteInfoDisplay.noteTitle.trim()
       : '未命名笔记';
+  const aiDiffDisplayOptions: Array<{ value: AiDiffDisplayMode; label: string }> = [
+    {
+      value: AI_DIFF_DISPLAY_MODE.OLD_ONLY,
+      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.OLD_ONLY],
+    },
+    {
+      value: AI_DIFF_DISPLAY_MODE.NEW_ONLY,
+      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.NEW_ONLY],
+    },
+    {
+      value: AI_DIFF_DISPLAY_MODE.COMPARE,
+      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.COMPARE],
+    },
+  ];
 
   return (
     <div className={styles.pageWrap}>
@@ -93,6 +112,14 @@ const NoteViewConnected: React.FC<NoteViewConnectedProps> = ({
             </span>
             <span className={rvhStyles.inlineTitleText}>{toolbarNoteTitle}</span>
           </>
+        }
+        extra={
+          <Segmented
+            value={aiDiffDisplayMode}
+            className={styles.aiDiffDisplayModeSwitch}
+            options={aiDiffDisplayOptions}
+            onChange={(value) => setAiDiffDisplayMode(value as AiDiffDisplayMode)}
+          />
         }
       />
       <div className={styles.statesBelowHeader}>
@@ -185,6 +212,7 @@ const NoteViewConnected: React.FC<NoteViewConnectedProps> = ({
                     resourceId={resourceId}
                     doc={doc}
                     provider={provider}
+                    aiDiffDisplayMode={aiDiffDisplayMode}
                     readOnly={isEditorReadOnly}
                     onOutlineChange={setOutlineItems}
                     onActiveHeadingChange={setActiveHeadingId}

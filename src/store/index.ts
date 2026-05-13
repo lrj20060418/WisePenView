@@ -6,6 +6,7 @@
 
 // Zustand stores
 export {
+  clearAiDiffDisplayStore,
   clearAllZustandStores,
   clearChatPanelStore,
   clearCurrentChatSessionStore,
@@ -18,6 +19,7 @@ export {
   clearTrashTagStore,
   clearTreeDriveCwdStores,
   getTreeDriveCwdStore,
+  useAiDiffDisplayStore,
   useChatPanelStore,
   useCurrentChatSessionStore,
   useDrivePreferencesStore,

@@ -2,7 +2,7 @@ import { zh } from '@blocknote/core/locales';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import { useCreateBlockNote } from '@blocknote/react';
-import { useMount, useUnmount } from 'ahooks';
+import { useMount, useUnmount, useUpdateEffect } from 'ahooks';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 
 import { useImageService } from '@/domains';
@@ -29,6 +29,8 @@ import {
   collectNoteEditorProps,
   getNoteEditorPlugins,
 } from './plugins';
+import { syncAiDiffBlockFoldDisplayMode } from './plugins/AIDiffPlugin';
+import { AiDiffDisplayModeProvider } from './plugins/AIDiffPlugin/displayModeContext';
 import styles from './style.module.less';
 
 type CreateBlockNoteOptions = NonNullable<Parameters<typeof useCreateBlockNote>[0]>;
@@ -40,7 +42,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 const CustomBlockNote = forwardRef<NoteBodyEditorHandle, CustomBlockNoteProps>(
   (
-    { resourceId, doc, provider, readOnly = false, onOutlineChange, onActiveHeadingChange },
+    {
+      resourceId,
+      doc,
+      provider,
+      aiDiffDisplayMode,
+      readOnly = false,
+      onOutlineChange,
+      onActiveHeadingChange,
+    },
     ref
   ) => {
     const imageService = useImageService();
@@ -104,6 +114,22 @@ const CustomBlockNote = forwardRef<NoteBodyEditorHandle, CustomBlockNoteProps>(
         },
       },
     });
+
+    useMount(() => {
+      try {
+        syncAiDiffBlockFoldDisplayMode(editor.prosemirrorView, aiDiffDisplayMode);
+      } catch {
+        void 0;
+      }
+    });
+
+    useUpdateEffect(() => {
+      try {
+        syncAiDiffBlockFoldDisplayMode(editor.prosemirrorView, aiDiffDisplayMode);
+      } catch {
+        void 0;
+      }
+    }, [aiDiffDisplayMode, editor]);
 
     const syncSelectedText = useCallback(() => {
       setSelectedText(resourceId, editor.getSelectedText());
@@ -233,17 +259,19 @@ const CustomBlockNote = forwardRef<NoteBodyEditorHandle, CustomBlockNoteProps>(
 
     return (
       <div className={styles.editorShell} onKeyDownCapture={onKeyDownCapture}>
-        <BlockNoteView
-          editor={editor}
-          theme="light"
-          formattingToolbar={false}
-          slashMenu={false}
-          editable={!readOnly}
-          onSelectionChange={handleSelectionChange}
-        >
-          <NoteToolbar onAskAi={handleAskAi} />
-          <NoteSlashMenu editor={editor} plugins={plugins} />
-        </BlockNoteView>
+        <AiDiffDisplayModeProvider value={aiDiffDisplayMode}>
+          <BlockNoteView
+            editor={editor}
+            theme="light"
+            formattingToolbar={false}
+            slashMenu={false}
+            editable={!readOnly}
+            onSelectionChange={handleSelectionChange}
+          >
+            <NoteToolbar onAskAi={handleAskAi} />
+            <NoteSlashMenu editor={editor} plugins={plugins} />
+          </BlockNoteView>
+        </AiDiffDisplayModeProvider>
       </div>
     );
   }
