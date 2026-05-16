@@ -34,7 +34,13 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onCancel, invit
         <Button key="cancel" onClick={handleCancel}>
           关闭
         </Button>,
-        <Button type="primary" icon={<LuCopy />} onClick={handleCopy} disabled={!inviteCode}>
+        <Button
+          key="copy"
+          type="primary"
+          icon={<LuCopy />}
+          onClick={handleCopy}
+          disabled={!inviteCode}
+        >
           {copied ? '已复制' : '复制'}
         </Button>,
       ]}
