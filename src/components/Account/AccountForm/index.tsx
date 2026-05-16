@@ -6,7 +6,7 @@ import { parseErrorMessage } from '@/utils/parseErrorMessage';
 import { useRequest } from 'ahooks';
 import { Button, Descriptions, Form, Input, Select } from 'antd';
 import type { InputRef } from 'antd/es/input';
-import React, { useMemo } from 'react';
+import React, { useMemo, type Ref } from 'react';
 import { RiPencilLine } from 'react-icons/ri';
 import type { AccountFormProps } from './index.type';
 import { getProfileDisplayString } from './profileDisplay';
@@ -14,19 +14,21 @@ import styles from './style.module.less';
 
 const { Option } = Select;
 
-const SexReadonlyInput = React.forwardRef<InputRef, { value?: number | null }>(({ value }, ref) => (
-  <Input
-    ref={ref}
-    disabled
-    readOnly
-    value={value != null ? SEX.getLabel(value) : '-'}
-    className={styles.editableInput}
-  />
-));
+function SexReadonlyInput({ value, ref }: { value?: number | null; ref?: Ref<InputRef> }) {
+  return (
+    <Input
+      ref={ref}
+      disabled
+      readOnly
+      value={value != null ? SEX.getLabel(value) : '-'}
+      className={styles.editableInput}
+    />
+  );
+}
 SexReadonlyInput.displayName = 'SexReadonlyInput';
 
-const DegreeLevelReadonlyInput = React.forwardRef<InputRef, { value?: number | null }>(
-  ({ value }, ref) => (
+function DegreeLevelReadonlyInput({ value, ref }: { value?: number | null; ref?: Ref<InputRef> }) {
+  return (
     <Input
       ref={ref}
       disabled
@@ -34,8 +36,8 @@ const DegreeLevelReadonlyInput = React.forwardRef<InputRef, { value?: number | n
       value={value != null ? DEGREE.getLabel(value) : '-'}
       className={styles.editableInput}
     />
-  )
-);
+  );
+}
 DegreeLevelReadonlyInput.displayName = 'DegreeLevelReadonlyInput';
 
 const AccountForm: React.FC<AccountFormProps> = ({
