@@ -8,8 +8,11 @@ import type {
 import { createReactBlockSpec, type ReactCustomBlockRenderProps } from '@blocknote/react';
 import { useCallback, useRef, useState } from 'react';
 
+import { AI_DIFF_DISPLAY_MODE, type AiDiffDisplayMode } from '@/domains/Note/enum';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import 'katex/dist/katex.min.css';
+import { useAiDiffDisplayModeContext } from '../../AIDiffPlugin/displayModeContext';
+import aiDiffStyles from '../../AIDiffPlugin/style.module.less';
 import popoverStyles from '../InlineMath/style.module.less';
 import { renderKatexInto } from '../katexRender';
 import { LatexEditPopover } from '../LatexEditPopover';
@@ -28,16 +31,161 @@ const mathBlockPropSchema = {
   autoEdit: {
     default: false,
   },
+  aiDiffType: {
+    default: '',
+  },
+  aiDiffKey: {
+    default: '',
+  },
+  aiDiffOrigin: {
+    default: '',
+  },
+  aiDiffReplace: {
+    default: '',
+  },
 } as const;
 
 type MathBlockRenderProps = ReactCustomBlockRenderProps<'math', typeof mathBlockPropSchema, 'none'>;
+type MathAiDiffActionMode = 'accept' | 'discard';
+type MathAiDiffViewMode = 'hidden' | 'plain' | 'compare';
+
+type MathBlockEditor = BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema> & {
+  removeBlocks?: (blocks: readonly unknown[]) => void;
+};
+
+type MathAiDiffResolvedView = {
+  mode: MathAiDiffViewMode;
+  plainExpression: string;
+  origin: string;
+  replace: string;
+  hasDiff: boolean;
+};
+
+function MathFormulaPreview({ expression, className }: { expression: string; className: string }) {
+  const mathRef = useRef<HTMLDivElement>(null);
+
+  useEffectForce(() => {
+    const el = mathRef.current;
+    if (!el) return;
+    renderKatexInto(el, expression, styles.mathPlaceholder, true);
+  }, [expression]);
+
+  return <div ref={mathRef} className={className} />;
+}
+
+function resolveMathAiDiffViewState(params: {
+  displayMode: AiDiffDisplayMode;
+  expression: string;
+  aiDiffType: string;
+  origin: string;
+  replace: string;
+}): MathAiDiffResolvedView {
+  const { displayMode, expression, aiDiffType, origin, replace } = params;
+  const hasDiff = aiDiffType === 'edit' || aiDiffType === 'create' || aiDiffType === 'delete';
+
+  if (!hasDiff) {
+    return {
+      mode: 'plain',
+      plainExpression: expression,
+      origin: '',
+      replace: '',
+      hasDiff: false,
+    };
+  }
+
+  if (displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY) {
+    const plainExpression = aiDiffType === 'create' ? '' : origin;
+    return {
+      mode: plainExpression ? 'plain' : 'hidden',
+      plainExpression,
+      origin,
+      replace,
+      hasDiff: true,
+    };
+  }
+
+  if (displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY) {
+    const plainExpression = aiDiffType === 'delete' ? '' : replace;
+    return {
+      mode: plainExpression ? 'plain' : 'hidden',
+      plainExpression,
+      origin,
+      replace,
+      hasDiff: true,
+    };
+  }
+
+  return {
+    mode: origin || replace ? 'compare' : 'hidden',
+    plainExpression: '',
+    origin,
+    replace,
+    hasDiff: true,
+  };
+}
+
+function clearMathAiDiffProps(props: MathBlockRenderProps['block']['props']) {
+  return {
+    ...props,
+    aiDiffType: '',
+    aiDiffKey: '',
+    aiDiffOrigin: '',
+    aiDiffReplace: '',
+  };
+}
+
+function MathDiffActionButtons({ onApply }: { onApply: (mode: MathAiDiffActionMode) => void }) {
+  return (
+    <span
+      className={`${aiDiffStyles.aiActionsAnchor} ${styles.mathDiffActions}`}
+      aria-hidden="true"
+    >
+      <span
+        className={`${aiDiffStyles.aiActionsRoot} ${styles.mathDiffActionsRoot}`}
+        aria-hidden="true"
+      >
+        <button
+          type="button"
+          aria-label="保留"
+          className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionAccept}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onApply('accept');
+          }}
+        >
+          Keep
+        </button>
+        <button
+          type="button"
+          aria-label="撤销"
+          className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionDiscard}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onApply('discard');
+          }}
+        >
+          Undo
+        </button>
+      </span>
+    </span>
+  );
+}
 
 function MathBlockView(props: MathBlockRenderProps) {
-  const displayMode = true;
+  const aiDiffDisplayMode = useAiDiffDisplayModeContext();
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(props.block.props.expression);
-  const mathRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -76,14 +224,6 @@ function MathBlockView(props: MathBlockRenderProps) {
     if (isEditing) return;
     setValue(props.block.props.expression);
   }, [props.block.props.expression, isEditing]);
-
-  const displayLatex = isEditing ? value : props.block.props.expression;
-
-  useEffectForce(() => {
-    const el = mathRef.current;
-    if (!el) return;
-    renderKatexInto(el, displayLatex, styles.mathPlaceholder, displayMode);
-  }, [displayLatex, displayMode]);
 
   useFocusPopoverTextarea(isEditing, popoverPos, inputRef);
 
@@ -180,9 +320,61 @@ function MathBlockView(props: MathBlockRenderProps) {
   };
 
   const shellClass = `${styles.mathShell} ${styles.mathShellBlock}`;
-  const rootClass = styles.mathRoot;
   const previewClass = styles.mathPreview;
   const editTitle = '编辑 LaTeX（独立）';
+  const aiDiffType = String(props.block.props.aiDiffType ?? '');
+  const aiDiffOrigin = String(props.block.props.aiDiffOrigin ?? '');
+  const aiDiffReplace = String(props.block.props.aiDiffReplace ?? '');
+  const viewState = resolveMathAiDiffViewState({
+    displayMode: aiDiffDisplayMode,
+    expression: props.block.props.expression,
+    aiDiffType,
+    origin: aiDiffOrigin,
+    replace: aiDiffReplace,
+  });
+  const hasPendingAiDiff = viewState.hasDiff;
+  const canEnterEdit = !hasPendingAiDiff && !isEditing;
+  const rootClass = canEnterEdit
+    ? styles.mathRoot
+    : `${styles.mathRoot} ${styles.mathRootReadonly}`;
+
+  const applyAiDiffAction = useCallback(
+    (mode: MathAiDiffActionMode) => {
+      const editor = props.editor as unknown as MathBlockEditor;
+      const baseProps = clearMathAiDiffProps(props.block.props);
+
+      if (aiDiffType === 'create') {
+        if (mode === 'accept') {
+          props.editor.updateBlock(props.block, {
+            props: { ...baseProps, expression: aiDiffReplace },
+          });
+        } else {
+          editor.removeBlocks?.([props.block]);
+        }
+        editor.focus();
+        return;
+      }
+
+      if (aiDiffType === 'delete') {
+        if (mode === 'accept') {
+          editor.removeBlocks?.([props.block]);
+        } else {
+          props.editor.updateBlock(props.block, {
+            props: { ...baseProps, expression: aiDiffOrigin },
+          });
+        }
+        editor.focus();
+        return;
+      }
+
+      const nextExpression = mode === 'accept' ? aiDiffReplace : aiDiffOrigin;
+      props.editor.updateBlock(props.block, {
+        props: { ...baseProps, expression: nextExpression },
+      });
+      editor.focus();
+    },
+    [aiDiffOrigin, aiDiffReplace, aiDiffType, props.block, props.editor]
+  );
 
   const editPopover = (
     <LatexEditPopover
@@ -205,26 +397,53 @@ function MathBlockView(props: MathBlockRenderProps) {
 
   return (
     <div ref={shellRef} contentEditable={false} className={`${shellClass} bn-math-block-root`}>
-      <div
-        className={rootClass}
-        role="button"
-        tabIndex={isEditing ? -1 : 0}
-        aria-label={isEditing ? undefined : '编辑独立公式'}
-        onClick={() => {
-          if (!isEditing) enterEdit();
-        }}
-        onKeyDown={(e) => {
-          if (isEditing) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            enterEdit();
-          }
-        }}
-      >
-        <div ref={mathRef} className={previewClass} />
-      </div>
-      {editPopover}
+      {viewState.mode === 'hidden' ? (
+        <div className={styles.mathHiddenShell} aria-hidden="true" />
+      ) : null}
+      {viewState.mode === 'plain' ? (
+        <div
+          className={rootClass}
+          role={canEnterEdit ? 'button' : undefined}
+          tabIndex={canEnterEdit ? 0 : -1}
+          aria-label={canEnterEdit ? '编辑独立公式' : undefined}
+          onClick={() => {
+            if (canEnterEdit) enterEdit();
+          }}
+          onKeyDown={(e) => {
+            if (!canEnterEdit) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              enterEdit();
+            }
+          }}
+        >
+          <MathFormulaPreview
+            expression={isEditing ? value : viewState.plainExpression}
+            className={previewClass}
+          />
+        </div>
+      ) : null}
+      {viewState.mode === 'compare' ? (
+        <div
+          className={`${styles.mathRoot} ${styles.mathRootReadonly} ${styles.mathDiffCompare} ${aiDiffStyles.aiDiffRoot}`}
+        >
+          {viewState.origin ? (
+            <div className={`${styles.mathDiffCard} ${styles.mathDiffDelete}`}>
+              <MathFormulaPreview expression={viewState.origin} className={previewClass} />
+            </div>
+          ) : null}
+          {viewState.replace ? (
+            <div className={`${styles.mathDiffCard} ${styles.mathDiffAdd}`}>
+              <MathFormulaPreview expression={viewState.replace} className={previewClass} />
+            </div>
+          ) : null}
+          <span className={styles.mathDiffActionLayer}>
+            <MathDiffActionButtons onApply={applyAiDiffAction} />
+          </span>
+        </div>
+      ) : null}
+      {!hasPendingAiDiff ? editPopover : null}
     </div>
   );
 }

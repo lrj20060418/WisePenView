@@ -3,6 +3,11 @@
  */
 
 export { clearAllZustandStores } from './clearAllStores';
+export {
+  clearAiDiffDisplayStore,
+  getAiDiffDisplayModeSnapshot,
+  useAiDiffDisplayStore,
+} from './useAiDiffDisplayStore';
 export { clearActiveDriveScopeStore, useActiveDriveScopeStore } from './useActiveDriveScopeStore';
 export { clearChatPanelStore, useChatPanelStore } from './useChatPanelStore';
 export {

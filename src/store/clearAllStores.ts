@@ -1,3 +1,4 @@
+import { clearAiDiffDisplayStore } from './useAiDiffDisplayStore';
 import { clearActiveDriveScopeStore } from './useActiveDriveScopeStore';
 import { clearChatModelPreferenceStore } from './useChatModelPreferenceStore';
 import { clearChatPanelStore } from './useChatPanelStore';
@@ -16,6 +17,7 @@ export function clearAllZustandStores(): void {
   clearCurrentChatSessionStore();
   clearPdfPreviewProgressStore();
   clearDrivePreferencesStore();
+  clearAiDiffDisplayStore();
   clearNoteSelectionStore();
   clearTrashTagStore();
   clearNewNoteStore();

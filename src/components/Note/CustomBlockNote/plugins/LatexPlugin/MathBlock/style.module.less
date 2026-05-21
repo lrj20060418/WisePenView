@@ -24,12 +24,81 @@
   }
 }
 
+.mathRootReadonly {
+  cursor: default;
+}
+
 .mathPreview {
   min-height: 1.25em;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+
+.mathHiddenShell {
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.mathDiffCompare {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+}
+
+.mathDiffCard {
+  border-radius: 0;
+  padding: 12px;
+}
+
+.mathDiffDelete {
+  background: color-mix(in srgb, var(--ant-color-error-bg) 45%, var(--ant-color-bg-container));
+  border-bottom: 1px solid color-mix(
+    in srgb,
+    var(--ant-color-error-border) 35%,
+    var(--ant-color-border-secondary)
+  );
+}
+
+.mathDiffAdd {
+  background: color-mix(
+    in srgb,
+    var(--ant-color-success-bg-hover) 38%,
+    var(--ant-color-bg-container)
+  );
+}
+
+.mathDiffActionLayer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.mathDiffActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+}
+
+.mathDiffActionsRoot {
+  left: auto;
+  right: 0;
+  top: 0;
+  transform: none;
+}
+
+.mathDiffActions::before {
+  display: none;
 }
 
 .mathPlaceholder {

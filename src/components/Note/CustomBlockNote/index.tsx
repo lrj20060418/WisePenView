@@ -2,10 +2,9 @@ import { zh } from '@blocknote/core/locales';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import { useCreateBlockNote } from '@blocknote/react';
-import { useMount, useUnmount } from 'ahooks';
+import { useMount, useUnmount, useUpdateEffect } from 'ahooks';
 import { useCallback, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
-
-import { useImageService } from '@/domains';
+import { useChatService, useImageService } from '@/domains';
 import { assertImageProxyUploadLimit } from '@/domains/Image';
 import { useAppMessage } from '@/hooks/useAppMessage';
 import {
@@ -29,6 +28,8 @@ import {
   collectNoteEditorProps,
   getNoteEditorPlugins,
 } from './plugins';
+import { syncAiDiffBlockFoldDisplayMode } from './plugins/AIDiffPlugin';
+import { AiDiffDisplayModeProvider } from './plugins/AIDiffPlugin/displayModeContext';
 import styles from './style.module.less';
 
 type CreateBlockNoteOptions = NonNullable<Parameters<typeof useCreateBlockNote>[0]>;
@@ -42,14 +43,17 @@ function CustomBlockNote({
   resourceId,
   doc,
   provider,
+  aiDiffDisplayMode,
   readOnly = false,
   onOutlineChange,
   onActiveHeadingChange,
   ref,
 }: CustomBlockNoteProps & { ref?: Ref<NoteBodyEditorHandle> }) {
   const imageService = useImageService();
+  const chatService = useChatService();
   const message = useAppMessage();
   const currentSessionId = useCurrentChatSessionStore((state) => state.currentSessionId);
+  const setCurrentSession = useCurrentChatSessionStore((state) => state.setCurrentSession);
   const setChatPanelCollapsed = useChatPanelStore((state) => state.setChatPanelCollapsed);
   const setSelectedText = useNoteSelectionStore((state) => state.setSelectedText);
   const setEnableSelectedText = useNoteSelectionStore((state) => state.setEnableSelectedText);
@@ -108,6 +112,22 @@ function CustomBlockNote({
       },
     },
   });
+
+  useMount(() => {
+    try {
+      syncAiDiffBlockFoldDisplayMode(editor.prosemirrorView, aiDiffDisplayMode);
+    } catch {
+      void 0;
+    }
+  });
+
+  useUpdateEffect(() => {
+    try {
+      syncAiDiffBlockFoldDisplayMode(editor.prosemirrorView, aiDiffDisplayMode);
+    } catch {
+      void 0;
+    }
+  }, [aiDiffDisplayMode, editor]);
 
   const syncSelectedText = useCallback(() => {
     setSelectedText(resourceId, editor.getSelectedText());
@@ -215,39 +235,56 @@ function CustomBlockNote({
     syncActiveHeading();
   }, [syncActiveHeading, syncSelectedText]);
 
-  const handleAskAi = useCallback(() => {
-    if (!currentSessionId) {
-      return;
-    }
+  const handleAskAi = useCallback(async () => {
+    let targetSessionId = currentSessionId;
     const selectedSnapshot = editor.getSelectedText().trim() || selectedText.trim();
     if (!selectedSnapshot) {
+      message.info('请先选中一段文字再问 AI');
       return;
     }
-    setSelectedText(currentSessionId, selectedSnapshot);
-    setEnableSelectedText(currentSessionId, true);
+
+    if (!targetSessionId) {
+      try {
+        const createdSession = await chatService.createSession();
+        targetSessionId = createdSession.id;
+        setCurrentSession({ id: createdSession.id, title: createdSession.title });
+      } catch (error) {
+        const text = error instanceof Error ? error.message : '新建聊天失败';
+        message.error(text);
+        return;
+      }
+    }
+
+    setSelectedText(targetSessionId, selectedSnapshot);
+    setEnableSelectedText(targetSessionId, true);
     setChatPanelCollapsed(false);
   }, [
+    chatService,
     currentSessionId,
     editor,
+    message,
     selectedText,
     setChatPanelCollapsed,
+    setCurrentSession,
     setEnableSelectedText,
     setSelectedText,
   ]);
 
   return (
     <div className={styles.editorShell} onKeyDownCapture={onKeyDownCapture}>
-      <BlockNoteView
-        editor={editor}
-        theme="light"
-        formattingToolbar={false}
-        slashMenu={false}
-        editable={!readOnly}
-        onSelectionChange={handleSelectionChange}
-      >
-        <NoteToolbar onAskAi={handleAskAi} />
-        <NoteSlashMenu editor={editor} plugins={plugins} />
-      </BlockNoteView>
+      <AiDiffDisplayModeProvider value={aiDiffDisplayMode}>
+        <BlockNoteView
+          editor={editor}
+          theme="light"
+          formattingToolbar={false}
+          slashMenu={false}
+          editable={!readOnly}
+          onSelectionChange={handleSelectionChange}
+        >
+          <NoteToolbar onAskAi={handleAskAi} />
+          <NoteSlashMenu editor={editor} plugins={plugins} />
+        </BlockNoteView>
+      </AiDiffDisplayModeProvider>
     </div>
   );
 }
