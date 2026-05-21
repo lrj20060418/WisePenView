@@ -1,3 +1,4 @@
+import { normalizeResourceItem } from '@/utils/normalize/normalizeResourceItem';
 import { computeFileMd5 } from '@/utils/oss/computeFileMd5';
 import { putOssPresignedUrl } from '@/utils/oss/ossPresignedPut';
 import { parseExtension } from '@/utils/parser/extensionParser';
@@ -128,7 +129,12 @@ const cancelPendingDoc = async (documentId: string): Promise<void> => {
 };
 
 const getDocInfo = async (resourceId: string): Promise<DocDisplayInfoResponse> => {
-  return DocumentApi.getDocInfo({ resourceId }) as Promise<DocDisplayInfoResponse>;
+  const data = (await DocumentApi.getDocInfo({ resourceId })) as DocDisplayInfoResponse;
+  // 后端 Long 字段（readCount/likeCount）以字符串返回，统一在 domain 边界归一化为 number。
+  return {
+    ...data,
+    resourceInfo: normalizeResourceItem(data.resourceInfo),
+  };
 };
 export const createDocumentServices = (): IDocumentService => ({
   uploadDocument,

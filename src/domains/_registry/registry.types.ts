@@ -1,4 +1,3 @@
-// 第四步：在 ServicesContextValue 中新增该服务的类型
 import type { IAuthService } from '@/domains/Auth';
 import type { IChatService } from '@/domains/Chat';
 import type { IDocumentService } from '@/domains/Document';
