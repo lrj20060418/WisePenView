@@ -7,7 +7,40 @@
 }
 
 .quotaBarProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--ant-margin-sm);
   flex: 1;
+}
+
+.quotaBarTrack {
+  position: relative;
+  height: 8px;
+  flex: 1;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.quotaBarFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.quotaBarFillNormal {
+  background-color: #1890ff;
+}
+
+.quotaBarFillWarning {
+  background-color: #faad14;
+}
+
+.quotaBarFillDanger {
+  background-color: #ff4d4f;
 }
 
 .quotaBarText {
