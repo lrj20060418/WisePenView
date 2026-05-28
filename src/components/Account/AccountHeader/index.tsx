@@ -1,3 +1,4 @@
+import UploadZone from '@/components/Common/UploadZone';
 import { useImageService, useUserService } from '@/domains';
 import { assertImageProxyUploadLimit } from '@/domains/Image';
 import { getVerificationModeLabel, IDENTITY, USER_STATUS } from '@/domains/User';
@@ -5,8 +6,7 @@ import { parseErrorMessage } from '@/utils/error';
 import { IMAGE_UPLOAD_MAX_SIZE_LABEL } from '@/utils/image/uploadLimit';
 import { Avatar, Button, Modal, toast, Tooltip } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import type { ChangeEvent } from 'react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { RiCheckLine, RiCloseLine, RiErrorWarningLine } from 'react-icons/ri';
 import type { AccountHeaderProps } from './index.type';
 import styles from './style.module.less';
@@ -14,7 +14,6 @@ import styles from './style.module.less';
 function AccountHeader({ user, onUserInfoUpdated }: AccountHeaderProps) {
   const userService = useUserService();
   const imageService = useImageService();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
@@ -65,14 +64,14 @@ function AccountHeader({ user, onUserInfoUpdated }: AccountHeaderProps) {
     setAvatarModalOpen(true);
   };
 
-  const handleAvatarFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const raw = event.target.files?.[0];
-    event.target.value = '';
-    if (!raw) return;
-
+  const handleAvatarFileChange = (file: File | null) => {
+    if (!file) {
+      setAvatarFile(null);
+      return;
+    }
     try {
-      assertImageProxyUploadLimit(raw);
-      setAvatarFile(raw);
+      assertImageProxyUploadLimit(file);
+      setAvatarFile(file);
     } catch (err) {
       toast.danger(parseErrorMessage(err));
       setAvatarFile(null);
@@ -103,26 +102,31 @@ function AccountHeader({ user, onUserInfoUpdated }: AccountHeaderProps) {
     <>
       <div className={styles.accountHeader}>
         <div className={styles.accountHeaderLeft}>
-          <Tooltip content="修改头像">
-            <span
-              className={styles.avatarWrap}
-              role="button"
-              tabIndex={0}
-              onClick={openAvatarModal}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openAvatarModal();
-                }
-              }}
-            >
-              <Avatar aria-label={nickname} className={styles.avatar}>
-                {user?.userInfo?.avatar && (
-                  <Avatar.Image alt={nickname} draggable={false} src={user.userInfo.avatar} />
-                )}
-                <Avatar.Fallback className={styles.avatarFallback}>{avatarLetter}</Avatar.Fallback>
-              </Avatar>
-            </span>
+          <Tooltip>
+            <Tooltip.Trigger>
+              <span
+                className={styles.avatarWrap}
+                role="button"
+                tabIndex={0}
+                onClick={openAvatarModal}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openAvatarModal();
+                  }
+                }}
+              >
+                <Avatar aria-label={nickname} className={styles.avatar}>
+                  {user?.userInfo?.avatar && (
+                    <Avatar.Image alt={nickname} draggable={false} src={user.userInfo.avatar} />
+                  )}
+                  <Avatar.Fallback className={styles.avatarFallback}>
+                    {avatarLetter}
+                  </Avatar.Fallback>
+                </Avatar>
+              </span>
+            </Tooltip.Trigger>
+            <Tooltip.Content>修改头像</Tooltip.Content>
           </Tooltip>
           <div className={styles.accountInfo}>
             <div className={styles.nameRow}>
@@ -176,25 +180,14 @@ function AccountHeader({ user, onUserInfoUpdated }: AccountHeaderProps) {
                 <p className={styles.avatarModalHint}>
                   支持 JPG、PNG、GIF、WebP，单张不超过 {IMAGE_UPLOAD_MAX_SIZE_LABEL}。
                 </p>
-                <input
-                  ref={avatarInputRef}
-                  className={styles.avatarInput}
-                  type="file"
+                <UploadZone
+                  file={avatarFile}
+                  disabled={avatarSubmitting}
                   accept="image/*"
-                  onChange={handleAvatarFileChange}
+                  label="点击或拖拽头像图片到此区域"
+                  description={`支持 JPG、PNG、GIF、WebP，单张不超过 ${IMAGE_UPLOAD_MAX_SIZE_LABEL}`}
+                  onFileChange={handleAvatarFileChange}
                 />
-                <div className={styles.avatarPicker}>
-                  <Button
-                    variant="secondary"
-                    isDisabled={avatarSubmitting}
-                    onPress={() => avatarInputRef.current?.click()}
-                  >
-                    选择图片
-                  </Button>
-                  <span className={styles.avatarFileName}>
-                    {avatarFile?.name ?? '尚未选择图片'}
-                  </span>
-                </div>
               </Modal.Body>
               <Modal.Footer>
                 <Button
