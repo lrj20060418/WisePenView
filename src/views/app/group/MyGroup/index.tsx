@@ -195,13 +195,13 @@ function MyGroup() {
       </Spin>
 
       <JoinGroupModal
-        open={joinGroupModalOpen}
-        onCancel={() => setJoinGroupModalOpen(false)}
+        isOpen={joinGroupModalOpen}
+        onOpenChange={setJoinGroupModalOpen}
         onSuccess={handleModalSuccess}
       />
       <CreateGroupModal
-        open={createGroupModalOpen}
-        onCancel={() => setCreateGroupModalOpen(false)}
+        isOpen={createGroupModalOpen}
+        onOpenChange={setCreateGroupModalOpen}
         onSuccess={handleModalSuccess}
       />
     </div>
