@@ -5,10 +5,10 @@ import { ALLOWED_GROUP_TYPES_MAP, GROUP_FILE_ORG_LOGIC, GROUP_TYPE } from '@/dom
 import { IDENTITY } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
 import { createBeforeUploadImageWithinLimit } from '@/utils/image/uploadLimit';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { UploadFile } from 'antd';
-import { Button, Form, Input, Modal, Select, Upload } from 'antd';
+import { Form, Input, Modal, Select, Upload } from 'antd';
 import { useMemo, useState } from 'react';
 import { LuUpload } from 'react-icons/lu';
 import type { CreateGroupModalProps } from './index.type';
@@ -121,10 +121,10 @@ function CreateGroupModal({ open, onCancel, onSuccess }: CreateGroupModalProps) 
       onCancel={handleCancel}
       destroyOnHidden
       footer={[
-        <Button key="cancel" onClick={handleCancel}>
+        <Button key="cancel" onPress={handleCancel}>
           取消
         </Button>,
-        <Button key="confirm" type="primary" onClick={handleConfirm} loading={submitting}>
+        <Button key="confirm" variant="primary" onPress={handleConfirm} isDisabled={submitting}>
           确定
         </Button>,
       ]}

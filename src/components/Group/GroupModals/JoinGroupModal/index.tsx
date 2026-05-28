@@ -1,9 +1,9 @@
 import { useGroupService } from '@/domains';
 import type { JoinGroupRequest } from '@/domains/Group';
 import { parseErrorMessage } from '@/utils/error';
-import { InputOTP, REGEXP_ONLY_DIGITS_AND_CHARS, toast } from '@heroui/react';
+import { Button, InputOTP, REGEXP_ONLY_DIGITS_AND_CHARS, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { Button, Form, Modal } from 'antd';
+import { Form, Modal } from 'antd';
 import React from 'react';
 import type { JoinGroupModalProps } from './index.type';
 
@@ -66,15 +66,14 @@ function JoinGroupModal({ open, onCancel, onSuccess }: JoinGroupModalProps) {
       onCancel={onCancel}
       destroyOnHidden
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onPress={onCancel}>
           取消
         </Button>,
         <Button
           key="confirm"
-          type="primary"
-          onClick={handleConfirm}
-          disabled={isConfirmDisabled}
-          loading={loading}
+          variant="primary"
+          onPress={handleConfirm}
+          isDisabled={isConfirmDisabled || loading}
         >
           确定
         </Button>,

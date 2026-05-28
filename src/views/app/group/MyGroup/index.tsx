@@ -4,9 +4,9 @@ import { CreateGroupModal, JoinGroupModal } from '@/components/Group/GroupModals
 import { useGroupService } from '@/domains';
 import type { FetchGroupListRequest, Group } from '@/domains/Group';
 import { GROUP_ROLE_FILTER_MAP } from '@/domains/Group';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { usePagination } from 'ahooks';
-import { Button, Col, Empty, Pagination, Row, Spin, Tabs } from 'antd';
+import { Col, Empty, Pagination, Row, Spin, Tabs } from 'antd';
 import { useState } from 'react';
 import { AiOutlinePlus, AiOutlineUserAdd } from 'react-icons/ai';
 import { useNavigate } from 'react-router-dom';
@@ -76,12 +76,12 @@ function MyGroup() {
           <span className={layout.pageSubtitle}>管理您的小组和协作</span>
         </div>
         <div className={layout.actionsRow}>
-          <Button onClick={() => setJoinGroupModalOpen(true)}>
+          <Button onPress={() => setJoinGroupModalOpen(true)}>
             <IconText icon={<AiOutlineUserAdd />} iconSize={16}>
               加入小组
             </IconText>
           </Button>
-          <Button type="primary" onClick={() => setCreateGroupModalOpen(true)}>
+          <Button variant="primary" onPress={() => setCreateGroupModalOpen(true)}>
             <IconText icon={<AiOutlinePlus />} iconSize={16}>
               新建小组
             </IconText>

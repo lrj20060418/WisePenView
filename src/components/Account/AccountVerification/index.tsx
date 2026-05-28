@@ -2,9 +2,9 @@ import { useUserService } from '@/domains';
 import type { InitiateUISVerifyRequest, SendEmailVerifyRequest } from '@/domains/User';
 import { USER_STATUS } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest, useUnmount } from 'ahooks';
-import { Alert, Button, Form, Input, Modal, Radio } from 'antd';
+import { Alert, Form, Input, Modal, Radio } from 'antd';
 import { useRef, useState } from 'react';
 import { RiMailLine, RiShieldUserLine } from 'react-icons/ri';
 import VerifyBanner from '../VerifyBanner';
@@ -177,14 +177,14 @@ function AccountVerification({ user, onUserInfoUpdated }: AccountVerificationPro
         onCancel={handleVerifyModalCancel}
         destroyOnHidden
         footer={[
-          <Button key="cancel" onClick={handleVerifyModalCancel} disabled={verifySubmitting}>
+          <Button key="cancel" onPress={handleVerifyModalCancel} isDisabled={verifySubmitting}>
             取消
           </Button>,
           <Button
             key="verify"
-            type="primary"
-            loading={verifySubmitting}
-            onClick={handleVerifySubmit}
+            variant="primary"
+            isDisabled={verifySubmitting}
+            onPress={handleVerifySubmit}
           >
             {verifyMode === 'email' ? '发送验证邮件' : '发起 UIS 认证'}
           </Button>,
@@ -278,7 +278,7 @@ function AccountVerification({ user, onUserInfoUpdated }: AccountVerificationPro
           uisAwaitingScan
             ? null
             : [
-                <Button key="ok" type="primary" onClick={handleUisOutcomeModalClose}>
+                <Button key="ok" variant="primary" onPress={handleUisOutcomeModalClose}>
                   知道了
                 </Button>,
               ]

@@ -2,10 +2,10 @@ import { useImageService, useUserService } from '@/domains';
 import { getVerificationModeLabel, IDENTITY, USER_STATUS } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
 import { createBeforeUploadImageWithinLimit } from '@/utils/image/uploadLimit';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { UploadFile } from 'antd';
-import { Avatar, Button, Modal, Tooltip, Upload } from 'antd';
+import { Avatar, Modal, Tooltip, Upload } from 'antd';
 import { useMemo, useState } from 'react';
 import { RiCheckLine, RiCloseLine, RiErrorWarningLine } from 'react-icons/ri';
 import type { AccountHeaderProps } from './index.type';
@@ -168,7 +168,7 @@ function AccountHeader({ user, onUserInfoUpdated }: AccountHeaderProps) {
           beforeUpload={beforeUploadAvatar}
           onChange={({ fileList }) => setAvatarFileList(fileList)}
         >
-          <Button type="default">选择图片</Button>
+          <Button variant="secondary">选择图片</Button>
         </Upload>
       </Modal>
     </>

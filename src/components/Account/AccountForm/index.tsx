@@ -3,9 +3,9 @@ import { useUserService } from '@/domains';
 import type { UpdateUserInfoRequest } from '@/domains/User';
 import { DEGREE, SEX } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { Button, Descriptions, Form, Input, Select } from 'antd';
+import { Descriptions, Form, Input, Select } from 'antd';
 import type { InputRef } from 'antd/es/input';
 import { useMemo, type Ref } from 'react';
 import { RiPencilLine } from 'react-icons/ri';
@@ -140,7 +140,7 @@ function AccountForm({
       <div className={styles.sectionHeader}>
         <h3 className={styles.sectionTitle}>基本档案</h3>
         {!editMode ? (
-          <Button type="primary" onClick={() => onEditModeChange(true)}>
+          <Button variant="primary" onPress={() => onEditModeChange(true)}>
             <IconText icon={<RiPencilLine />} iconSize={16}>
               编辑资料
             </IconText>
@@ -192,10 +192,10 @@ function AccountForm({
           </div>
           <div className={styles.formActions}>
             <Form.Item className={styles.submitItem}>
-              <Button type="primary" onClick={() => void runSave()} loading={saving}>
+              <Button variant="primary" onPress={() => void runSave()} isDisabled={saving}>
                 保存
               </Button>
-              <Button onClick={onCancel} className={styles.cancelBtn}>
+              <Button onPress={onCancel} className={styles.cancelBtn}>
                 取消
               </Button>
             </Form.Item>
