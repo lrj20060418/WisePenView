@@ -47,7 +47,14 @@ export type NoteInlineContentLike =
   | InlineMathContent
   | Record<string, unknown>;
 
+export type AiDiffActionMode = 'accept' | 'discard';
+
 type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
+
+type AiDiffPropsActionResult =
+  | { kind: 'none' }
+  | { kind: 'remove' }
+  | { kind: 'update'; props: Record<string, unknown> };
 
 const SUPPORTED_SCHEMA_BLOCK_TYPES = new Set([
   'audio',
@@ -80,6 +87,16 @@ const INLINE_AI_DIFF_BLOCK_TYPES = new Set([
 ]);
 
 const CONTENT_NONE_AI_BLOCK_TYPES = new Set(['audio', 'divider', 'file', 'image', 'math', 'video']);
+
+const AI_DIFF_INLINE_TYPES = new Set([
+  'ai-diff',
+  'ai-add',
+  'ai-delete',
+  'ai-link-add',
+  'ai-link-delete',
+]);
+
+const AI_DIFF_PROP_TYPES = new Set(['edit', 'create', 'delete']);
 
 function toTextInline(text: string): TextInlineContent {
   return { type: 'text', text, styles: {} };
@@ -677,7 +694,7 @@ function getText(v: unknown): string {
 export function applyAiDiffActionForKey(
   content: unknown,
   key: string,
-  mode: 'accept' | 'discard'
+  mode: AiDiffActionMode
 ): NoteInlineContentLike[] | null {
   if (!Array.isArray(content)) return null;
   if (!key) return null;
@@ -685,13 +702,7 @@ export function applyAiDiffActionForKey(
   const nodes = content as unknown[];
   const changeIndex = nodes.findIndex((n) => {
     const t = getType(n);
-    if (
-      t !== 'ai-diff' &&
-      t !== 'ai-add' &&
-      t !== 'ai-delete' &&
-      t !== 'ai-link-add' &&
-      t !== 'ai-link-delete'
-    ) {
+    if (!t || !AI_DIFF_INLINE_TYPES.has(t)) {
       return false;
     }
     const props = getProps(n);
@@ -701,6 +712,24 @@ export function applyAiDiffActionForKey(
 
   const changeType = getType(nodes[changeIndex]);
   const changeProps = getProps(nodes[changeIndex]) ?? {};
+  const replacement = changeType ? resolveAiInlineReplacement(changeType, changeProps, mode) : [];
+
+  const out: NoteInlineContentLike[] = [];
+  for (let i = 0; i < nodes.length; i += 1) {
+    if (i === changeIndex) {
+      out.push(...replacement);
+      continue;
+    }
+    out.push(nodes[i] as Record<string, unknown>);
+  }
+  return mergeAdjacentText(out);
+}
+
+function resolveAiInlineReplacement(
+  changeType: string,
+  changeProps: Record<string, unknown>,
+  mode: AiDiffActionMode
+): NoteInlineContentLike[] {
   const replacement: NoteInlineContentLike[] = [];
 
   if (changeType === 'ai-diff') {
@@ -725,15 +754,90 @@ export function applyAiDiffActionForKey(
     if (mode === 'discard' && (text || href)) replacement.push(toLinkInline(text, href));
   }
 
+  return replacement;
+}
+
+function clearAiDiffProps(props: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...props,
+    aiDiffType: '',
+    aiDiffKey: '',
+    aiDiffOrigin: '',
+    aiDiffReplace: '',
+  };
+}
+
+export function applyAiDiffActionToProps(
+  props: unknown,
+  mode: AiDiffActionMode
+): AiDiffPropsActionResult {
+  if (!isRecord(props)) return { kind: 'none' };
+
+  const aiDiffType = getPropString(props, 'aiDiffType');
+  if (!AI_DIFF_PROP_TYPES.has(aiDiffType)) return { kind: 'none' };
+
+  const baseProps = clearAiDiffProps(props);
+  const origin = getPropString(props, 'aiDiffOrigin');
+  const replace = getPropString(props, 'aiDiffReplace');
+
+  if (aiDiffType === 'create') {
+    if (mode === 'discard') return { kind: 'remove' };
+    return { kind: 'update', props: { ...baseProps, expression: replace } };
+  }
+
+  if (aiDiffType === 'delete') {
+    if (mode === 'accept') return { kind: 'remove' };
+    return { kind: 'update', props: { ...baseProps, expression: origin } };
+  }
+
+  return {
+    kind: 'update',
+    props: {
+      ...baseProps,
+      expression: mode === 'accept' ? replace : origin,
+    },
+  };
+}
+
+export function applyAllAiDiffActionsToContent(
+  content: unknown,
+  mode: AiDiffActionMode
+): NoteInlineContentLike[] | null {
+  if (!Array.isArray(content)) return null;
+
+  let changed = false;
   const out: NoteInlineContentLike[] = [];
-  for (let i = 0; i < nodes.length; i += 1) {
-    if (i === changeIndex) {
-      out.push(...replacement);
+
+  for (const node of content as unknown[]) {
+    const type = getType(node);
+    const props = getProps(node) ?? {};
+
+    if (type && AI_DIFF_INLINE_TYPES.has(type)) {
+      changed = true;
+      out.push(...resolveAiInlineReplacement(type, props, mode));
       continue;
     }
-    out.push(nodes[i] as Record<string, unknown>);
+
+    if (type === 'inlineMath') {
+      const propsAction = applyAiDiffActionToProps(props, mode);
+      if (propsAction.kind === 'remove') {
+        changed = true;
+        continue;
+      }
+      if (propsAction.kind === 'update') {
+        changed = true;
+        out.push({
+          ...(node as Record<string, unknown>),
+          props: propsAction.props,
+        });
+        continue;
+      }
+    }
+
+    out.push(node as NoteInlineContentLike);
   }
-  return mergeAdjacentText(out);
+
+  return changed ? mergeAdjacentText(out) : null;
 }
 
 export function editAiLinkInlineContentForKey(
