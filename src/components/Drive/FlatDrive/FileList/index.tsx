@@ -297,16 +297,18 @@ function FileList({ groupId, filter }: FileListProps) {
         {openDropdownKey && <div className={styles.mask} aria-hidden />}
       </div>
 
-      <RenameFileModal
-        open={renameFileModalOpen}
-        file={renameFileTarget}
-        onCancel={handleRenameFileModalClose}
-        onSuccess={fetchList}
-      />
+      {renameFileTarget ? (
+        <RenameFileModal
+          isOpen={renameFileModalOpen}
+          file={renameFileTarget}
+          onOpenChange={(open) => !open && handleRenameFileModalClose()}
+          onSuccess={fetchList}
+        />
+      ) : null}
       <DeleteFileModal
-        open={deleteFileModalOpen}
+        isOpen={deleteFileModalOpen}
         file={deleteFileTarget}
-        onCancel={handleDeleteFileModalClose}
+        onOpenChange={(open) => !open && handleDeleteFileModalClose()}
         onSuccess={fetchList}
       />
       <EditStickerModal

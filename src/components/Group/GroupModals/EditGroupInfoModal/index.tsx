@@ -14,10 +14,10 @@ import {
 } from '@/domains/Tag';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
 import { createBeforeUploadImageWithinLimit } from '@/utils/image/uploadLimit';
-import { toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { UploadFile } from 'antd';
-import { Button, Checkbox, Form, Input, Modal, Radio, Tooltip, Upload } from 'antd';
+import { Checkbox, Form, Input, Modal, Radio, Tooltip, Upload } from 'antd';
 import { useMemo, useState } from 'react';
 import { LuUpload } from 'react-icons/lu';
 import type { EditGroupInfoModalProps } from './index.type';
@@ -212,15 +212,14 @@ function EditGroupInfoModal({
       destroyOnHidden
       wrapClassName={styles.modalWrap}
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onPress={onCancel}>
           取消
         </Button>,
         <Button
           key="confirm"
-          type="primary"
-          onClick={handleConfirm}
-          loading={loading}
-          disabled={configLoading}
+          variant="primary"
+          onPress={handleConfirm}
+          isDisabled={loading || configLoading}
         >
           确定
         </Button>,
