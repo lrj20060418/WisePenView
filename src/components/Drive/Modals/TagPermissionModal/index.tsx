@@ -1,6 +1,7 @@
 import DriveNav from '@/components/Drive/DriveNav';
 import { useDriveService, useGroupService, useTagService } from '@/domains';
 import type { DriveNode } from '@/domains/Drive';
+import { mapTagToFolderNode } from '@/domains/Drive/mapper/DriveServices.map';
 import type { GroupMember } from '@/domains/Group';
 import {
   ACCESS_CONTROL_SCOPE,
@@ -13,13 +14,18 @@ import {
   TAG_RESOURCE_ACTION,
   type AccessControlScope,
   type TagResourceAction,
+  type TagTreeNode,
 } from '@/domains/Tag';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
 import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { Checkbox, Empty, Form, Modal, Radio, Select } from 'antd';
+import { Checkbox, Empty, Form, Modal, Radio, Select, Spin } from 'antd';
 import { useState } from 'react';
-import { DEFAULT_DRIVE_ROOT_ID, type DriveSelectionItem } from '../../common/driveComponentModel';
+import {
+  DEFAULT_DRIVE_ROOT_ID,
+  toDriveSelectionItem,
+  type DriveSelectionItem,
+} from '../../common/driveComponentModel';
 import type { TagPermissionModalProps } from './index.type';
 import styles from './style.module.less';
 
@@ -53,13 +59,23 @@ const buildMemberOptions = (members: GroupMember[]) =>
     return { label, value: member.userId };
   });
 
-const getActionLabel = (action: TagResourceAction) =>
-  TAG_RESOURCE_ACTION.labels[action] ?? String(action);
-
 const filterSelectableUserIds = (ids: string[] | undefined, selectableMemberIdSet: Set<string>) => {
   if (!ids || ids.length === 0) return [];
   if (selectableMemberIdSet.size === 0) return ids;
   return ids.filter((id) => selectableMemberIdSet.has(id));
+};
+
+const buildSelectionFromTag = (tag: TagTreeNode): DriveSelectionItem => {
+  const node = mapTagToFolderNode(tag, null);
+  const selection = toDriveSelectionItem(node);
+  if (selection) return selection;
+  return {
+    nodeId: node.id,
+    kind: 'folder',
+    label: node.name,
+    parentNodeId: node.parentId,
+    tagId: tag.tagId,
+  };
 };
 
 async function findFolderNodeIdByTagId(params: {
@@ -103,6 +119,7 @@ const TagPermissionModal = ({
   const [tagRefreshSeed, setTagRefreshSeed] = useState(0);
   const [tagInitialIds, setTagInitialIds] = useState<string[] | undefined>(undefined);
   const [hoveredAction, setHoveredAction] = useState<TagResourceAction | null>(null);
+  const [initialTagLoading, setInitialTagLoading] = useState(false);
   const watchedGrantedActions = Form.useWatch('grantedActions', form);
 
   const { run: runResolveInitialNode } = useRequest(
@@ -164,11 +181,41 @@ const TagPermissionModal = ({
   const actionHighlightSet = hoveredAction
     ? new Set([hoveredAction, ...getResourceActionImpliedActions(hoveredAction)])
     : null;
+  const showTagTree = !initialTagId;
+
+  const applyTagToForm = (tag: TagTreeNode) => {
+    form.setFieldsValue({
+      taggedResourceAclGrantScope: tag.taggedResourceAclGrantScope ?? ACCESS_CONTROL_SCOPE.ALL,
+      taggedResourceAclGrantSpecifiedUsers: filterSelectableUserIds(
+        tag.taggedResourceAclGrantSpecifiedUsers,
+        selectableMemberIdSet
+      ),
+      grantedActions: normalizeResourceActions(tag.grantedActions),
+      tagMountPermissionScope: tag.tagMountPermissionScope ?? ACCESS_CONTROL_SCOPE.ALL,
+      tagMountSpecifiedUsers: filterSelectableUserIds(
+        tag.tagMountSpecifiedUsers,
+        selectableMemberIdSet
+      ),
+    });
+  };
+
+  const resolveTagById = async (tagId: string): Promise<TagTreeNode | undefined> => {
+    let nextTag = tagService.getTagById(tagId, groupId);
+    if (!nextTag) {
+      await tagService.getTagTree(groupId);
+      nextTag = tagService.getTagById(tagId, groupId);
+    }
+    return nextTag;
+  };
+
+  const resolveCachedTag = (tagId: string): TagTreeNode | undefined =>
+    tagService.getTagById(tagId, groupId);
 
   const handleOpenChange = (visible: boolean) => {
     if (!visible) {
       setSelectedTag(null);
       setTagInitialIds(undefined);
+      setInitialTagLoading(false);
       form.resetFields();
       return;
     }
@@ -176,9 +223,40 @@ const TagPermissionModal = ({
     form.resetFields();
     setTagRefreshSeed((prev) => prev + 1);
     setTagInitialIds(undefined);
-    if (initialTagId) {
-      runResolveInitialNode(initialTagId);
-    }
+    void (async () => {
+      if (initialTagId) {
+        if (showTagTree) {
+          runResolveInitialNode(initialTagId);
+        }
+        setInitialTagLoading(true);
+        const cachedTag = resolveCachedTag(initialTagId);
+        if (cachedTag) {
+          setSelectedTag(buildSelectionFromTag(cachedTag));
+          applyTagToForm(cachedTag);
+        }
+        try {
+          await tagService.refreshTagTree(groupId);
+        } catch (err) {
+          toast.danger(parseErrorMessage(err));
+        }
+        try {
+          const tag = await resolveTagById(initialTagId);
+          if (tag) {
+            setSelectedTag(buildSelectionFromTag(tag));
+            applyTagToForm(tag);
+          }
+        } finally {
+          setInitialTagLoading(false);
+        }
+        return;
+      }
+
+      try {
+        await tagService.refreshTagTree(groupId);
+      } catch (err) {
+        toast.danger(parseErrorMessage(err));
+      }
+    })();
     if (groupId) {
       runFetchMembers();
     }
@@ -199,29 +277,12 @@ const TagPermissionModal = ({
     const selectedTagId = nextFolder.tagId;
     setSelectedTag(nextFolder);
     const fillFormByTag = async () => {
-      let nextTag = tagService.getTagById(selectedTagId, groupId);
-      if (!nextTag) {
-        await tagService.getTagTree(groupId);
-        nextTag = tagService.getTagById(selectedTagId, groupId);
-      }
+      const nextTag = await resolveTagById(selectedTagId);
       if (!nextTag) {
         form.resetFields();
         return;
       }
-      form.setFieldsValue({
-        taggedResourceAclGrantScope:
-          nextTag.taggedResourceAclGrantScope ?? ACCESS_CONTROL_SCOPE.ALL,
-        taggedResourceAclGrantSpecifiedUsers: filterSelectableUserIds(
-          nextTag.taggedResourceAclGrantSpecifiedUsers,
-          selectableMemberIdSet
-        ),
-        grantedActions: normalizeResourceActions(nextTag.grantedActions),
-        tagMountPermissionScope: nextTag.tagMountPermissionScope ?? ACCESS_CONTROL_SCOPE.ALL,
-        tagMountSpecifiedUsers: filterSelectableUserIds(
-          nextTag.tagMountSpecifiedUsers,
-          selectableMemberIdSet
-        ),
-      });
+      applyTagToForm(nextTag);
     };
     void fillFormByTag();
   };
@@ -316,24 +377,30 @@ const TagPermissionModal = ({
     >
       <div className={styles.modalFormPadding}>
         <div className={styles.wrapper}>
-          <div className={styles.leftPane}>
-            <div className={styles.leftTitle}>选择标签</div>
-            <DriveNav
-              scope={groupId ? { type: 'group', groupId } : undefined}
-              renderableTypes={['folder']}
-              selectableTypes={['folder']}
-              multiple={false}
-              refreshTrigger={tagRefreshSeed}
-              initialSelectedIds={tagInitialIds}
-              onChange={handleTagChange}
-            />
-          </div>
+          {showTagTree ? (
+            <div className={styles.leftPane}>
+              <div className={styles.leftTitle}>选择标签</div>
+              <DriveNav
+                scope={groupId ? { type: 'group', groupId } : undefined}
+                renderableTypes={['folder']}
+                selectableTypes={['folder']}
+                multiple={false}
+                refreshTrigger={tagRefreshSeed}
+                initialSelectedIds={tagInitialIds}
+                onChange={handleTagChange}
+              />
+            </div>
+          ) : null}
 
           <div className={styles.rightPane}>
             <Form form={form} layout="vertical">
               {!selectedTag ? (
                 <div className={styles.emptyState}>
-                  <Empty description="请选择一个标签" />
+                  {showTagTree ? (
+                    <Empty description="请选择一个标签" />
+                  ) : (
+                    <Spin size="large" tip="加载标签权限中" />
+                  )}
                 </div>
               ) : (
                 <>
@@ -384,10 +451,6 @@ const TagPermissionModal = ({
                       <div className={styles.actionList}>
                         {TAG_RESOURCE_ACTION.options.map((item) => {
                           const action = item.value as TagResourceAction;
-                          const impliedActions = getResourceActionImpliedActions(action);
-                          const impliedLabels = impliedActions
-                            .map((value) => getActionLabel(value))
-                            .filter(Boolean);
                           const isHighlighted = actionHighlightSet?.has(action);
                           return (
                             <div
@@ -408,11 +471,6 @@ const TagPermissionModal = ({
                               >
                                 <span className={styles.actionLabel}>{item.label}</span>
                               </Checkbox>
-                              {impliedLabels.length > 0 ? (
-                                <div className={styles.actionHint}>
-                                  包含：{impliedLabels.join(' / ')}
-                                </div>
-                              ) : null}
                             </div>
                           );
                         })}

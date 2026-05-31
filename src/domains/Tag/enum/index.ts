@@ -27,10 +27,10 @@ export type AccessControlScopeKey = EnumKey<typeof ACCESS_CONTROL_SCOPE>;
 
 /** 资源访问权限（与 OpenAPI ResourceAction 对齐） */
 export const TAG_RESOURCE_ACTION = createEnum([
-  { value: 1, key: 'DISCOVER', label: '列表可见' },
-  { value: 2, key: 'VIEW', label: '在线阅读' },
-  { value: 4, key: 'EDIT', label: '协同编辑' },
-  { value: 8, key: 'DOWNLOAD_WATERMARK', label: '导出/下载带水印' },
+  { value: 1, key: 'DISCOVER', label: '查看资源列表' },
+  { value: 2, key: 'VIEW', label: '阅读' },
+  { value: 4, key: 'EDIT', label: '编辑' },
+  { value: 8, key: 'DOWNLOAD_WATERMARK', label: '带水印下载' },
   { value: 16, key: 'DOWNLOAD_ORIGINAL', label: '下载源文件' },
 ] as const);
 

@@ -97,6 +97,12 @@ const getRawTagTree = async (): Promise<TagTreeNode[]> => {
   return tagTree;
 };
 
+const refreshTagTree = async (): Promise<TagTreeNode[]> => {
+  await delay(200);
+  flatMap = buildFlatMap(tagTree);
+  return tagTree;
+};
+
 const getTagById = (tagId: string): TagTreeNode | undefined => {
   if (!flatMap) flatMap = buildFlatMap(tagTree);
   return flatMap.get(tagId);
@@ -143,6 +149,7 @@ const moveTag = async (): Promise<void> => {
 export const TagServicesMock: ITagService = {
   getRawTagTree,
   getRawTagById,
+  refreshTagTree,
   getTagTree,
   getTagById,
   getResByTag,

@@ -32,10 +32,13 @@ import {
   Label,
   ListBox,
   Modal,
+  Radio,
+  RadioGroup,
   Select,
   TextArea,
   TextField,
   toast,
+  Tooltip,
 } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useCallback, useState, type FormEvent } from 'react';
@@ -60,8 +63,11 @@ const DEFAULT_FORM_VALUES: CreateGroupFormValues = {
   defaultMemberActions: DEFAULT_MEMBER_ACTIONS,
 };
 
-const getActionLabel = (action: TagResourceAction) =>
-  TAG_RESOURCE_ACTION.labels[action] ?? String(action);
+const FILE_ORG_LOGIC_INTRO: Record<GroupFileOrgLogic, string> = {
+  [GROUP_FILE_ORG_LOGIC.FOLDER]:
+    '文件夹模式：用常规文件夹模式组织资源，同一份资源只能上传到一个文件夹下。',
+  [GROUP_FILE_ORG_LOGIC.TAG]: '标签模式：用标签组织资源，同一份资源可以上传到多个标签下。',
+};
 
 function CreateGroupModal({ isOpen, onOpenChange, onSuccess }: CreateGroupModalProps) {
   const groupService = useGroupService();
@@ -276,28 +282,33 @@ function CreateGroupModal({ isOpen, onOpenChange, onSuccess }: CreateGroupModalP
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.sectionTitle}>资源管理模式</div>
-                  <Select
+                  <RadioGroup
                     aria-label="资源管理模式"
-                    name="fileOrgLogic"
-                    value={String(formValues.fileOrgLogic ?? GROUP_FILE_ORG_LOGIC.FOLDER)}
+                    value={formValues.fileOrgLogic ?? GROUP_FILE_ORG_LOGIC.FOLDER}
                     onChange={(value) =>
-                      updateFormValue('fileOrgLogic', Number(value) as unknown as GroupFileOrgLogic)
+                      updateFormValue('fileOrgLogic', value as GroupFileOrgLogic)
                     }
-                    isRequired
+                    className={styles.modeRow}
+                    variant="secondary"
+                    orientation="horizontal"
                   >
-                    <Label>资源管理模式</Label>
-                    <Select.Trigger />
-                    <Select.Popover>
-                      <ListBox>
-                        {GROUP_FILE_ORG_LOGIC.options.map((item) => (
-                          <ListBox.Item key={String(item.value)} id={String(item.value)}>
-                            {FILE_ORG_LOGIC_LABEL[item.value]}
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
-                  <div className={styles.modeHint}>注意：设置为标签模式后无法改回文件夹模式</div>
+                    {GROUP_FILE_ORG_LOGIC.options.map((item) => (
+                      <Radio key={item.key} value={item.value}>
+                        <Radio.Control>
+                          <Radio.Indicator />
+                        </Radio.Control>
+                        <Radio.Content>
+                          <Tooltip>
+                            <Tooltip.Trigger>
+                              <span>{FILE_ORG_LOGIC_LABEL[item.value]}</span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>{FILE_ORG_LOGIC_INTRO[item.value]}</Tooltip.Content>
+                          </Tooltip>
+                        </Radio.Content>
+                      </Radio>
+                    ))}
+                  </RadioGroup>
+                  <div className={styles.modeHint}>只能从文件夹模式切换至标签模式</div>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.sectionTitle}>小组成员默认权限</div>
@@ -305,8 +316,6 @@ function CreateGroupModal({ isOpen, onOpenChange, onSuccess }: CreateGroupModalP
                   <div className={styles.actionList}>
                     {TAG_RESOURCE_ACTION.options.map((item) => {
                       const action = item.value as TagResourceAction;
-                      const impliedActions = getResourceActionImpliedActions(action);
-                      const impliedLabels = impliedActions.map((value) => getActionLabel(value));
                       const isHighlighted = actionHighlightSet?.has(action);
                       return (
                         <div
@@ -322,14 +331,17 @@ function CreateGroupModal({ isOpen, onOpenChange, onSuccess }: CreateGroupModalP
                           <Checkbox
                             isSelected={selectedActionSet.has(action)}
                             onChange={(isSelected) => handleActionToggle(action, isSelected)}
+                            variant="secondary"
                           >
-                            <span className={styles.actionLabel}>{item.label}</span>
+                            <Checkbox.Control>
+                              <Checkbox.Indicator />
+                            </Checkbox.Control>
+                            <Checkbox.Content>
+                              <span data-slot="label" className={styles.actionLabel}>
+                                {item.label}
+                              </span>
+                            </Checkbox.Content>
                           </Checkbox>
-                          {impliedLabels.length > 0 ? (
-                            <div className={styles.actionHint}>
-                              包含：{impliedLabels.join(' / ')}
-                            </div>
-                          ) : null}
                         </div>
                       );
                     })}
