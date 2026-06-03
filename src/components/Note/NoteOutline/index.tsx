@@ -1,7 +1,8 @@
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
-import type { NoteOutlineItem, NoteOutlineProps } from './index.type';
+import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
+import { NOTE_OUTLINE_TITLE_ID, type NoteOutlineItem, type NoteOutlineProps } from './index.type';
 import styles from './style.module.less';
 
 function resolveLevelClass(level: number): string {
@@ -18,8 +19,22 @@ function filterItems(items: NoteOutlineItem[], maxLevel?: number): NoteOutlineIt
   return items.filter((it) => it.level <= maxLevel);
 }
 
-function NoteOutline({ items, activeId, onNavigate, maxLevel }: NoteOutlineProps) {
-  const displayItems = useMemo(() => filterItems(items, maxLevel), [items, maxLevel]);
+function NoteOutline({
+  items,
+  activeId,
+  onNavigate,
+  titleResourceId,
+  titleFallback,
+  maxLevel,
+}: NoteOutlineProps) {
+  const titleText = useResourceDisplayName(titleResourceId, titleFallback, '未命名笔记');
+  const displayItems = useMemo(() => {
+    const itemsWithTitle =
+      titleResourceId != null && titleResourceId !== ''
+        ? [{ id: NOTE_OUTLINE_TITLE_ID, level: 0, text: titleText }, ...items]
+        : items;
+    return filterItems(itemsWithTitle, maxLevel);
+  }, [items, maxLevel, titleResourceId, titleText]);
 
   return (
     <div className={styles.root} aria-label="文档目录">

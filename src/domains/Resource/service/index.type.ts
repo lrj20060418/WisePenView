@@ -24,6 +24,7 @@ export interface IResourceService {
   getUserResources(params: GetUserResourcesRequest): Promise<ResourceListPage>;
   getGroupResources(params: GetGroupResourceRequest): Promise<ResourceListPage>;
   renameResource(params: RenameResourceRequest): Promise<void>;
+  removeResources(params: RemoveResourcesRequest): Promise<void>;
   updateResourceTags(params: UpdateResourceTagsRequest): Promise<void>;
   /** 点赞 / 取消点赞，返回操作后最新状态 */
   interactToggleLike(params: InteractToggleLikeRequest): Promise<InteractToggleLikeResult>;
@@ -35,6 +36,11 @@ export interface IResourceService {
 export interface RenameResourceRequest {
   resourceId: string;
   newName: string;
+}
+
+/** 删除资源请求参数（对齐 OpenAPI ResourceRemoveRequest，POST /resource/item/removeResources） */
+export interface RemoveResourcesRequest {
+  resourceIds: string[];
 }
 
 /** 更新资源用户标签（对齐 OpenAPI ResourceUpdateTagsRequest，POST /resource/item/updateTags） */

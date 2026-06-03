@@ -1,3 +1,9 @@
+import {
+  useNewNoteStore,
+  useNoteSelectionStore,
+  usePdfPreviewProgressStore,
+  useResourceDisplayNameStore,
+} from '@/store';
 import { ResourceInteractApi } from '../apis/InteractApi';
 import { ResourceItemApi } from '../apis/ResourceApi';
 import type { ListResourceItemsApiRequest } from '../apis/ResourceApi.type';
@@ -10,6 +16,7 @@ import type {
   InteractToggleLikeRequest,
   InteractToggleLikeResult,
   IResourceService,
+  RemoveResourcesRequest,
   RenameResourceRequest,
   ResourceListPage,
   UpdateResourceTagsRequest,
@@ -34,6 +41,17 @@ const getGroupResources = async (params: GetGroupResourceRequest): Promise<Resou
 
 const renameResource = async (params: RenameResourceRequest): Promise<void> => {
   await ResourceItemApi.renameResource(params);
+  useResourceDisplayNameStore.getState().setDisplayName(params.resourceId, params.newName);
+};
+
+const removeResources = async (params: RemoveResourcesRequest): Promise<void> => {
+  await ResourceItemApi.removeResources(params);
+  for (const resourceId of params.resourceIds) {
+    // 资源已删除，同步清理与之绑定的临时状态
+    usePdfPreviewProgressStore.getState().removeProgress(resourceId);
+    useNewNoteStore.getState().clearNewNoteResourceId(resourceId);
+    useNoteSelectionStore.getState().clearSelectedText(resourceId);
+  }
 };
 
 const updateResourceTags = async (params: UpdateResourceTagsRequest): Promise<void> => {
@@ -61,6 +79,7 @@ export const createResourceServices = (): IResourceService => ({
   getUserResources,
   getGroupResources,
   renameResource,
+  removeResources,
   updateResourceTags,
   interactToggleLike,
   interactRate,

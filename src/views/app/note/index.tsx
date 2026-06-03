@@ -13,13 +13,17 @@ import CustomBlockNote from '@/components/Note/CustomBlockNote';
 import type { NoteBodyEditorHandle } from '@/components/Note/CustomBlockNote/index.type';
 import NoteInfoBar from '@/components/Note/NoteInfoBar';
 import NoteOutline from '@/components/Note/NoteOutline';
-import type { NoteOutlineItem } from '@/components/Note/NoteOutline/index.type';
+import {
+  NOTE_OUTLINE_TITLE_ID,
+  type NoteOutlineItem,
+} from '@/components/Note/NoteOutline/index.type';
 import NoteTitle from '@/components/Note/NoteTitle';
 import type { NoteTitleHandle } from '@/components/Note/NoteTitle/index.type';
 import { useNoteService, useResourceService } from '@/domains';
 import type { AiDiffDisplayMode, NoteInfoDisplayData } from '@/domains/Note';
 import { AI_DIFF_DISPLAY_MODE, AI_DIFF_DISPLAY_MODE_LABELS, useNoteSession } from '@/domains/Note';
 import { RESOURCE_TYPE } from '@/domains/Resource';
+import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
 import { useSmoothFlag } from '@/hooks/useSmoothFlag';
 import { useAiDiffDisplayStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
@@ -31,6 +35,27 @@ interface NoteViewConnectedProps {
   resourceId: string;
   noteInfoDisplay: NoteInfoDisplayData;
   onRefreshNoteInfo: () => void;
+}
+
+interface NoteToolbarTitleProps {
+  resourceId: string;
+  fallbackTitle?: string;
+}
+
+function NoteToolbarTitle({ resourceId, fallbackTitle }: NoteToolbarTitleProps) {
+  const title = useResourceDisplayName(resourceId, fallbackTitle, '未命名笔记');
+
+  return (
+    <IconText
+      className={rvhStyles.inlineTitleText}
+      icon={<EntryIcon entryType="resource" resourceType={RESOURCE_TYPE.NOTE} />}
+      iconSize={18}
+      gap="var(--ant-margin-sm)"
+      ellipsis
+    >
+      {title}
+    </IconText>
+  );
 }
 
 function NoteViewConnected({
@@ -124,16 +149,6 @@ function NoteViewConnected({
     }, 2000);
   };
 
-  const noteTitleText = noteInfoDisplay?.noteTitle?.trim() || '未命名笔记';
-  const outlineItemsWithTitle: NoteOutlineItem[] = [
-    { id: '__note_title__', level: 0, text: noteTitleText },
-    ...outlineItems,
-  ];
-
-  const toolbarNoteTitle =
-    noteInfoDisplay.noteTitle?.trim() && noteInfoDisplay.noteTitle.trim() !== '未命名笔记'
-      ? noteInfoDisplay.noteTitle.trim()
-      : '未命名笔记';
   const aiDiffDisplayOptions: Array<{ value: AiDiffDisplayMode; label: string }> = [
     {
       value: AI_DIFF_DISPLAY_MODE.OLD_ONLY,
@@ -156,7 +171,7 @@ function NoteViewConnected({
       return;
     }
     const titleApi = titleEditorRef.current;
-    const title = titleApi?.getPlainTitle() ?? noteTitleText;
+    const title = titleApi?.getPlainTitle() ?? noteInfoDisplay?.noteTitle ?? '未命名笔记';
     const titleRoot = titleApi?.getProseMirrorRoot() ?? null;
     try {
       setPdfExportLoading(true);
@@ -176,7 +191,9 @@ function NoteViewConnected({
     }
     try {
       setIsDownloadingMarkdown(true);
-      await bodyApi.downloadMarkdown(toolbarNoteTitle);
+      const title =
+        titleEditorRef.current?.getPlainTitle() ?? noteInfoDisplay?.noteTitle ?? '未命名笔记';
+      await bodyApi.downloadMarkdown(title);
       toast.success('Markdown 下载已开始');
     } catch (err) {
       toast.danger(parseErrorMessage(err));
@@ -191,15 +208,7 @@ function NoteViewConnected({
     <div className={styles.pageWrap}>
       <ResourceViewerHeader
         inlineTitle={
-          <IconText
-            className={rvhStyles.inlineTitleText}
-            icon={<EntryIcon entryType="resource" resourceType={RESOURCE_TYPE.NOTE} />}
-            iconSize={18}
-            gap="var(--ant-margin-sm)"
-            ellipsis
-          >
-            {toolbarNoteTitle}
-          </IconText>
+          <NoteToolbarTitle resourceId={resourceId} fallbackTitle={noteInfoDisplay?.noteTitle} />
         }
         extra={
           <div className={styles.headerToolbarExtra}>
@@ -262,10 +271,12 @@ function NoteViewConnected({
                 </div>
                 <div className={styles.outlineScrollArea}>
                   <NoteOutline
-                    items={outlineItemsWithTitle}
+                    items={outlineItems}
                     activeId={activeHeadingId}
+                    titleResourceId={resourceId}
+                    titleFallback={noteInfoDisplay?.noteTitle}
                     onNavigate={(id) => {
-                      if (id === '__note_title__') {
+                      if (id === NOTE_OUTLINE_TITLE_ID) {
                         const anchor = titleAnchorRef.current;
                         if (anchor) {
                           anchor.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -321,7 +332,7 @@ function NoteViewConnected({
                   <NoteTitle
                     key={`${resourceId}-${noteInfoDisplay?.noteTitle ?? ''}`}
                     ref={titleEditorRef}
-                    id={noteId}
+                    id={resourceId}
                     initialContent={noteInfoDisplay?.noteTitle}
                     focusOnMount={isConnected}
                     onEnterKey={focusBody}

@@ -9,6 +9,7 @@ export type {
   InteractRateResult,
   InteractToggleLikeRequest,
   InteractToggleLikeResult,
+  RemoveResourcesRequest,
   RenameResourceRequest,
   ResourceListPage,
   UpdateResourceTagsRequest,

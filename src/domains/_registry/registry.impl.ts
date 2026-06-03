@@ -31,16 +31,16 @@ import type { ServicesContextValue } from './registry.types';
 const adminService = createAdminServices();
 const authService = createAuthServices();
 const chatService = createChatServices();
-const documentService = createDocumentServices();
 const groupService = createGroupServices();
 const imageService = createImageServices();
-const noteService = createNoteServices();
 const quotaService = createQuotaServices();
 const resourceService = createResourceServices();
 const userService = createUserServices();
 const walletService = createWalletServices();
 
 // Level 1：依赖 Level 0
+const documentService = createDocumentServices({ resourceService: resourceService });
+const noteService = createNoteServices({ resourceService: resourceService });
 const tagService = createTagServices({ resourceService: resourceService });
 const stickerService = createStickerServices({ resourceService: resourceService });
 const driveService = createDriveServices({
