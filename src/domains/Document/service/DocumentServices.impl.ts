@@ -1,9 +1,9 @@
+import type { IResourceService } from '@/domains/Resource';
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 import { computeFileMd5 } from '@/utils/oss/computeFileMd5';
 import { putOssPresignedUrl } from '@/utils/oss/ossPresignedPut';
 import { parseExtension } from '@/utils/parser/extensionParser';
 import { DocumentApi } from '../apis/DocumentApi';
-import { ResourceItemApi } from '../apis/ResourceApi';
 import { DocumentServicesMap } from '../mapper/DocumentServices.map';
 import type {
   DocDisplayInfoResponse,
@@ -16,6 +16,10 @@ import type {
   UploadDocumentResult,
 } from './index.type';
 import { DOCUMENT_ALLOWED_EXTENSIONS } from './index.type';
+
+export interface DocumentServicesDeps {
+  resourceService: IResourceService;
+}
 
 const ALLOWED_EXT_SET = new Set<string>(DOCUMENT_ALLOWED_EXTENSIONS);
 
@@ -93,10 +97,6 @@ const retryConvert = async (documentId: string): Promise<void> => {
   await DocumentApi.retryDocConvert({ documentId });
 };
 
-const deleteDocument = async (documentId: string): Promise<void> => {
-  await ResourceItemApi.removeResources({ resourceIds: [documentId] });
-};
-
 const listPendingDocs = async (): Promise<PendingDocItem[]> => {
   const data = await DocumentApi.listPendingDocs();
   return DocumentServicesMap.mapListPendingDocsFromApi(data);
@@ -118,13 +118,22 @@ const getDocInfo = async (resourceId: string): Promise<DocDisplayInfoResponse> =
   const data = await DocumentApi.getDocInfo({ resourceId });
   return DocumentServicesMap.mapGetDocInfoFromApi(data);
 };
-export const createDocumentServices = (): IDocumentService => ({
-  uploadDocument,
-  retryConvert,
-  deleteDocument,
-  listPendingDocs,
-  syncPendingDocStatus,
-  retryPendingDoc,
-  cancelPendingDoc,
-  getDocInfo,
-});
+
+export const createDocumentServices = (deps: DocumentServicesDeps): IDocumentService => {
+  const { resourceService } = deps;
+
+  const deleteDocument = async (documentId: string): Promise<void> => {
+    await resourceService.removeResources({ resourceIds: [documentId] });
+  };
+
+  return {
+    uploadDocument,
+    retryConvert,
+    deleteDocument,
+    listPendingDocs,
+    syncPendingDocStatus,
+    retryPendingDoc,
+    cancelPendingDoc,
+    getDocInfo,
+  };
+};

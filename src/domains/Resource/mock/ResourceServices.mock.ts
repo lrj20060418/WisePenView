@@ -6,10 +6,17 @@ import type {
   InteractToggleLikeRequest,
   InteractToggleLikeResult,
   IResourceService,
+  RemoveResourcesRequest,
   RenameResourceRequest,
   ResourceItem,
   ResourceListPage,
 } from '@/domains/Resource';
+import {
+  useNewNoteStore,
+  useNoteSelectionStore,
+  usePdfPreviewProgressStore,
+  useResourceDisplayNameStore,
+} from '@/store';
 import mockdata from './mockdata.json';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,8 +79,18 @@ const getGroupResources = async (params: GetGroupResourceRequest): Promise<Resou
   return paginateMockResources(params);
 };
 
-const renameResource = async (_params: RenameResourceRequest): Promise<void> => {
+const renameResource = async (params: RenameResourceRequest): Promise<void> => {
   await delay(150);
+  useResourceDisplayNameStore.getState().setDisplayName(params.resourceId, params.newName);
+};
+
+const removeResources = async (params: RemoveResourcesRequest): Promise<void> => {
+  await delay(150);
+  for (const resourceId of params.resourceIds) {
+    usePdfPreviewProgressStore.getState().removeProgress(resourceId);
+    useNewNoteStore.getState().clearNewNoteResourceId(resourceId);
+    useNoteSelectionStore.getState().clearSelectedText(resourceId);
+  }
 };
 
 const updateResourceTags = async (): Promise<void> => {
@@ -96,6 +113,7 @@ export const ResourceServicesMock: IResourceService = {
   getUserResources,
   getGroupResources,
   renameResource,
+  removeResources,
   updateResourceTags,
   interactToggleLike,
   interactRate,

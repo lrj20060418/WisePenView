@@ -1,8 +1,6 @@
-import EntryIcon from '@/components/Common/EntryIcon';
-import IconText from '@/components/Common/IconText';
-import { ROOT_DISPLAY } from '@/components/Drive/common/constants';
 import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
 import type { DataNode } from 'antd/es/tree';
+import DriveTreeNodeTitle from './DriveTreeNodeTitle';
 import styles from './style.module.less';
 
 interface BuildTreeDataOptions {
@@ -76,19 +74,7 @@ function toTreeDataNode(node: DriveNode, options: BuildTreeDataOptions): DataNod
 
   const selectable = node.type === 'trash' ? false : options.selectableTypes.has(node.type);
   const disabled = options.disabledNodeIds.has(node.id);
-  const resourceType =
-    node.type === 'resource' || node.type === 'link' ? node.resourceType : undefined;
-  const title = (
-    <IconText
-      className={styles.nodeTitle}
-      icon={<EntryIcon entryType={node.type} resourceType={resourceType} size={14} />}
-      iconSize={14}
-      gap="var(--ant-margin-xxs)"
-      ellipsis
-    >
-      {getNodeDisplayName(node)}
-    </IconText>
-  );
+  const title = <DriveTreeNodeTitle node={node} />;
 
   if (node.type === 'folder') {
     return {
@@ -109,13 +95,4 @@ function toTreeDataNode(node: DriveNode, options: BuildTreeDataOptions): DataNod
     disabled,
     isLeaf: true,
   };
-}
-
-function getNodeDisplayName(node: DriveNode): string {
-  if (node.type === 'folder') {
-    if (!node.parentId) return ROOT_DISPLAY;
-    return node.name || ROOT_DISPLAY;
-  }
-  if (node.type === 'resource' || node.type === 'link') return node.title || '未命名文件';
-  return '回收站';
 }
