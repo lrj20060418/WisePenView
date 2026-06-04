@@ -14,6 +14,8 @@ import type {
   PageResult,
   RenameSessionRequest,
   ToolOption,
+  UploadAttachmentParams,
+  UploadAttachmentResult,
 } from './index.type';
 
 const getModels = async (): Promise<ModelListResponse> => {
@@ -64,6 +66,18 @@ const getTools = async (): Promise<ToolOption[]> => {
   return await ChatApi.getTools();
 };
 
+const uploadAttachment = async ({
+  file,
+}: UploadAttachmentParams): Promise<UploadAttachmentResult> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await ChatApi.uploadAttachment(formData);
+  return {
+    attachmentId: res.attachment_id,
+    filename: res.filename,
+  };
+};
+
 export const createChatServices = (): IChatService => ({
   getModels,
   createSession,
@@ -72,4 +86,5 @@ export const createChatServices = (): IChatService => ({
   listSessions,
   listHistoryMessages,
   getTools,
+  uploadAttachment,
 });

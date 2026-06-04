@@ -10,5 +10,7 @@ export type {
   ModelListResponse,
   PageResult,
   RenameSessionRequest,
+  UploadAttachmentParams,
+  UploadAttachmentResult,
 } from './service/index.type';
 export { useChatSession } from './session/useChatSession';

@@ -9,6 +9,7 @@ export interface IChatService {
   listSessions(params?: ListSessionsRequest): Promise<PageResult<ChatSession>>;
   listHistoryMessages(params: ListHistoryMessagesRequest): Promise<PageResult<MessageResponse>>;
   getTools(): Promise<ToolOption[]>;
+  uploadAttachment(params: UploadAttachmentParams): Promise<UploadAttachmentResult>;
 }
 
 /** `GET /model/listModels` 的 data 字段结构 */

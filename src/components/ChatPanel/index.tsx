@@ -24,6 +24,7 @@ import AdvancedModeToggle from './AdvancedModeToggle';
 import { buildDefaultPersonalAgent, buildGroupAgent } from './agent';
 import AgentSelector from './AgentSelector';
 import ChatInput from './ChatInput';
+import type { SendOptions } from './ChatInput/index.type';
 import {
   HISTORY_PAGE_SIZE,
   buildPanelMessages,
@@ -298,7 +299,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
     }
   };
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, opts?: SendOptions) => {
     if (!currentModel) return;
     let targetSessionId = currentSessionId;
     const targetAgent = selectedAgent ?? defaultPersonalAgent;
@@ -337,6 +338,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
       },
       allowedSkillIds,
       selectedSkillIds: selectedSkillIds.length > 0 ? selectedSkillIds : undefined,
+      pendingImages: opts?.pendingImages,
     });
 
     if (hasSelectedContext) {
@@ -466,6 +468,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
               primarySkills={primarySkills}
               advancedMode={advancedMode}
               advancedSkillGroups={advancedSkillGroups}
+              currentModelVision={currentModel?.vision ?? false}
             />
           </div>
         </>

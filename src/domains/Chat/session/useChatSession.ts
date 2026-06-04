@@ -26,6 +26,7 @@ const buildRequestBody = ({
   agentContext,
   allowedSkillIds,
   selectedSkillIds,
+  pendingImages,
 }: {
   sessionId: string;
   query: string;
@@ -37,6 +38,7 @@ const buildRequestBody = ({
   agentContext?: ChatAgentContext;
   allowedSkillIds?: string[];
   selectedSkillIds?: string[];
+  pendingImages?: { mimeType: string; base64: string; filename?: string }[];
 }): ChatRequestBody => {
   const normalizedStates: ChatState[] = [];
   const selectedValue = selected?.trim();
@@ -78,6 +80,15 @@ const buildRequestBody = ({
     ...(selectedSkillIds && selectedSkillIds.length > 0
       ? { selected_skill_ids: selectedSkillIds }
       : {}),
+    ...(pendingImages && pendingImages.length > 0
+      ? {
+          image_b64_list: pendingImages.map((img) => ({
+            mime_type: img.mimeType,
+            base64: img.base64,
+            filename: img.filename,
+          })),
+        }
+      : {}),
   };
 };
 
@@ -114,6 +125,7 @@ export const useChatSession = ({
         agentContext?: ChatAgentContext;
         allowedSkillIds?: string[];
         selectedSkillIds?: string[];
+        pendingImages?: { mimeType: string; base64: string; filename?: string }[];
       }
     ) => {
       const targetSessionId = options?.sessionId ?? sessionId;
@@ -130,6 +142,7 @@ export const useChatSession = ({
         agentContext: options?.agentContext,
         allowedSkillIds: options?.allowedSkillIds,
         selectedSkillIds: options?.selectedSkillIds,
+        pendingImages: options?.pendingImages,
       });
       await chat.sendMessage({ text: query }, { body: requestBody });
     },

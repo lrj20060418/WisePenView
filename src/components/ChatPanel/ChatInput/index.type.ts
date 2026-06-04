@@ -4,7 +4,7 @@ import type { SkillSummary } from '@/domains';
 import type { ChatAgentOption } from '@/store';
 
 export interface ChatInputProps {
-  onSend: (text: string) => void | Promise<void>;
+  onSend: (text: string, opts?: SendOptions) => void | Promise<void>;
   sending: boolean;
   currentModelId: string;
   onModelChange: (model: Model) => void;
@@ -15,4 +15,15 @@ export interface ChatInputProps {
   primarySkills: SkillSummary[];
   advancedMode: boolean;
   advancedSkillGroups: SkillScopeTreeGroup[];
+  currentModelVision: boolean;
+}
+
+export interface PendingImagePayload {
+  mimeType: string;
+  base64: string;
+  filename?: string;
+}
+
+export interface SendOptions {
+  pendingImages?: PendingImagePayload[];
 }

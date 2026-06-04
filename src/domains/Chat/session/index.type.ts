@@ -26,6 +26,12 @@ interface ChatResourceRef {
   context_mode?: string;
 }
 
+interface ImageB64Item {
+  mime_type: string;
+  base64: string;
+  filename?: string;
+}
+
 interface ChatRequestBody {
   session_id: string;
   query: string;
@@ -36,6 +42,7 @@ interface ChatRequestBody {
   agent_context?: ChatAgentContext;
   allowed_skill_ids?: string[];
   selected_skill_ids?: string[];
+  image_b64_list?: ImageB64Item[];
 }
 
 interface UseChatSessionOptions {
@@ -50,5 +57,6 @@ export type {
   ChatRequestBody,
   ChatResourceRef,
   ChatState,
+  ImageB64Item,
   UseChatSessionOptions,
 };

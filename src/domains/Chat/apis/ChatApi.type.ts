@@ -61,3 +61,8 @@ export interface ToolOption {
   label: string;
 }
 export type ListToolsApiResponse = ToolOption[];
+
+export interface UploadAttachmentResponse {
+  attachment_id: string;
+  filename?: string;
+}

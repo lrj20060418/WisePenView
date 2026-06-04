@@ -247,6 +247,18 @@ const getTools = async (): Promise<ToolOption[]> => {
   ];
 };
 
+const uploadAttachment = async ({
+  file,
+}: UploadAttachmentParams): Promise<UploadAttachmentResult> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        attachmentId: 'mock-attachment-' + Date.now(),
+        filename: file.name,
+      });
+    }, 500);
+  });
+};
 export const ChatServicesMock: IChatService = {
   getModels,
   createSession,
@@ -255,4 +267,5 @@ export const ChatServicesMock: IChatService = {
   listSessions,
   listHistoryMessages,
   getTools,
+  uploadAttachment,
 };
