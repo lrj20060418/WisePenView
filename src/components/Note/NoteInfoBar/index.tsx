@@ -37,11 +37,7 @@ function NoteInfoBar({ noteInfoDisplay }: NoteInfoBarProps) {
       </div>
       {/* 第二行：阅读量 / 点赞量 / 平均分 */}
       <div className={styles.interactRow}>
-        <ResourceInteractBar
-          readCount={noteInfoDisplay?.resourceInfo?.readCount}
-          likeCount={noteInfoDisplay?.resourceInfo?.likeCount}
-          scoreAvg={noteInfoDisplay?.resourceInfo?.scoreAvg}
-        />
+        <ResourceInteractBar resourceId={noteInfoDisplay?.resourceInfo?.resourceId ?? ''} />
       </div>
     </div>
   );

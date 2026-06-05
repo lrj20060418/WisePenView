@@ -1,5 +1,4 @@
 import type { ResourceItem } from '@/domains/Resource';
-import { normalizeResourceItem } from '@/utils/normalize/normalizeResourceItem';
 import type {
   ChangeResourceActionPermissionApiRequest,
   ListResourceItemsApiRequest,
@@ -11,6 +10,39 @@ import type {
   ResourceListPage,
   UpdateResourceActionPermissionRequest,
 } from '../service/index.type';
+
+/** 后端 ResourceItemResponse 中的嵌套互动统计结构 */
+interface RawInteractionInfo {
+  readCount?: number | string | null;
+  likeCount?: number | string | null;
+  scoreCount?: number | string | null;
+  scoreTotal?: number | string | null;
+}
+
+/**
+ * 将后端 ResourceItemResponse 原始数据归一化为前端 ResourceItem
+ */
+export function normalizeResourceItem<T extends Partial<ResourceItem> | null | undefined>(
+  raw: T
+): T {
+  if (raw == null) return raw;
+  const next: Partial<ResourceItem> = { ...raw };
+
+  const interactionInfo = (raw as unknown as { resourceInteractionInfo?: RawInteractionInfo })
+    .resourceInteractionInfo;
+
+  if (interactionInfo) {
+    next.readCount =
+      interactionInfo.readCount != null ? Number(interactionInfo.readCount) : undefined;
+    next.likeCount =
+      interactionInfo.likeCount != null ? Number(interactionInfo.likeCount) : undefined;
+    const scoreCount = interactionInfo.scoreCount != null ? Number(interactionInfo.scoreCount) : 0;
+    const scoreTotal = interactionInfo.scoreTotal != null ? Number(interactionInfo.scoreTotal) : 0;
+    next.scoreAvg = scoreCount > 0 ? scoreTotal / scoreCount : null;
+  }
+
+  return next as T;
+}
 
 /** Service 入参 → GET /resource/item/listResources query */
 const mapListResourceItemsRequest = (
@@ -96,8 +128,42 @@ const mapChangeResourceActionPermissionRequest = (
   };
 };
 
+/** 互动记录 API 响应 → 点赞状态 */
+const mapLikeStatusFromApi = (
+  res: { liked?: boolean; score?: number; resourceId?: string } | null | undefined
+): { liked: boolean | null } => ({
+  liked: res?.liked ?? null,
+});
+
+/** 互动记录 API 响应 → 评分 */
+const mapRateFromApi = (
+  res: { liked?: boolean; score?: number; resourceId?: string } | null | undefined
+): { score: number | null } => ({
+  score: res?.score ?? null,
+});
+
+/** 资源互动聚合统计（供 ResourceInteractBar 展示） */
+export interface ResourceInteractStats {
+  readCount?: number | null;
+  likeCount?: number | null;
+  scoreAvg?: number | null;
+}
+
+/** ResourceItem → 聚合互动统计，供 ResourceInteractBar 展示 */
+const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractStats => {
+  const normalized = normalizeResourceItem(resourceInfo);
+  return {
+    readCount: normalized.readCount ?? null,
+    likeCount: normalized.likeCount ?? null,
+    scoreAvg: normalized.scoreAvg ?? null,
+  };
+};
+
 export const ResourceServicesMap = {
   mapListResourceItemsRequest,
   mapResourceListPageFromApi,
   mapChangeResourceActionPermissionRequest,
+  mapLikeStatusFromApi,
+  mapRateFromApi,
+  mapInteractStatsFromApi,
 };

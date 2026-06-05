@@ -206,11 +206,7 @@ function PdfPreview() {
       />
       <div className={styles.content}>
         <div className={styles.root}>
-          <ResourceInteractBar
-            readCount={resourceInfo?.readCount}
-            likeCount={resourceInfo?.likeCount}
-            scoreAvg={resourceInfo?.scoreAvg}
-          />
+          <ResourceInteractBar resourceId={resourceId as string} />
           <PdfViewer key={resourceId} resourceId={resourceId} onLoadError={handleViewerLoadError} />
           <ResourceInteractFooter
             resourceId={resourceId as string}

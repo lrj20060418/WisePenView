@@ -121,6 +121,11 @@ const interactRead = async (_resourceId: string): Promise<void> => {
   await delay(50);
 };
 
+const getInteractStats = async (_resourceId: string) => {
+  await delay(50);
+  return { readCount: 0, likeCount: 0, scoreAvg: null };
+};
+
 export const ResourceServicesMock: IResourceService = {
   getUserResources,
   getGroupResources,
@@ -133,4 +138,5 @@ export const ResourceServicesMock: IResourceService = {
   interactToggleLike,
   interactRate,
   interactRead,
+  getInteractStats,
 };

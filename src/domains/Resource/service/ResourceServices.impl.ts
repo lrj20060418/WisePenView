@@ -1,4 +1,6 @@
 import { apiGet } from '@/apis/request';
+import { DocumentApi } from '@/domains/Document/apis/DocumentApi';
+import { NoteApi } from '@/domains/Note/apis/NoteApi';
 import {
   useNewNoteStore,
   useNoteSelectionStore,
@@ -8,6 +10,7 @@ import {
 import { ResourceInteractApi } from '../apis/InteractApi';
 import { ResourceItemApi } from '../apis/ResourceApi';
 import type { ListResourceItemsApiRequest } from '../apis/ResourceApi.type';
+import type { ResourceInteractStats } from '../mapper/ResourceServices.map';
 import { ResourceServicesMap } from '../mapper/ResourceServices.map';
 import type {
   GetGroupResourceRequest,
@@ -71,7 +74,7 @@ const getLikeStatus = async (resourceId: string): Promise<{ liked: boolean | nul
     '/resource/interaction/getResourceUserInteractionRecord',
     { params: { resourceId } }
   );
-  return { liked: res?.liked ?? null };
+  return ResourceServicesMap.mapLikeStatusFromApi(res);
 };
 
 /** 获取当前用户评分，供 ResourceRating 薄层调用 */
@@ -80,7 +83,7 @@ const getRate = async (resourceId: string): Promise<{ score: number | null }> =>
     '/resource/interaction/getResourceUserInteractionRecord',
     { params: { resourceId } }
   );
-  return { score: res?.score ?? null };
+  return ResourceServicesMap.mapRateFromApi(res);
 };
 
 /** 点赞 / 取消点赞 */
@@ -98,6 +101,17 @@ const interactRead = async (resourceId: string): Promise<void> => {
   await ResourceInteractApi.read({ resourceId });
 };
 
+/** 获取资源聚合互动统计，供 ResourceInteractBar 自行请求；编排 note 和 document 两个接口 */
+const getInteractStats = async (resourceId: string): Promise<ResourceInteractStats> => {
+  try {
+    const data = await NoteApi.getNoteInfo({ resourceId });
+    return ResourceServicesMap.mapInteractStatsFromApi(data.resourceInfo);
+  } catch {
+    const data = await DocumentApi.getDocInfo({ resourceId });
+    return ResourceServicesMap.mapInteractStatsFromApi(data.resourceInfo);
+  }
+};
+
 export const createResourceServices = (): IResourceService => ({
   getUserResources,
   getGroupResources,
@@ -110,4 +124,5 @@ export const createResourceServices = (): IResourceService => ({
   interactToggleLike,
   interactRate,
   interactRead,
+  getInteractStats,
 });

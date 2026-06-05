@@ -10,6 +10,7 @@ import type {
   ResourceSortDir,
   TagQueryLogicMode,
 } from '@/domains/Resource';
+import type { ResourceInteractStats } from '../mapper/ResourceServices.map';
 
 /** 资源列表分页（与 OpenAPI PageResultResourceItemResponse 一致） */
 export interface ResourceListPage {
@@ -38,6 +39,8 @@ export interface IResourceService {
   interactRate(params: InteractRateRequest): Promise<void>;
   /** 上报资源阅读（详情页 / 文档预览页进入时调用一次） */
   interactRead(resourceId: string): Promise<void>;
+  /** 获取资源聚合互动统计（readCount / likeCount / scoreAvg），供 ResourceInteractBar 自行请求 */
+  getInteractStats(resourceId: string): Promise<ResourceInteractStats>;
 }
 
 /** 重命名资源请求参数（对齐 OpenAPI ResourceRenameRequest，POST /resource/item/renameRes） */

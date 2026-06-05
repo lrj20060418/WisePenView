@@ -5,9 +5,9 @@ import {
   RESOURCE_ACTION,
   resourceActionsInclude,
 } from '@/domains/Resource';
+import { normalizeResourceItem } from '@/domains/Resource/mapper/ResourceServices.map';
 import { formatTimestampToDateTime } from '@/utils/format/formatTime';
 import { normalizeId } from '@/utils/normalize/normalizeId';
-import { normalizeResourceItem } from '@/utils/normalize/normalizeResourceItem';
 import type {
   CreateNoteResponse,
   NoteInfoDisplayData,

@@ -1,6 +1,6 @@
 /** 资源点赞薄层：自行获取点赞状态 + 防抖请求，UI 委托给 LikeButton 组件 */
 import { useDebounceFn, useRequest } from 'ahooks';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import LikeButton from '@/components/Common/LikeButton';
 import { useResourceService } from '@/domains';
@@ -38,10 +38,10 @@ function ResourceLikeButton({ resourceId }: ResourceLikeButtonProps) {
 
   const { run: debouncedToggle } = useDebounceFn(runToggleLike, { wait: TOGGLE_LIKE_DEBOUNCE_MS });
 
-  const handleLikeClick = useCallback(() => {
+  const handleLikeClick = () => {
     setDisplayLiked(!resolvedLiked);
     debouncedToggle();
-  }, [resolvedLiked, debouncedToggle]);
+  };
 
   return <LikeButton liked={resolvedLiked} onClick={handleLikeClick} />;
 }

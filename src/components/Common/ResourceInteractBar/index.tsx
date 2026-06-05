@@ -1,12 +1,23 @@
 import { Eye, Star, ThumbsUp } from 'lucide-react';
 /** 详情页顶部互动信息展示条（只读，Note 与 PDF 详情页共用） */
+import { useRequest } from 'ahooks';
 import { Divider } from 'antd';
 
+import { useResourceService } from '@/domains';
 import { formatReadCount } from '@/utils/format/formatNumber';
 import type { ResourceInteractBarProps } from './index.type';
 import styles from './style.module.less';
 
-function ResourceInteractBar({ readCount, likeCount, scoreAvg }: ResourceInteractBarProps) {
+function ResourceInteractBar({ resourceId }: ResourceInteractBarProps) {
+  const resourceService = useResourceService();
+
+  const { data } = useRequest(() => resourceService.getInteractStats(resourceId), {
+    ready: Boolean(resourceId),
+    refreshDeps: [resourceId],
+  });
+
+  const { readCount, likeCount, scoreAvg } = data ?? {};
+
   const scoreAvgText = scoreAvg != null ? `${scoreAvg.toFixed(1)} 分` : '暂无评分';
   const hasScoreAvg = scoreAvg != null;
   const showReadCount = readCount !== undefined;

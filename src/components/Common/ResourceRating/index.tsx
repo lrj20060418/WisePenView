@@ -1,6 +1,6 @@
 /** 资源评分薄层：自行获取初始评分 + 防抖提交请求，UI 委托给 Rating 组件 */
 import { useDebounceFn, useRequest } from 'ahooks';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import Rating from '@/components/Common/Rating';
 import { useResourceService } from '@/domains';
@@ -53,13 +53,10 @@ function ResourceRating({ resourceId, onRateSuccess }: ResourceRatingProps) {
 
   const { run: debouncedRate } = useDebounceFn(runRate, { wait: RATE_DEBOUNCE_MS });
 
-  const handleRateChange = useCallback(
-    (nextScore: number) => {
-      setDisplayUserScore(nextScore);
-      debouncedRate(nextScore);
-    },
-    [debouncedRate]
-  );
+  const handleRateChange = (nextScore: number) => {
+    setDisplayUserScore(nextScore);
+    debouncedRate(nextScore);
+  };
 
   return (
     <div className={styles.rateSection}>
