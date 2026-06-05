@@ -47,6 +47,7 @@ export type {
 export type {
   DataTableColumn,
   DataTableLoadMore,
+  DataTablePagination,
   DataTableProps,
   DataTableRowContext,
   DataTableTab,

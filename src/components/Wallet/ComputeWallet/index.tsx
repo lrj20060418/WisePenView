@@ -236,6 +236,10 @@ function ComputeWallet({
         loading={loadingTx}
         flashFirstRow={flashFirstRow}
         showOperatorColumn={showOperatorColumn}
+        current={page}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={onTxPageChange}
         onTabChange={handleTxTabChange}
       />
 

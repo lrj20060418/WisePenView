@@ -10,6 +10,7 @@ import {
   resolveDataColumnWidthClass,
 } from '../shared/TableBase/columnWidth';
 import TableBodyState from '../shared/TableBodyState';
+import TablePaginationFooter from '../shared/TablePaginationFooter';
 import { TableLoadMoreRow, TableRefreshIndicator } from '../shared/TableStatusRows';
 import TableSummaryFooter from '../shared/TableSummaryFooter';
 import type { DataTableProps, DataTableRowContext } from './index.type';
@@ -53,6 +54,7 @@ function DataTable<T extends object>({
   toolbar,
   loadMore,
   totalCount,
+  pagination,
   summary,
   getRowClassName,
 }: DataTableProps<T>) {
@@ -69,11 +71,11 @@ function DataTable<T extends object>({
     if (summary !== undefined) {
       return summary;
     }
-    const count = totalCount ?? items.length;
+    const count = pagination?.total ?? totalCount ?? items.length;
     return count > 0 ? t('summary.totalRecords', { count }) : t('summary.totalRecordsZero');
-  }, [summary, totalCount, items.length, t]);
+  }, [summary, pagination?.total, totalCount, items.length, t]);
 
-  const showFooter = !showSkeletonBody && Boolean(defaultSummary);
+  const showFooter = !showSkeletonBody && (Boolean(defaultSummary) || Boolean(pagination));
 
   const handleScroll = useCallback(() => {
     if (!loadMore) {
@@ -240,7 +242,17 @@ function DataTable<T extends object>({
           </Table.Content>
         </Table.ScrollContainer>
 
-        {showFooter ? (
+        {showFooter && pagination ? (
+          <TablePaginationFooter
+            summary={defaultSummary}
+            total={pagination.total}
+            current={pagination.current}
+            pageSize={pagination.pageSize}
+            onChange={pagination.onChange}
+            pageSizeControl={pagination.pageSizeControl}
+            className={styles.tableFooter}
+          />
+        ) : showFooter ? (
           <TableSummaryFooter summary={defaultSummary} className={styles.tableFooter} />
         ) : null}
       </Table>
