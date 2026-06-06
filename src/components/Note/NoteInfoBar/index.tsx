@@ -1,11 +1,11 @@
 import { Divider } from 'antd';
 
-import ResourceInteractBar from '@/components/Common/ResourceInteractBar';
 import UserCapsule from '@/components/Common/UserCapsule';
+import ResourceInteractBar from '@/components/Resource/ResourceInteractBar';
 import type { NoteInfoBarProps } from './index.type';
 import styles from './style.module.less';
 
-function NoteInfoBar({ noteInfoDisplay, displayLikeCount }: NoteInfoBarProps) {
+function NoteInfoBar({ noteInfoDisplay }: NoteInfoBarProps) {
   const authors = noteInfoDisplay?.authors ?? [];
   const lastEditedAtText = noteInfoDisplay?.lastEditedAtText ?? '暂无';
 
@@ -35,13 +35,9 @@ function NoteInfoBar({ noteInfoDisplay, displayLikeCount }: NoteInfoBarProps) {
           <span className={styles.noteInfoValue}>{lastEditedAtText}</span>
         </div>
       </div>
-      {/* 第二行：阅读量 / 点赞量 / 平均分（与 PDF 顶部展示一致） */}
+      {/* 第二行：阅读量 / 点赞量 / 平均分 */}
       <div className={styles.interactRow}>
-        <ResourceInteractBar
-          readCount={noteInfoDisplay?.readCount}
-          likeCount={displayLikeCount ?? noteInfoDisplay?.likeCount}
-          scoreAvg={noteInfoDisplay?.scoreAvg}
-        />
+        <ResourceInteractBar resourceId={noteInfoDisplay?.resourceInfo?.resourceId ?? ''} />
       </div>
     </div>
   );

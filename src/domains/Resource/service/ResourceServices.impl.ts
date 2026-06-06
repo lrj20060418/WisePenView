@@ -1,3 +1,5 @@
+import { DocumentApi } from '@/domains/Document/apis/DocumentApi';
+import { NoteApi } from '@/domains/Note/apis/NoteApi';
 import {
   useNewNoteStore,
   useNoteSelectionStore,
@@ -7,14 +9,13 @@ import {
 import { ResourceInteractApi } from '../apis/InteractApi';
 import { ResourceItemApi } from '../apis/ResourceApi';
 import type { ListResourceItemsApiRequest } from '../apis/ResourceApi.type';
+import type { ResourceInteractStats } from '../mapper/ResourceServices.map';
 import { ResourceServicesMap } from '../mapper/ResourceServices.map';
 import type {
   GetGroupResourceRequest,
   GetUserResourcesRequest,
   InteractRateRequest,
-  InteractRateResult,
   InteractToggleLikeRequest,
-  InteractToggleLikeResult,
   IResourceService,
   RemoveResourcesRequest,
   RenameResourceRequest,
@@ -66,21 +67,42 @@ const updateResourceActionPermission = async (
   await ResourceItemApi.changeResourceActionPermission(request);
 };
 
-/** 点赞 / 取消点赞，返回操作后最新状态 */
-const interactToggleLike = async (
-  params: InteractToggleLikeRequest
-): Promise<InteractToggleLikeResult> => {
-  const res = await ResourceInteractApi.toggleLike({ resourceId: params.resourceId });
-  return ResourceServicesMap.mapInteractToggleLikeFromApi(res);
+/** 获取当前用户点赞状态，供 ResourceLikeButton 薄层调用 */
+const getLikeStatus = async (resourceId: string): Promise<{ liked: boolean }> => {
+  const res = await ResourceInteractApi.getUserInteractionRecord({ resourceId });
+  return ResourceServicesMap.mapLikeStatusFromApi(res);
 };
 
-/** 评分（1–5），支持覆盖，返回最新 userScore */
-const interactRate = async (params: InteractRateRequest): Promise<InteractRateResult> => {
-  const res = await ResourceInteractApi.rate({
-    resourceId: params.resourceId,
-    score: params.score,
-  });
-  return ResourceServicesMap.mapInteractRateFromApi(res);
+/** 获取当前用户评分，供 ResourceRating 薄层调用 */
+const getRate = async (resourceId: string): Promise<{ score: number }> => {
+  const res = await ResourceInteractApi.getUserInteractionRecord({ resourceId });
+  return ResourceServicesMap.mapRateFromApi(res);
+};
+
+/** 点赞 / 取消点赞 */
+const interactToggleLike = async (params: InteractToggleLikeRequest): Promise<void> => {
+  await ResourceInteractApi.toggleLike({ resourceId: params.resourceId });
+};
+
+/** 评分（1–5），支持覆盖 */
+const interactRate = async (params: InteractRateRequest): Promise<void> => {
+  await ResourceInteractApi.rate({ resourceId: params.resourceId, score: params.score });
+};
+
+/** 上报资源阅读 */
+const interactRead = async (resourceId: string): Promise<void> => {
+  await ResourceInteractApi.read({ resourceId });
+};
+
+/** 获取资源聚合互动统计，供 ResourceInteractBar 自行请求；编排 note 和 document 两个接口 */
+const getInteractStats = async (resourceId: string): Promise<ResourceInteractStats> => {
+  try {
+    const data = await NoteApi.getNoteInfo({ resourceId });
+    return ResourceServicesMap.mapInteractStatsFromApi(data.resourceInfo);
+  } catch {
+    const data = await DocumentApi.getDocInfo({ resourceId });
+    return ResourceServicesMap.mapInteractStatsFromApi(data.resourceInfo);
+  }
 };
 
 export const createResourceServices = (): IResourceService => ({
@@ -90,6 +112,10 @@ export const createResourceServices = (): IResourceService => ({
   removeResources,
   updateResourceTags,
   updateResourceActionPermission,
+  getLikeStatus,
+  getRate,
   interactToggleLike,
   interactRate,
+  interactRead,
+  getInteractStats,
 });
