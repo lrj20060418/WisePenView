@@ -64,6 +64,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   const setSessionAgent = useChatAgentStore((state) => state.setSessionAgent);
   const advancedMode = useAdvancedModeStore((state) => state.advancedMode);
   const selectedSkills = useChatCapabilityStore((state) => state.selectedSkills);
+  const selectedTools = useChatCapabilityStore((state) => state.selectedTools);
 
   useUpdateEffect(() => {
     clearChatCapabilityStore();
@@ -357,6 +358,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
     }
 
     const selectedSkillIds = selectedSkills.map((s) => s.skillId);
+    const selectedToolIds = selectedTools.map((t) => t.toolId);
 
     const sendPromise = sendSessionMessage(text, {
       model: currentModel.id,
@@ -367,6 +369,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
         agent_type: targetAgent.agentType,
         group_id: targetAgent.groupId,
         advanced_mode_enabled: advancedMode,
+        tools: selectedToolIds.length > 0 ? selectedToolIds : undefined,
       },
       allowedSkillIds,
       selectedSkillIds: selectedSkillIds.length > 0 ? selectedSkillIds : undefined,

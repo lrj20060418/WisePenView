@@ -68,9 +68,11 @@ const getTools = async (): Promise<ToolOption[]> => {
 
 const uploadAttachment = async ({
   file,
+  saveToLibrary,
 }: UploadAttachmentParams): Promise<UploadAttachmentResult> => {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('save_to_library', String(Boolean(saveToLibrary)));
   const res = await ChatApi.uploadAttachment(formData);
   return {
     attachmentId: res.attachment_id,

@@ -71,6 +71,7 @@ function ChatInput({
   const chatService = useChatService();
 
   const pendingImageMetas = useChatPageStore((state) => state.pendingImageMetas);
+  const autoSaveToLibrary = useChatPageStore((state) => state.autoSaveToLibrary);
   const addPendingImage = useChatPageStore((state) => state.addPendingImage);
   const removePendingImage = useChatPageStore((state) => state.removePendingImage);
   const addAttachment = useChatPageStore((state) => state.addAttachment);
@@ -159,7 +160,10 @@ function ChatInput({
       const id = crypto.randomUUID();
       addPendingAttachmentUpload({ id, filename: file.name, status: 'uploading' });
       try {
-        const result = await chatService.uploadAttachment({ file });
+        const result = await chatService.uploadAttachment({
+          file,
+          saveToLibrary: autoSaveToLibrary,
+        });
         removePendingAttachmentUpload(id);
         addAttachment({
           attachmentId: result.attachmentId,
@@ -178,6 +182,7 @@ function ChatInput({
     },
     [
       chatService,
+      autoSaveToLibrary,
       addPendingAttachmentUpload,
       removePendingAttachmentUpload,
       addAttachment,

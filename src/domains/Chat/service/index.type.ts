@@ -7,6 +7,7 @@ export interface ToolOption {
 
 export interface UploadAttachmentParams {
   file: File;
+  saveToLibrary?: boolean;
 }
 
 export interface UploadAttachmentResult {
