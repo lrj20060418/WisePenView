@@ -1,21 +1,19 @@
 import { useChatService } from '@/domains';
+import {
+  buildCapabilityPickerSections,
+  type CapabilityPickerItem,
+  type CapabilityToolOption,
+} from '@/domains/Chat/mapper/capabilityPicker.mapper';
 import type { SkillSummary } from '@/domains/Resource';
 import type { ChatAgentOption } from '@/store';
 import { useChatCapabilityStore, useChatPageStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
+import { base64ToFile, fileToBase64, generateThumbnail } from '@/utils/file/upload';
 import { toast } from '@heroui/react';
 import { useRequest, useUpdateEffect } from 'ahooks';
 import { Input } from 'antd';
 import { X } from 'lucide-react';
-import {
-  type ClipboardEvent,
-  type DragEvent,
-  type KeyboardEvent,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ClipboardEvent, type DragEvent, type KeyboardEvent, useRef, useState } from 'react';
 import ActionToolbar from './ActionToolbar';
 import CapabilityPicker from './CapabilityPicker';
 import ContentPicker from './ContentPicker';
@@ -23,10 +21,8 @@ import ContextTags from './ContextTags';
 import DocumentPickerModal from './DocumentPickerModal';
 import DropOverlay from './DropOverlay';
 import OtherSkillModal from './OtherSkillModal';
-import { type CapabilityToolOption } from './capability';
 import type { ChatInputProps, PendingImagePayload } from './index.type';
 import styles from './style.module.less';
-import { base64ToFile, fileToBase64, generateThumbnail } from './uploadUtils';
 
 const { TextArea } = Input;
 
@@ -99,12 +95,9 @@ function ChatInput({
       : `${selectedPreviewChars.slice(0, 5).join('')}...${selectedPreviewChars.slice(-5).join('')}`;
 
   const { data: toolOptionsData } = useRequest(() => chatService.getTools(), { refreshDeps: [] });
-  const toolOptions = useMemo<CapabilityToolOption[]>(
-    () => toolOptionsData ?? [],
-    [toolOptionsData]
-  );
+  const toolOptions: CapabilityToolOption[] = toolOptionsData ?? [];
 
-  const otherSkillGroups = useMemo(() => {
+  const otherSkillGroups = (() => {
     const primaryIds = new Set(primarySkills.map((s) => s.skillId));
     return advancedSkillGroups
       .map((group) => ({
@@ -112,111 +105,111 @@ function ChatInput({
         skills: group.skills.filter((s) => !primaryIds.has(s.skillId)),
       }))
       .filter((group) => group.skills.length > 0);
-  }, [advancedSkillGroups, primarySkills]);
+  })();
 
-  const togglePrimarySkill = useCallback(
-    (skill: SkillSummary) => {
-      toggleSkill(skill, { sourceAgent: selectedAgent });
-    },
-    [selectedAgent, toggleSkill]
-  );
+  const capabilitySections = buildCapabilityPickerSections({
+    primarySkills,
+    selectedSkills,
+    selectedTools,
+    toolOptions,
+    advancedMode,
+    otherSkillGroups,
+  });
 
-  const handleOtherSkillConfirm = useCallback(
-    (selected: Array<{ skill: SkillSummary; sourceAgent: ChatAgentOption | null }>) => {
-      const selectedIds = new Set(selected.map((s) => s.skill.skillId));
-      const toRemove = selectedSkills.filter((s) => s.external && !selectedIds.has(s.skillId));
-      toRemove.forEach((s) => removeSkill(s.skillId));
-      const existingIds = new Set(selectedSkills.map((s) => s.skillId));
-      selected.forEach(({ skill, sourceAgent }) => {
-        if (!existingIds.has(skill.skillId)) {
-          toggleSkill(skill, { sourceAgent, external: true });
-        }
+  function togglePrimarySkill(skill: SkillSummary): void {
+    toggleSkill(skill, { sourceAgent: selectedAgent });
+  }
+
+  function handleOtherSkillConfirm(
+    selected: Array<{ skill: SkillSummary; sourceAgent: ChatAgentOption | null }>
+  ): void {
+    const selectedIds = new Set(selected.map((s) => s.skill.skillId));
+    const toRemove = selectedSkills.filter((s) => s.external && !selectedIds.has(s.skillId));
+    toRemove.forEach((s) => removeSkill(s.skillId));
+
+    const existingIds = new Set(selectedSkills.map((s) => s.skillId));
+    selected.forEach(({ skill, sourceAgent }) => {
+      if (!existingIds.has(skill.skillId)) {
+        toggleSkill(skill, { sourceAgent, external: true });
+      }
+    });
+  }
+
+  async function uploadAndAddAttachment(file: File) {
+    const id = crypto.randomUUID();
+    addPendingAttachmentUpload({
+      id,
+      filename: file.name,
+      status: 'uploading',
+    });
+    try {
+      const result = await chatService.uploadAttachment({
+        file,
+        saveToLibrary: autoSaveToLibrary,
       });
-    },
-    [selectedSkills, removeSkill, toggleSkill]
-  );
+      removePendingAttachmentUpload(id);
+      addAttachment({
+        attachmentId: result.attachmentId,
+        filename: result.filename ?? file.name,
+        enabled: true,
+      });
+      return result;
+    } catch (err) {
+      updatePendingAttachmentUpload(id, { status: 'failed' });
+      toast.danger(`附件上传失败: ${parseErrorMessage(err)}`);
+      return null;
+    }
+  }
 
-  const addPendingVisionImage = useCallback(
-    async (file: File) => {
-      try {
-        const { mimeType, base64 } = await fileToBase64(file);
-        if (base64.length > MAX_IMAGE_BASE64_BYTES) {
-          toast.warning(`${file.name} 转换后超过 5MB 限制`);
-          return;
-        }
-        const id = crypto.randomUUID();
-        const thumbnailUrl = await generateThumbnail(file, 48).catch(() => '');
-        addPendingImage({ id, mimeType, filename: file.name, thumbnailUrl });
-        base64MapRef.current.set(id, base64);
-      } catch (err) {
-        toast.danger(`图片添加失败：${parseErrorMessage(err)}`);
+  async function addPendingVisionImage(file: File): Promise<void> {
+    try {
+      if (file.size > MAX_IMAGE_RAW_BYTES_APPROX) {
+        toast.warning(`${file.name} 过大，图片直传约限制原图 3.75MB`);
+        return;
       }
-    },
-    [addPendingImage]
-  );
-
-  const uploadAndAddAttachment = useCallback(
-    async (file: File): Promise<boolean> => {
+      const { mimeType, base64 } = await fileToBase64(file);
       const id = crypto.randomUUID();
-      addPendingAttachmentUpload({ id, filename: file.name, status: 'uploading' });
-      try {
-        const result = await chatService.uploadAttachment({
-          file,
-          saveToLibrary: autoSaveToLibrary,
-        });
-        removePendingAttachmentUpload(id);
-        addAttachment({
-          attachmentId: result.attachmentId,
-          filename: result.filename ?? file.name,
-          enabled: true,
-        });
-        return true;
-      } catch (err) {
-        updatePendingAttachmentUpload(id, {
-          status: 'failed',
-          errorMessage: parseErrorMessage(err),
-        });
-        console.error('[Upload] failed:', file.name, err);
-        return false;
-      }
-    },
-    [
-      chatService,
-      autoSaveToLibrary,
-      addPendingAttachmentUpload,
-      removePendingAttachmentUpload,
-      addAttachment,
-      updatePendingAttachmentUpload,
-    ]
-  );
+      const thumbnailUrl = await generateThumbnail(file, 48).catch(() => '');
+      base64MapRef.current.set(id, base64);
+      addPendingImage({
+        id,
+        filename: file.name,
+        mimeType,
+        thumbnailUrl,
+      });
+    } catch (err) {
+      toast.danger(`图片添加失败: ${parseErrorMessage(err)}`);
+    }
+  }
 
-  const routeFiles = useCallback(
-    async (fileList: FileList | File[]) => {
-      const files = Array.from(fileList);
-      let acceptedImageCount = useChatPageStore.getState().pendingImageMetas.length;
-      for (const file of files) {
-        const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-        const isImage = IMAGE_EXTENSIONS.has(ext) || file.type.startsWith('image/');
-        if (isImage && currentModelVision) {
-          if (acceptedImageCount >= MAX_IMAGE_COUNT) {
-            toast.warning(`最多添加 ${MAX_IMAGE_COUNT} 张图片`);
-            continue;
-          }
-          if (file.size > MAX_IMAGE_RAW_BYTES_APPROX) {
-            toast.warning(`${file.name} 过大，图片直传约限制原图 3.75MB`);
-            continue;
-          }
-          acceptedImageCount += 1;
-          await addPendingVisionImage(file);
-        } else {
-          void uploadAndAddAttachment(file);
+  async function routeFiles(fileList: FileList | File[]): Promise<void> {
+    const files = Array.from(fileList);
+    let acceptedImageCount = pendingImageMetas.length;
+    for (const file of files) {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const isImage = IMAGE_EXTENSIONS.has(ext) || file.type.startsWith('image/');
+      if (isImage) {
+        if (!currentModelVision) {
+          toast.warning('当前模型不支持图片');
+          continue;
         }
+        if (acceptedImageCount >= MAX_IMAGE_COUNT) {
+          toast.warning(`最多 ${MAX_IMAGE_COUNT} 张图片`);
+          continue;
+        }
+        if (file.size > MAX_IMAGE_RAW_BYTES_APPROX) {
+          toast.warning(`${file.name} 过大，图片直传约限制原图 3.75MB`);
+          continue;
+        }
+        acceptedImageCount += 1;
+        await addPendingVisionImage(file);
+      } else {
+        void uploadAndAddAttachment(file);
       }
-    },
-    [currentModelVision, addPendingVisionImage, uploadAndAddAttachment]
-  );
+    }
+  }
 
-  const convertPendingImagesToAttachments = useCallback(async () => {
+  async function convertPendingImagesToAttachments(): Promise<void> {
     const metas = useChatPageStore.getState().pendingImageMetas;
     if (metas.length === 0) return;
     for (const meta of metas) {
@@ -229,18 +222,15 @@ function ChatInput({
         base64MapRef.current.delete(meta.id);
       }
     }
-  }, [removePendingImage, uploadAndAddAttachment]);
+  }
 
-  const handleModelChange = useCallback(
-    (model: Parameters<typeof onModelChange>[0]) => {
-      const wasVision = currentModelVision;
-      onModelChange(model);
-      if (wasVision && !model.vision) {
-        void convertPendingImagesToAttachments();
-      }
-    },
-    [currentModelVision, onModelChange, convertPendingImagesToAttachments]
-  );
+  function handleModelChange(model: Parameters<typeof onModelChange>[0]): void {
+    const wasVision = currentModelVision;
+    onModelChange(model);
+    if (wasVision && !model.vision) {
+      void convertPendingImagesToAttachments();
+    }
+  }
 
   const handleSend = async () => {
     if (!value.trim() || sending || !currentModelId) return;
@@ -274,7 +264,7 @@ function ChatInput({
         base64MapRef.current.delete(id);
       }
     } catch (err) {
-      toast.danger(`发送失败：${parseErrorMessage(err)}`);
+      toast.danger(`发送失败: ${parseErrorMessage(err)}`);
     }
   };
 
@@ -285,70 +275,46 @@ function ChatInput({
     }
   };
 
-  const handleCapabilityOpenChange = useCallback((open: boolean) => {
-    if (!open && suppressCapabilityCloseRef.current) {
-      suppressCapabilityCloseRef.current = false;
-      return;
+  const handleCapabilityItemPress = (item: CapabilityPickerItem) => {
+    switch (item.kind) {
+      case 'primary-skill':
+        if (item.skill) togglePrimarySkill(item.skill);
+        break;
+      case 'tool':
+        if (item.tool) toggleTool(item.tool);
+        break;
+      case 'external-skill':
+        removeSkill(item.key);
+        break;
+      case 'select-other':
+        setCapabilityOpen(false);
+        setOtherSkillModalOpen(true);
+        break;
     }
-    if (open) setContentPickOpen(false);
-    setCapabilityOpen(open);
-  }, []);
+  };
 
-  const handleContentPickOpenChange = useCallback((open: boolean) => {
-    if (open) setCapabilityOpen(false);
-    setContentPickOpen(open);
-  }, []);
-
-  const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
+  function handleDrop(e: DragEvent<HTMLDivElement>): void {
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current += 1;
-    if (dragCounterRef.current === 1) setIsDragOver(true);
-  }, []);
-
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current <= 0) {
-      dragCounterRef.current = 0;
-      setIsDragOver(false);
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      void routeFiles(e.dataTransfer.files);
     }
-  }, []);
+  }
 
-  const handleDrop = useCallback(
-    (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current = 0;
-      setIsDragOver(false);
-      if (e.dataTransfer.files.length > 0) {
-        void routeFiles(e.dataTransfer.files);
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>): void {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) void routeFiles([file]);
+        return;
       }
-    },
-    [routeFiles]
-  );
-
-  const handlePaste = useCallback(
-    (e: ClipboardEvent<HTMLTextAreaElement>) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (file) void routeFiles([file]);
-          return;
-        }
-      }
-    },
-    [routeFiles]
-  );
+    }
+  }
 
   useUpdateEffect(() => {
     clearCapabilities();
@@ -357,20 +323,8 @@ function ChatInput({
   const capabilityDropdownContent = (
     <CapabilityPicker
       open
-      advancedMode={advancedMode}
-      primarySkills={primarySkills}
-      selectedSkills={selectedSkills}
-      selectedTools={selectedTools}
-      toolOptions={toolOptions}
-      onToggleSkill={togglePrimarySkill}
-      onToggleTool={toggleTool}
-      onRemoveExternalSkill={removeSkill}
-      onOpenOtherSkillModal={() => {
-        setCapabilityOpen(false);
-        setOtherSkillModalOpen(true);
-      }}
-      currentAgent={selectedAgent}
-      otherSkillGroups={otherSkillGroups}
+      sections={capabilitySections}
+      onItemPress={handleCapabilityItemPress}
       onMenuInteract={() => {
         suppressCapabilityCloseRef.current = true;
       }}
@@ -396,9 +350,25 @@ function ChatInput({
     <div
       className={styles.container}
       ref={containerRef}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current += 1;
+        if (dragCounterRef.current === 1) setIsDragOver(true);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current -= 1;
+        if (dragCounterRef.current <= 0) {
+          dragCounterRef.current = 0;
+          setIsDragOver(false);
+        }
+      }}
       onDrop={handleDrop}
     >
       <div className={styles.inputCard} ref={inputCardRef}>
@@ -415,7 +385,7 @@ function ChatInput({
               <X size={12} />
             </button>
             <span className={styles.selectedHintText} title={selectedContextText}>
-              选中内容：“{selectedPreview}”
+              选中内容："{selectedPreview}"
             </span>
           </div>
         ) : null}
@@ -444,10 +414,20 @@ function ChatInput({
             disabledSend={!value.trim() || sending || !currentModelId}
             capabilityCount={selectedSkills.length + selectedTools.length}
             capabilityOpen={capabilityOpen}
-            onCapabilityOpenChange={handleCapabilityOpenChange}
+            onCapabilityOpenChange={(open: boolean) => {
+              if (!open && suppressCapabilityCloseRef.current) {
+                suppressCapabilityCloseRef.current = false;
+                return;
+              }
+              if (open) setContentPickOpen(false);
+              setCapabilityOpen(open);
+            }}
             capabilityDropdownContent={capabilityDropdownContent}
             contentPickOpen={contentPickOpen}
-            onContentPickOpenChange={handleContentPickOpenChange}
+            onContentPickOpenChange={(open: boolean) => {
+              if (open) setCapabilityOpen(false);
+              setContentPickOpen(open);
+            }}
             contentPickDropdownContent={contentPickDropdownContent}
             getPopupContainer={() => inputCardRef.current || document.body}
           />

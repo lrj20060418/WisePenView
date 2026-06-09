@@ -1,5 +1,5 @@
 import type { Model } from '@/components/ChatPanel/index.type';
-import type { SkillScopeTreeGroup } from '@/components/ChatPanel/skillScope';
+import type { SkillScopeTreeGroup } from '@/domains/Chat/mapper/skillScope.mapper';
 import type { SkillSummary } from '@/domains/Resource';
 import type { ChatAgentOption } from '@/store';
 

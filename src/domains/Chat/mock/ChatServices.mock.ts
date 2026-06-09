@@ -133,8 +133,8 @@ const buildMockHistoryMessages = (sessionId: string, total: number): MessageResp
       role,
       model_id: isUser ? null : 'mock-system-1',
       content: isUser
-        ? `�?{sessionId}】第 ${round} 轮：请解释一下这个需求，并给出步骤。`
-        : `�?{sessionId}】第 ${round} 轮回复：已整理需求背景、约束条件与执行步骤。`,
+        ? `【${sessionId}】第 ${round} 轮：请解释一下这个需求，并给出步骤。`
+        : `【${sessionId}】第 ${round} 轮回复：已整理需求背景、约束条件与执行步骤。`,
       tool_calls: null,
       created_at: createdAt,
     };

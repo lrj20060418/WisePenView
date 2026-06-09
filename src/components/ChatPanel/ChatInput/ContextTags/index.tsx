@@ -1,4 +1,5 @@
 import { useChatPageStore } from '@/store';
+import { LoaderCircle, TriangleAlert, X } from 'lucide-react';
 import styles from './style.module.less';
 
 function ContextTags() {
@@ -26,7 +27,7 @@ function ContextTags() {
         <span key={ref.resourceId} className={`${styles.tag} ${styles.docTag}`}>
           引用 {ref.resourceName}
           <span className={styles.tagRemove} onClick={() => removeDocRef(ref.resourceId)}>
-            x
+            <X size={11} />
           </span>
         </span>
       ))}
@@ -34,7 +35,7 @@ function ContextTags() {
         <span key={att.attachmentId} className={`${styles.tag} ${styles.attachmentTag}`}>
           附件 {att.filename}
           <span className={styles.tagRemove} onClick={() => removeAttachment(att.attachmentId)}>
-            x
+            <X size={11} />
           </span>
         </span>
       ))}
@@ -45,7 +46,7 @@ function ContextTags() {
           ) : null}
           {img.filename}
           <span className={styles.tagRemove} onClick={() => removePendingImage(img.id)}>
-            x
+            <X size={11} />
           </span>
         </span>
       ))}
@@ -54,12 +55,17 @@ function ContextTags() {
           key={upload.id}
           className={`${styles.tag} ${upload.status === 'uploading' ? styles.uploadingTag : styles.failedTag}`}
         >
-          {upload.status === 'uploading' ? '⏳' : '⚠️'} {upload.filename}
+          {upload.status === 'uploading' ? (
+            <LoaderCircle size={13} className={styles.spinIcon} />
+          ) : (
+            <TriangleAlert size={13} />
+          )}{' '}
+          {upload.filename}
           <span
             className={styles.tagRemove}
             onClick={() => removePendingAttachmentUpload(upload.id)}
           >
-            x
+            <X size={11} />
           </span>
         </span>
       ))}

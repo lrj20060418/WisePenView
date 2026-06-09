@@ -1,6 +1,12 @@
 import type { ChatPanelProps, Message, Model } from '@/components/ChatPanel/index.type';
 import { useChatService, useGroupService, useResourceService } from '@/domains';
-import { mapApiModelsToFlatModels } from '@/domains/Chat';
+import {
+  buildAdvancedSkillTreeGroups,
+  buildAgentFromResourceItem,
+  buildDefaultPersonalAgent,
+  getPrimarySkillsForAgent,
+  mapApiModelsToFlatModels,
+} from '@/domains/Chat';
 import { useChatSession } from '@/domains/Chat/session/useChatSession';
 import type { SkillSummary } from '@/domains/Resource';
 import {
@@ -22,7 +28,6 @@ import { IndentIncrease } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdvancedModeToggle from './AdvancedModeToggle';
-import { buildAgentFromResourceItem, buildDefaultPersonalAgent } from './agent';
 import AgentSelector from './AgentSelector';
 import ChatInput from './ChatInput';
 import type { SendOptions } from './ChatInput/index.type';
@@ -36,8 +41,9 @@ import {
 } from './ChatPanel';
 import MessageList from './MessageList';
 import NewChatButton from './NewChatButton';
-import { buildAdvancedSkillTreeGroups, getPrimarySkillsForAgent } from './skillScope';
 import styles from './style.module.less';
+
+const DEFAULT_PERSONAL_AGENT = buildDefaultPersonalAgent();
 
 function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) {
   const navigate = useNavigate();
@@ -76,14 +82,27 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   const [historyTotalPage, setHistoryTotalPage] = useState(1);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
 
-  const defaultPersonalAgent = useMemo(() => buildDefaultPersonalAgent(), []);
-  const { data: joinedGroupData, loading: loadingJoinedGroups } = useRequest(
-    () => groupService.fetchGroupList({ groupRoleFilter: 'JOINED', page: 1, size: 100 }),
+  const { data: chatGroupData, loading: loadingChatGroups } = useRequest(
+    async () => {
+      const [joinedData, managedData] = await Promise.all([
+        groupService.fetchGroupList({ groupRoleFilter: 'JOINED', page: 1, size: 100 }),
+        groupService.fetchGroupList({ groupRoleFilter: 'MANAGED', page: 1, size: 100 }),
+      ]);
+      const seenGroupIds = new Set<string>();
+      const groups = [...(joinedData?.groups ?? []), ...(managedData?.groups ?? [])].filter(
+        (group) => {
+          if (seenGroupIds.has(group.groupId)) return false;
+          seenGroupIds.add(group.groupId);
+          return true;
+        }
+      );
+      return { groups, total: groups.length };
+    },
     { refreshDeps: [] }
   );
   const { data: skillListData } = useRequest(
     async () => {
-      const groups = joinedGroupData?.groups ?? [];
+      const groups = chatGroupData?.groups ?? [];
       const requests = [
         resourceService.getUserResources({
           page: 1,
@@ -128,7 +147,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
       });
       return { list: skills, total: skills.length, page: 1, size: skills.length, total_page: 1 };
     },
-    { refreshDeps: [joinedGroupData] }
+    { refreshDeps: [chatGroupData] }
   );
 
   const { data: personalAgentData, loading: loadingPersonalAgents } = useRequest(
@@ -142,13 +161,12 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
       }),
     { refreshDeps: [] }
   );
-  const personalAgentOptions = useMemo(
-    () => (personalAgentData?.list ?? []).map((item) => buildAgentFromResourceItem(item)),
-    [personalAgentData?.list]
+  const personalAgentOptions = (personalAgentData?.list ?? []).map((item) =>
+    buildAgentFromResourceItem(item)
   );
   const { data: groupAgentData, loading: loadingGroupAgents } = useRequest(
     async () => {
-      const groups = joinedGroupData?.groups ?? [];
+      const groups = chatGroupData?.groups ?? [];
       if (groups.length === 0) return [];
       const results = await Promise.all(
         groups.map((group) =>
@@ -173,51 +191,31 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
         )
       );
     },
-    { refreshDeps: [joinedGroupData?.groups] }
+    { refreshDeps: [chatGroupData?.groups] }
   );
-  const groupAgentOptions = useMemo(() => groupAgentData ?? [], [groupAgentData]);
-  const agentOptions = useMemo(
-    () => [defaultPersonalAgent, ...personalAgentOptions, ...groupAgentOptions],
-    [defaultPersonalAgent, personalAgentOptions, groupAgentOptions]
-  );
-  const agentOptionsLoaded = !loadingJoinedGroups && !loadingPersonalAgents && !loadingGroupAgents;
-  const selectedAgent = useMemo(() => {
+  const groupAgentOptions = groupAgentData ?? [];
+  const agentOptions = [DEFAULT_PERSONAL_AGENT, ...personalAgentOptions, ...groupAgentOptions];
+  const agentOptionsLoaded = !loadingChatGroups && !loadingPersonalAgents && !loadingGroupAgents;
+  const selectedAgent = (() => {
     const storedAgent = currentSessionId ? sessionAgentBySessionId[currentSessionId] : draftAgent;
-    if (!storedAgent) return defaultPersonalAgent;
-    if (storedAgent.isDefault) return defaultPersonalAgent;
+    if (!storedAgent) return DEFAULT_PERSONAL_AGENT;
+    if (storedAgent.isDefault) return DEFAULT_PERSONAL_AGENT;
 
     const freshAgent = agentOptions.find((agent) => agent.agentId === storedAgent.agentId);
     if (freshAgent) return freshAgent;
 
-    return agentOptionsLoaded ? defaultPersonalAgent : storedAgent;
-  }, [
-    agentOptions,
-    agentOptionsLoaded,
-    currentSessionId,
-    defaultPersonalAgent,
-    draftAgent,
-    sessionAgentBySessionId,
-  ]);
+    return agentOptionsLoaded ? DEFAULT_PERSONAL_AGENT : storedAgent;
+  })();
 
-  const allSkills = useMemo(() => skillListData?.list ?? [], [skillListData?.list]);
-  const primarySkills = useMemo(
-    () => getPrimarySkillsForAgent(allSkills, selectedAgent),
-    [allSkills, selectedAgent]
+  const allSkills = skillListData?.list ?? [];
+  const primarySkills = getPrimarySkillsForAgent(allSkills, selectedAgent);
+  const advancedSkillGroups = buildAdvancedSkillTreeGroups(
+    allSkills,
+    chatGroupData?.groups ?? [],
+    selectedAgent,
+    primarySkills
   );
-  const advancedSkillGroups = useMemo(
-    () =>
-      buildAdvancedSkillTreeGroups(
-        allSkills,
-        joinedGroupData?.groups ?? [],
-        selectedAgent,
-        primarySkills
-      ),
-    [allSkills, joinedGroupData?.groups, primarySkills, selectedAgent]
-  );
-  const allowedSkillIds = useMemo(
-    () => primarySkills.map((skill) => skill.skillId),
-    [primarySkills]
-  );
+  const allowedSkillIds = primarySkills.map((skill) => skill.skillId);
 
   const {
     messages: liveMessages,
@@ -335,7 +333,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   const handleSend = async (text: string, opts?: SendOptions) => {
     if (!currentModel) return;
     let targetSessionId = currentSessionId;
-    const targetAgent = selectedAgent ?? defaultPersonalAgent;
+    const targetAgent = selectedAgent ?? DEFAULT_PERSONAL_AGENT;
 
     if (!targetSessionId) {
       try {

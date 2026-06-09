@@ -1,19 +1,11 @@
-import type { SkillSummary } from '@/domains/Resource';
-import type { ChatAgentOption, TemporarySkillSelection } from '@/store';
-import type { CapabilityToolOption } from '../capability';
+import type {
+  CapabilityPickerItem,
+  CapabilityPickerSection,
+} from '@/domains/Chat/mapper/capabilityPicker.mapper';
 
 export interface CapabilityPickerProps {
   open: boolean;
-  advancedMode: boolean;
-  primarySkills: SkillSummary[];
-  selectedSkills: TemporarySkillSelection[];
-  selectedTools: CapabilityToolOption[];
-  toolOptions: CapabilityToolOption[];
-  onToggleSkill: (skill: SkillSummary) => void;
-  onToggleTool: (tool: CapabilityToolOption) => void;
-  onRemoveExternalSkill: (skillId: string) => void;
-  onOpenOtherSkillModal: () => void;
-  currentAgent: ChatAgentOption | null;
-  otherSkillGroups: Array<{ key: string }>;
+  sections: CapabilityPickerSection[];
+  onItemPress: (item: CapabilityPickerItem) => void;
   onMenuInteract?: () => void;
 }

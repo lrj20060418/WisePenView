@@ -1,7 +1,22 @@
 export type { Model } from './entity/model';
 export { MODEL_PROVIDER_ID, MODEL_TYPE } from './enum/model';
 export type { ModelProviderId, ModelType } from './enum/model';
+export {
+  buildAgentFromResourceItem,
+  buildAgentFromSkillTreeGroup,
+  buildDefaultPersonalAgent,
+  buildGroupAgent,
+} from './mapper/agent.mapper';
+export { buildCapabilityPickerSections } from './mapper/capabilityPicker.mapper';
+export type {
+  CapabilityPickerItem,
+  CapabilityPickerItemKind,
+  CapabilityPickerSection,
+  CapabilityToolOption,
+} from './mapper/capabilityPicker.mapper';
 export { mapApiModelsToFlatModels } from './mapper/model.mapper';
+export { buildAdvancedSkillTreeGroups, getPrimarySkillsForAgent } from './mapper/skillScope.mapper';
+export type { SkillScopeTreeGroup } from './mapper/skillScope.mapper';
 export type {
   ChatSession,
   CreateSessionRequest,

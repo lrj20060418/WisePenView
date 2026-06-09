@@ -1,11 +1,11 @@
+import { buildAgentFromSkillTreeGroup } from '@/domains/Chat/mapper/agent.mapper';
 import type { SkillSummary } from '@/domains/Resource';
 import type { ChatAgentOption } from '@/store';
 import type { TreeDataNode } from 'antd';
 import { Button, Modal, Tree } from 'antd';
 import { ChevronDown, Folder } from 'lucide-react';
 import type { Key } from 'react';
-import { useCallback, useMemo, useState } from 'react';
-import { buildAgentFromSkillTreeGroup } from '../../agent';
+import { useMemo, useState } from 'react';
 import type { OtherSkillModalProps } from './index.type';
 import styles from './style.module.less';
 
@@ -45,45 +45,36 @@ function OtherSkillModal({
     return { skillMap: mapping, treeData: data };
   }, [currentAgent, groups]);
 
-  const handleOpenChange = useCallback(
-    (visible: boolean) => {
-      if (visible) {
-        setSelectedKeys(selectedSkills.filter((s) => s.external).map((s) => s.skillId));
-      }
-    },
-    [selectedSkills]
-  );
-
-  const handleSelect = useCallback((keys: Key[]) => {
-    setSelectedKeys(keys);
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const handleConfirm = useCallback(() => {
-    const selected = selectedKeys.map((key) => skillMap.get(String(key))).filter(Boolean) as Array<{
-      skill: SkillSummary;
-      sourceAgent: ChatAgentOption | null;
-    }>;
-    onConfirm(selected);
-    onClose();
-  }, [selectedKeys, skillMap, onConfirm, onClose]);
-
   return (
     <Modal
       title="选择其他 Skill"
       open={open}
-      onCancel={handleCancel}
-      afterOpenChange={handleOpenChange}
+      onCancel={() => onClose()}
+      afterOpenChange={(visible) => {
+        if (visible) {
+          setSelectedKeys(selectedSkills.filter((s) => s.external).map((s) => s.skillId));
+        }
+      }}
       destroyOnHidden
       width={560}
       footer={[
-        <Button key="cancel" onClick={handleCancel}>
+        <Button key="cancel" onClick={() => onClose()}>
           取消
         </Button>,
-        <Button key="confirm" type="primary" onClick={handleConfirm}>
+        <Button
+          key="confirm"
+          type="primary"
+          onClick={() => {
+            const selected = selectedKeys
+              .map((key) => skillMap.get(String(key)))
+              .filter(Boolean) as Array<{
+              skill: SkillSummary;
+              sourceAgent: ChatAgentOption | null;
+            }>;
+            onConfirm(selected);
+            onClose();
+          }}
+        >
           确认
         </Button>,
       ]}
@@ -103,7 +94,7 @@ function OtherSkillModal({
                 <ChevronDown size={14} />
               </span>
             }
-            onSelect={handleSelect}
+            onSelect={(keys: Key[]) => setSelectedKeys(keys)}
           />
         </div>
       </div>

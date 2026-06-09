@@ -13,7 +13,7 @@ import { Button, Empty, Modal, Spin, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { Folder, Users } from 'lucide-react';
 import type { Key } from 'react';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { DocumentPickerModalProps } from './index.type';
 import styles from './style.module.less';
 
@@ -58,9 +58,40 @@ function prefixTreeKeys(scopeKey: string, nodes: DataNode[]): DataNode[] {
   }));
 }
 
+function buildScopeRootNode(key: string, title: string, scopeType: 'personal' | 'group'): DataNode {
+  const icon =
+    scopeType === 'personal' ? (
+      <Folder size={14} color="var(--ant-color-warning)" />
+    ) : (
+      <Users size={14} color="var(--ant-color-primary)" />
+    );
+
+  return {
+    key,
+    title: (
+      <IconText
+        className={styles.scopeTitle}
+        icon={icon}
+        iconSize={14}
+        gap="var(--ant-margin-xxs)"
+        ellipsis
+      >
+        {title}
+      </IconText>
+    ),
+    isLeaf: false,
+    selectable: false,
+    checkable: false,
+  };
+}
+
 const RENDERABLE_TYPES = new Set<RenderableType>(['folder', 'resource', 'link']);
 const SELECTABLE_TYPES = new Set<SelectableType>(['resource', 'link']);
 const EMPTY_STRING_SET = new Set<string>();
+
+function isSelectableNode(node: DriveNode | undefined): boolean {
+  return node?.type === 'resource' || node?.type === 'link';
+}
 
 function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
   const driveService = useDriveService();
@@ -70,36 +101,6 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const scopeMapRef = useRef<Map<string, ScopeInfo>>(new Map());
   const scopedDriveNodeMapRef = useRef<Map<string, DriveNode>>(new Map());
-
-  const buildScopeRootNode = useCallback(
-    (key: string, title: string, scopeType: 'personal' | 'group'): DataNode => {
-      const icon =
-        scopeType === 'personal' ? (
-          <Folder size={14} color="var(--ant-color-warning)" />
-        ) : (
-          <Users size={14} color="var(--ant-color-primary)" />
-        );
-
-      return {
-        key,
-        title: (
-          <IconText
-            className={styles.scopeTitle}
-            icon={icon}
-            iconSize={14}
-            gap="var(--ant-margin-xxs)"
-            ellipsis
-          >
-            {title}
-          </IconText>
-        ),
-        isLeaf: false,
-        selectable: false,
-        checkable: false,
-      };
-    },
-    []
-  );
 
   function buildScopedChildren(scopeKey: string, driveNodes: DriveNode[]): DataNode[] {
     const rawNodeMap = new Map<string, DriveNode>();
@@ -197,13 +198,21 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
       nodes.push(buildScopeRootNode(personalKey, '个人文件', 'personal'));
 
       try {
-        const data = await groupService.fetchGroupList({
-          groupRoleFilter: 'JOINED',
-          page: 1,
-          size: 100,
-        });
-        const groups = data?.groups ?? [];
-        for (const group of groups) {
+        const [joinedData, managedData] = await Promise.all([
+          groupService.fetchGroupList({ groupRoleFilter: 'JOINED', page: 1, size: 100 }),
+          groupService.fetchGroupList({ groupRoleFilter: 'MANAGED', page: 1, size: 100 }),
+        ]);
+
+        const seenGroupIds = new Set<string>();
+        const allGroups = [...(joinedData?.groups ?? []), ...(managedData?.groups ?? [])].filter(
+          (group) => {
+            if (seenGroupIds.has(group.groupId)) return false;
+            seenGroupIds.add(group.groupId);
+            return true;
+          }
+        );
+
+        for (const group of allGroups) {
           const groupKey = buildScopeKey(`group:${group.groupId}`);
           scopeMapRef.current.set(groupKey, { label: group.groupName, groupId: group.groupId });
           nodes.push(buildScopeRootNode(groupKey, group.groupName, 'group'));
@@ -231,40 +240,28 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
     await loadFolderChildren(parsed.scopeKey, parsed.driveNodeId);
   }
 
-  const isSelectableKey = useCallback((key: string): boolean => {
-    const node = scopedDriveNodeMapRef.current.get(key);
-    return node?.type === 'resource' || node?.type === 'link';
-  }, []);
+  function normalizeSelectableKeys(keys: string[]): string[] {
+    return keys.filter((key) => isSelectableNode(scopedDriveNodeMapRef.current.get(key)));
+  }
 
-  const normalizeSelectableKeys = useCallback(
-    (keys: string[]): string[] => keys.filter((key) => isSelectableKey(key)),
-    [isSelectableKey]
-  );
+  function handleSelect(_keys: Key[], info: { node: DataNode; selected: boolean }): void {
+    const clickedKey = String(info.node.key);
+    if (!isSelectableNode(scopedDriveNodeMapRef.current.get(clickedKey))) return;
 
-  const handleSelect = useCallback(
-    (_keys: Key[], info: { node: DataNode; selected: boolean }) => {
-      const clickedKey = String(info.node.key);
-      if (!isSelectableKey(clickedKey)) return;
+    setCheckedKeys((prev) => {
+      const next = prev.includes(clickedKey)
+        ? prev.filter((key) => key !== clickedKey)
+        : [...prev, clickedKey];
+      return normalizeSelectableKeys(next);
+    });
+  }
 
-      setCheckedKeys((prev) => {
-        const next = prev.includes(clickedKey)
-          ? prev.filter((key) => key !== clickedKey)
-          : [...prev, clickedKey];
-        return normalizeSelectableKeys(next);
-      });
-    },
-    [isSelectableKey, normalizeSelectableKeys]
-  );
+  function handleCheck(checked: Key[] | { checked: Key[]; halfChecked: Key[] }): void {
+    const keys = Array.isArray(checked) ? checked.map(String) : checked.checked.map(String);
+    setCheckedKeys(normalizeSelectableKeys(keys));
+  }
 
-  const handleCheck = useCallback(
-    (checked: Key[] | { checked: Key[]; halfChecked: Key[] }) => {
-      const keys = Array.isArray(checked) ? checked.map(String) : checked.checked.map(String);
-      setCheckedKeys(normalizeSelectableKeys(keys));
-    },
-    [normalizeSelectableKeys]
-  );
-
-  const handleConfirm = useCallback(() => {
+  function handleConfirm(): void {
     for (const key of checkedKeys) {
       const driveNode = scopedDriveNodeMapRef.current.get(key);
       if (!driveNode || (driveNode.type !== 'resource' && driveNode.type !== 'link')) continue;
@@ -277,22 +274,20 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
       });
     }
     onClose();
-  }, [addDocRef, checkedKeys, onClose]);
-
-  const handleAfterOpenChange = useCallback((visible: boolean) => {
-    if (visible) return;
-    scopeMapRef.current.clear();
-    scopedDriveNodeMapRef.current.clear();
-    setTreeData([]);
-    setCheckedKeys([]);
-  }, []);
+  }
 
   return (
     <Modal
       title="文档库选择"
       open={open}
       onCancel={onClose}
-      afterOpenChange={handleAfterOpenChange}
+      afterOpenChange={(visible) => {
+        if (visible) return;
+        scopeMapRef.current.clear();
+        scopedDriveNodeMapRef.current.clear();
+        setTreeData([]);
+        setCheckedKeys([]);
+      }}
       destroyOnHidden
       width={560}
       footer={null}
