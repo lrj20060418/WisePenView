@@ -2,13 +2,21 @@ import type { ResourceItem } from '@/domains/Resource';
 import type { GetUserInteractionRecordApiResponse } from '../apis/InteractApi.type';
 import type {
   ChangeResourceActionPermissionApiRequest,
+  GlobalSearchApiResponse,
   ListResourceItemsApiRequest,
   ResourceListPageApiResponse,
 } from '../apis/ResourceApi.type';
-import { resourceActionsToApiKeys, TAG_QUERY_LOGIC_MODE, type ResourceActionKey } from '../enum';
+import {
+  normalizeSearchResourceType,
+  resourceActionsToApiKeys,
+  TAG_QUERY_LOGIC_MODE,
+  type ResourceActionKey,
+} from '../enum';
 import type {
   GetUserResourcesRequest,
   ResourceListPage,
+  SearchHitItem,
+  SearchResultPage,
   UpdateResourceActionPermissionRequest,
 } from '../service/index.type';
 
@@ -162,6 +170,20 @@ const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractSt
   };
 };
 
+// 枚举归一化大小写，下游 === 比较与分组 label 生效
+const mapSearchHitFromApi = (raw: GlobalSearchApiResponse['list'][number]): SearchHitItem => ({
+  ...raw,
+  resourceType: normalizeSearchResourceType(raw.resourceType),
+});
+
+const mapSearchResultPageFromApi = (data: GlobalSearchApiResponse): SearchResultPage => ({
+  list: data.list.map(mapSearchHitFromApi),
+  total: data.total,
+  page: data.page,
+  size: data.size,
+  totalPage: data.totalPage,
+});
+
 export const ResourceServicesMap = {
   mapListResourceItemsRequest,
   mapResourceListPageFromApi,
@@ -169,4 +191,5 @@ export const ResourceServicesMap = {
   mapLikeStatusFromApi,
   mapRateFromApi,
   mapInteractStatsFromApi,
+  mapSearchResultPageFromApi,
 };
