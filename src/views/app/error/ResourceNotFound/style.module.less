@@ -35,31 +35,12 @@
   max-width: 560px;
 }
 
-.result:global(.ant-result) {
-  padding: clamp(24px, 4vh, 40px) 0;
-}
-
-.result :global(.ant-result-title) {
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: rgba(0, 0, 0, 0.88);
-}
-
-.result :global(.ant-result-subtitle) {
-  font-size: 16px;
-  line-height: 1.65;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.result :global(.ant-result-icon) {
-  margin-bottom: 8px;
-}
-
-.result :global(.ant-result-icon .anticon) {
-  color: @accent;
+.actionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm, 12px);
 }
 
 .footerMini {

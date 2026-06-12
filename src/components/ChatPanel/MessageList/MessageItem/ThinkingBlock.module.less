@@ -9,20 +9,33 @@
 
 .thinkingWrapper {
   .collapseHeader {
+    display: flex;
+    align-items: center;
+    width: 100%;
     padding: 0px 0px !important; // 极致紧凑
     height: 28px !important;
-    align-items: center !important;
-
+    border: 0;
     border-radius: var(--ant-border-radius) !important;
+    background: transparent;
     color: var(--ant-color-text-description) !important;
     font-size: var(--ant-font-size-sm) !important;
     font-weight: 500;
+    cursor: pointer;
 
     // 悬停反馈
     &:hover {
       background-color: var(--ant-color-fill-tertiary);
       color: var(--ant-color-text) !important; // 悬停变深色
     }
+  }
+
+  .expandIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    opacity: 0.6;
+    transition: transform 0.2s;
   }
 
   .collapseContentBox {
