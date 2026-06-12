@@ -1,4 +1,5 @@
 .tableWrapper {
+  position: relative;
   min-width: 0;
 }
 
@@ -35,4 +36,34 @@
 
 .clickableRow {
   cursor: pointer;
+}
+
+.cellButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.pageSizeSelect {
+  min-width: 104px;
+}
+
+.statusSuccess {
+  color: var(--success, #16a34a);
+}
+
+.statusDanger {
+  color: var(--danger, #dc2626);
+}
+
+.statusWarning {
+  color: var(--warning, #d97706);
 }
