@@ -1,10 +1,14 @@
 import IconText from '@/components/Common/IconText';
+import {
+  FolderTable,
+  type FolderTableBreadcrumbItem,
+  type FolderTableRowProps,
+} from '@/components/Table';
 import type { DriveNode } from '@/domains/Drive';
 import { Button } from '@heroui/react';
-import { Table } from 'antd';
-import { ChevronDown, ChevronRight, CloudUpload } from 'lucide-react';
-import React, { useMemo, useRef, type HTMLAttributes } from 'react';
-import { resolveDriveScope } from '../common/driveComponentModel';
+import { CloudUpload } from 'lucide-react';
+import React, { useMemo, useRef } from 'react';
+import { getDriveNodeLabel, resolveDriveScope } from '../common/driveComponentModel';
 import { useClickNode } from '../common/useClickNode';
 import {
   DRAG_TYPE_DRIVE_NODE,
@@ -12,12 +16,63 @@ import {
   isDropTargetDriveNode,
   useDriveDrop,
 } from '../common/useDriveDrop';
-import Breadcrumb from './components/Breadcrumb';
-import { getTableDriveColumns } from './config/columnConfig';
-import type { DriveRow, TableDriveProps } from './index.type';
+import type { DriveRow, DriveTableRow, TableDriveProps } from './index.type';
 import styles from './style.module.less';
 import { useTableDrive } from './useTableDrive';
 import { useTableDriveActions } from './useTableDriveActions';
+
+function getTypeLabel(node: DriveNode): string {
+  switch (node.type) {
+    case 'folder':
+      return '文件夹';
+    case 'resource':
+      return node.resourceType;
+    case 'link':
+      return '链接';
+    case 'trash':
+      return '回收站';
+    case 'loadMore':
+      return '';
+  }
+}
+
+function toDriveTableRow(node: DriveRow, loadingMoreParentId: string | null): DriveTableRow {
+  if (node.type === 'loadMore') {
+    return {
+      id: node.id,
+      name: '加载更多',
+      entryType: 'loadMore',
+      typeLabel: '',
+      loaded: node.loaded,
+      total: node.total,
+      loadMoreLabel: loadingMoreParentId === node.parentId ? '加载中...' : undefined,
+      loadMoreLoading: loadingMoreParentId === node.parentId,
+      node,
+    };
+  }
+
+  return {
+    id: node.id,
+    name: getDriveNodeLabel(node),
+    entryType: node.type,
+    resourceType: node.type === 'resource' || node.type === 'link' ? node.resourceType : undefined,
+    sizeLabel: '—',
+    typeLabel: getTypeLabel(node),
+    isExpandable: node.type === 'folder' || node.type === 'trash',
+    children: node.children?.map((child) => toDriveTableRow(child, loadingMoreParentId)),
+    node,
+  };
+}
+
+function toBreadcrumbItems(pathNodes: DriveNode[]): FolderTableBreadcrumbItem[] {
+  return pathNodes
+    .filter((node) => node.type !== 'loadMore')
+    .map((node, index) => ({
+      id: node.id,
+      label: getDriveNodeLabel(node),
+      isRoot: index === 0,
+    }));
+}
 
 function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
   const resolvedScope = React.useMemo(() => resolveDriveScope(scope, groupId), [scope, groupId]);
@@ -42,10 +97,17 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     groupId: finalGroupId,
   });
   const { onDrop } = useDriveDrop({ refresh, groupId: finalGroupId });
+  const rows = useMemo(
+    () => dataSource.map((node) => toDriveTableRow(node, loadingMoreParentId)),
+    [dataSource, loadingMoreParentId]
+  );
+  const currentDirectoryItemCount = useMemo(
+    () => rows.filter((row) => row.entryType !== 'loadMore').length,
+    [rows]
+  );
+  const breadcrumbItems = useMemo(() => toBreadcrumbItems(pathNodes), [pathNodes]);
   const {
-    onRowAction,
-    openDropdownKey,
-    setOpenDropdownKey,
+    rowActions,
     showCreateFolder,
     showUploadToGroup,
     showManagePermission,
@@ -55,59 +117,80 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     ModalHost,
   } = useTableDriveActions({
     currentNodeId,
-    currentRows: dataSource,
+    currentRows: rows,
     rootId: finalRootId,
     groupId: finalGroupId,
     actions,
     refresh,
   });
 
-  // 仅在 drag 期间打开；drop / dragEnd 都会复位。useRef 避免触发 re-render，也避免 onClick 闭包旧值
+  // 拖拽结束前屏蔽行点击，避免拖放动作额外触发进入/打开。
   const isDraggingRef = useRef(false);
 
-  const getRowProps = (record: DriveRow): HTMLAttributes<HTMLTableRowElement> => {
-    const base: HTMLAttributes<HTMLTableRowElement> = {
-      onClick: () => {
-        if (isDraggingRef.current) return;
-        handleClickNode(record);
-      },
-      style: { cursor: 'pointer' },
-    };
+  const handleExpandedChange = async (keys: string[]) => {
+    const addedKey = keys.find((key) => !expandedRowKeys.includes(key));
+    if (addedKey) {
+      const row = findRowById(dataSource, addedKey);
+      if (row) {
+        await handleExpand(true, row);
+        return;
+      }
+    }
+    const removedKey = expandedRowKeys.find((key) => !keys.includes(key));
+    if (removedKey) {
+      const row = findRowById(dataSource, removedKey);
+      if (row) {
+        await handleExpand(false, row);
+        return;
+      }
+    }
+  };
 
-    // loadMore 行不参与 drag/drop
-    if (record.type === 'loadMore') return base;
+  const getRowProps = (row: DriveTableRow): FolderTableRowProps => {
+    const node = row.node;
+    const base: FolderTableRowProps = {};
 
-    if (isDraggableDriveNode(record)) {
+    if (node.type === 'loadMore') {
+      if (loadingMoreParentId === node.parentId) {
+        base['aria-busy'] = true;
+      }
+      return base;
+    }
+
+    if (isDraggableDriveNode(node)) {
       base.draggable = true;
-      base.onDragStart = (e) => {
+      base.onDragStart = (event) => {
         isDraggingRef.current = true;
-        e.dataTransfer.setData(DRAG_TYPE_DRIVE_NODE, JSON.stringify(record));
-        e.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(DRAG_TYPE_DRIVE_NODE, JSON.stringify(node));
+        event.dataTransfer.effectAllowed = 'move';
       };
-      base.onDragEnd = () => {
+      base.onDragEnd = (event) => {
         isDraggingRef.current = false;
+        event.currentTarget.classList.remove(styles.droppableOver);
       };
     }
 
-    if (isDropTargetDriveNode(record)) {
-      base.onDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        e.currentTarget.classList.add(styles.droppableOver);
+    if (isDropTargetDriveNode(node)) {
+      base.onDragOver = (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        event.currentTarget.classList.add(styles.droppableOver);
       };
-      base.onDragLeave = (e) => {
-        e.currentTarget.classList.remove(styles.droppableOver);
+      base.onDragLeave = (event) => {
+        event.currentTarget.classList.remove(styles.droppableOver);
       };
-      base.onDrop = (e) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove(styles.droppableOver);
-        const raw = e.dataTransfer.getData(DRAG_TYPE_DRIVE_NODE);
+      base.onDrop = (event) => {
+        event.preventDefault();
+        event.currentTarget.classList.remove(styles.droppableOver);
+        const raw = event.dataTransfer.getData(DRAG_TYPE_DRIVE_NODE);
         if (!raw) return;
         try {
           const source = JSON.parse(raw) as DriveNode;
-          void onDrop(source, record);
+          void onDrop(source, node);
         } catch {
-          // 非本系统拖拽数据，忽略
+          // 忽略非 Drive 节点拖拽数据。
+        } finally {
+          isDraggingRef.current = false;
         }
       };
     }
@@ -115,54 +198,24 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     return base;
   };
 
-  const columns = useMemo(
-    () =>
-      getTableDriveColumns({
-        styles: {
-          nameCell: styles.nameCell,
-          loadMoreCell: styles.loadMoreCell,
-          optionBtn: styles.optionBtn,
-        },
-        loadingMoreParentId,
-        actionConfig: actions,
-        onRowAction,
-        openDropdownKey,
-        setOpenDropdownKey,
-      }),
-    [actions, loadingMoreParentId, onRowAction, openDropdownKey, setOpenDropdownKey]
-  );
-
-  const expandIcon = ({
-    expanded,
-    onExpand,
-    record,
-  }: {
-    expanded: boolean;
-    onExpand: (record: DriveRow, e: React.MouseEvent<HTMLElement>) => void;
-    record: DriveRow;
-  }) => {
-    if (record.type !== 'folder') {
-      return record.type === 'loadMore' ? null : <span className={styles.expandPlaceholder} />;
-    }
-    return (
-      <button
-        type="button"
-        className={styles.expandBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          onExpand(record, e);
-        }}
-      >
-        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-      </button>
-    );
+  const handleRowActivate = (row: DriveTableRow) => {
+    if (isDraggingRef.current) return;
+    handleClickNode(row.node);
   };
 
   return (
     <main className={styles.listArea}>
-      <div className={styles.wrapper}>
-        <div className={styles.toolbar}>
-          <Breadcrumb pathNodes={pathNodes} onJump={(node) => enterFolder(node.id)} />
+      <FolderTable<DriveTableRow>
+        ariaLabel="云盘文件列表"
+        items={rows}
+        loading={loading}
+        breadcrumb={
+          <FolderTable.Breadcrumb
+            items={breadcrumbItems}
+            onJump={(nodeId) => enterFolder(nodeId)}
+          />
+        }
+        toolbar={
           <div className={styles.toolbarActions}>
             {showUploadToGroup ? (
               <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
@@ -182,32 +235,30 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
               </Button>
             ) : null}
           </div>
-        </div>
-
-        <div className={styles.scrollArea}>
-          <div className={styles.tableWrapper}>
-            <Table<DriveRow>
-              rowKey="id"
-              dataSource={dataSource}
-              columns={columns}
-              loading={loading}
-              pagination={false}
-              size="middle"
-              expandable={{
-                expandedRowKeys,
-                onExpand: handleExpand,
-                rowExpandable: (r) => r.type === 'folder',
-                expandIcon,
-                indentSize: 24,
-              }}
-              onRow={getRowProps}
-            />
-          </div>
-        </div>
-      </div>
+        }
+        expandedRowKeys={expandedRowKeys}
+        onExpandedChange={(keys) => void handleExpandedChange(keys)}
+        onRowActivate={handleRowActivate}
+        getRowProps={getRowProps}
+        rowActions={rowActions}
+        totalCount={currentDirectoryItemCount}
+        summary={`当前目录共 ${currentDirectoryItemCount} 项`}
+        className={styles.table}
+      />
       {ModalHost}
     </main>
   );
+}
+
+function findRowById(rows: DriveRow[], id: string): DriveRow | undefined {
+  for (const row of rows) {
+    if (row.id === id) return row;
+    if (row.type !== 'loadMore' && row.children?.length) {
+      const child = findRowById(row.children, id);
+      if (child) return child;
+    }
+  }
+  return undefined;
 }
 
 export default TableDrive;

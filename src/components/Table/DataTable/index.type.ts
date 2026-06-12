@@ -20,6 +20,15 @@ export interface DataTableColumn<T extends object> extends Omit<
 
 export type DataTableLoadMore = TableLoadMore;
 
+export interface DataTablePagination {
+  total: number;
+  current: number;
+  pageSize: number;
+  onChange: (page: number, pageSize: number) => void;
+  summary?: ReactNode;
+  pageSizeControl?: ReactNode;
+}
+
 export interface DataTableProps<T extends object> {
   ariaLabel: string;
   items: T[];
@@ -38,6 +47,7 @@ export interface DataTableProps<T extends object> {
   toolbar?: ReactNode;
   loadMore?: DataTableLoadMore;
   totalCount?: number;
+  pagination?: DataTablePagination;
   summary?: ReactNode;
   getRowClassName?: (row: T, ctx: DataTableRowContext<T>) => string | undefined;
 }

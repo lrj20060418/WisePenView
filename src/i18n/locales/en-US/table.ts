@@ -7,6 +7,8 @@ const enUSTable = {
   loading: 'Loading',
   refreshing: 'Refreshing data…',
   loadMore: 'Loading more…',
+  loadMoreAction: 'Load more',
+  loadMoreExplicit: 'Load more ({{loaded}} / {{total}} loaded)',
   loadMoreRow: 'Loading more',
   summary: {
     totalItems: '{{count}} items total',

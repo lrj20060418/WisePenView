@@ -150,6 +150,40 @@
   cursor: pointer;
 }
 
+.inlineLoadMoreRow {
+  :global(.table__cell) {
+    background: var(--surface);
+  }
+}
+
+.inlineLoadMoreButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: @table-font-family;
+  font-size: @table-font-size-body;
+  line-height: @table-line-height-body;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .inlineLoadMoreButton:hover {
+    color: var(--accent-hover, var(--accent));
+  }
+}
+
+.inlineLoadMoreButton:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
 .mutedCell {
   color: var(--muted);
   font-variant-numeric: tabular-nums;

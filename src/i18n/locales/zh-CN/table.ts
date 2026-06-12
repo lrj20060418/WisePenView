@@ -7,6 +7,8 @@ const zhCNTable = {
   loading: '加载中',
   refreshing: '正在刷新数据…',
   loadMore: '正在加载更多…',
+  loadMoreAction: '加载更多',
+  loadMoreExplicit: '加载更多（已加载 {{loaded}} / 共 {{total}}）',
   loadMoreRow: '正在加载更多',
   summary: {
     totalItems: '共 {{count}} 项',

@@ -23,6 +23,7 @@ export const ManageTable = Object.assign(ManageTableComponent, {
 
 export const DataTable = Object.assign(DataTableComponent, {
   Tabs: DataTableTabs,
+  MemberCell: TableMemberCell,
   TextCell: TableTextCell,
   cellStyles: tableCellStyles,
 });
@@ -47,6 +48,7 @@ export type {
 export type {
   DataTableColumn,
   DataTableLoadMore,
+  DataTablePagination,
   DataTableProps,
   DataTableRowContext,
   DataTableTab,
@@ -63,4 +65,5 @@ export type {
   FolderTableRow,
   FolderTableRowAction,
   FolderTableRowContext,
+  FolderTableRowProps,
 } from './FolderTable/index.type';
