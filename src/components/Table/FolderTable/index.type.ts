@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import type { FolderColumnWidth } from '../shared/TableBase/columnWidth';
 import type { TableColumnBase, TableLoadMore } from '../shared/TableBase/index.type';
 import type { TableRowAction } from '../shared/TableRowActions/index.type';
 
-export type FolderTableEntryType = 'folder' | 'link' | 'resource' | 'trash';
+export type FolderTableEntryType = 'folder' | 'link' | 'resource' | 'trash' | 'loadMore';
 
 export interface FolderTableRow {
   id: string;
@@ -14,6 +14,13 @@ export interface FolderTableRow {
   /** 展示用，如「—」「45 KB」 */
   sizeLabel?: string;
   typeLabel: string;
+  /** loadMore 行展示用 */
+  loaded?: number;
+  total?: number;
+  loadMoreLabel?: string;
+  loadMoreLoading?: boolean;
+  /** 是否展示展开控件；适合懒加载 children 的目录行 */
+  isExpandable?: boolean;
   /** 树形子节点；展开后插入当前层级下方 */
   children?: FolderTableRow[];
 }
@@ -62,6 +69,8 @@ export interface FolderTableProps<T extends FolderTableRow> {
   onExpandedChange?: (keys: string[]) => void;
   /** 单击行（文件夹进入 / 资源打开） */
   onRowActivate?: (row: T) => void;
+  /** 行级属性扩展，供拖放等业务注入 HTML 属性 */
+  getRowProps?: (row: T, ctx: FolderTableRowContext<T>) => HTMLAttributes<HTMLTableRowElement>;
   rowActions?: FolderTableRowAction<T>[] | ((row: T) => FolderTableRowAction<T>[]);
   /** 滚动加载更多；Folder 型不做分页 */
   loadMore?: FolderTableLoadMore;

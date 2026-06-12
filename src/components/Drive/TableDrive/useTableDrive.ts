@@ -21,7 +21,7 @@ interface UseTableDriveReturn {
   loading: boolean;
   loadingMoreParentId: string | null;
   expandedRowKeys: string[];
-  /** 进入子目录（仅 folder 调用） */
+  /** 进入容器目录（folder / trash 调用） */
   enterFolder: (nodeId: string) => void;
   /** 点击 LoadMoreNode 行：再加载一页 */
   handleLoadMore: (node: LoadMoreNode) => Promise<void>;
@@ -93,7 +93,7 @@ export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTabl
   };
 
   const handleExpand = async (expanded: boolean, record: DriveRow) => {
-    if (!expanded || record.type !== 'folder') {
+    if (!expanded || (record.type !== 'folder' && record.type !== 'trash')) {
       setExpandedRowKeys((keys) => keys.filter((k) => k !== record.id));
       return;
     }
@@ -123,7 +123,7 @@ export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTabl
 }
 
 function attachChildren(row: DriveRow, map: Map<string, DriveNode[]>): DriveRow {
-  if (row.type !== 'folder') return row;
+  if (row.type !== 'folder' && row.type !== 'trash') return row;
   const cached = map.get(row.id) as DriveRow[] | undefined;
   if (!cached) return row;
   return { ...row, children: cached.map((c) => attachChildren(c, map)) };

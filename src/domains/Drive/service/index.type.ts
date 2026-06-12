@@ -1,4 +1,4 @@
-import type { DriveNode, DriveNodeType } from '../entity/drive';
+import type { DriveNode } from '../entity/drive';
 
 export interface IDriveService {
   getDriveTree(params: GetDriveTreeParams): Promise<DriveNode>;
@@ -51,7 +51,7 @@ export interface RenameNodeParams {
 export interface CreateNodeParams {
   parentId: string;
   name: string;
-  type: DriveNodeType;
+  type: 'folder';
   groupId?: string;
 }
 

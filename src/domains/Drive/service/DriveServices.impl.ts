@@ -445,10 +445,7 @@ export const createDriveServices = (
   };
 
   const createNode: IDriveService['createNode'] = async (params) => {
-    const { parentId, name, type } = params;
-    if (type !== 'folder') {
-      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_UNSUPPORTED_CREATE_TYPE, { type });
-    }
+    const { parentId, name } = params;
     const groupId = normalizeTagGroupId(params.groupId) ?? getNodeGroupId(parentId);
     const decodedParent = decodeNodeId(parentId);
     let targetParentTagId: string | undefined;

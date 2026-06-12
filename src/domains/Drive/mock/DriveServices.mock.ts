@@ -76,7 +76,7 @@ function createDriveServiceMock(opts?: CreateDriveServiceOptions): IDriveService
   function detachFromParent(nodeId: string): void {
     const node = nodes.get(nodeId);
     if (!node || !node.parentId) return;
-    const parent = getFolder(node.parentId);
+    const parent = getContainer(node.parentId);
     if (!parent) return;
     parent.childrenIds = parent.childrenIds.filter((id) => id !== nodeId);
   }
@@ -125,7 +125,7 @@ function createDriveServiceMock(opts?: CreateDriveServiceOptions): IDriveService
     async moveNode(params: MoveNodeParams) {
       await delay(NETWORK_DELAY_MS);
       const node = nodes.get(params.nodeId);
-      const newParent = getFolder(params.newParentId);
+      const newParent = getContainer(params.newParentId);
       if (!node || !newParent) {
         throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
           nodeId: node ? params.newParentId : params.nodeId,
@@ -166,48 +166,15 @@ function createDriveServiceMock(opts?: CreateDriveServiceOptions): IDriveService
         });
       }
       const newId = `${params.type}-mock-${Date.now()}`;
-      let node: DriveNode;
-      if (params.type === 'folder') {
-        node = {
-          id: newId,
-          type: 'folder',
-          parentId: params.parentId,
-          tagId: `tag-${newId}`,
-          name: params.name,
-          expanded: false,
-          childrenIds: [],
-        };
-      } else if (params.type === 'resource') {
-        node = {
-          id: newId,
-          type: 'resource',
-          parentId: params.parentId,
-          resourceId: newId,
-          title: params.name,
-          resourceType: 'document',
-        };
-      } else if (params.type === 'link') {
-        node = {
-          id: newId,
-          type: 'link',
-          parentId: params.parentId,
-          resourceId: newId,
-          title: params.name,
-          resourceType: 'document',
-        };
-      } else if (params.type === 'trash') {
-        node = {
-          id: newId,
-          type: 'trash',
-          parentId: params.parentId,
-          tagId: `tag-${newId}`,
-          childrenIds: [],
-        };
-      } else {
-        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_UNSUPPORTED_CREATE_TYPE, {
-          type: params.type,
-        });
-      }
+      const node: DriveNode = {
+        id: newId,
+        type: 'folder',
+        parentId: params.parentId,
+        tagId: `tag-${newId}`,
+        name: params.name,
+        expanded: false,
+        childrenIds: [],
+      };
       nodes.set(newId, node);
       parent.childrenIds.push(newId);
     },

@@ -36,7 +36,7 @@ interface LinkNode extends DriveNodeBase {
   resourceType: ResourceType;
 }
 
-/** 列表末尾「加载更多」占位节点：由 service 在 children 未拉满时自动追加 */
+/** 列表末尾「加载更多」占位节点：用于提示某个父目录仍有资源分页，不代表真实文件或文件夹 */
 interface LoadMoreNode extends DriveNodeBase {
   type: 'loadMore';
   parentId: string;

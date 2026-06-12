@@ -45,7 +45,11 @@ function flattenFolderRows<T extends FolderTableRow>(
   for (const row of rows) {
     result.push({ ...row, depth });
     const hasChildren = Boolean(row.children?.length);
-    if (row.entryType === 'folder' && hasChildren && expandedKeys.has(row.id)) {
+    if (
+      (row.entryType === 'folder' || row.entryType === 'trash') &&
+      hasChildren &&
+      expandedKeys.has(row.id)
+    ) {
       result.push(...flattenFolderRows(row.children as T[], expandedKeys, depth + 1));
     }
   }
@@ -54,7 +58,10 @@ function flattenFolderRows<T extends FolderTableRow>(
 }
 
 function folderRowHasChildren(row: FolderTableRow): boolean {
-  return row.entryType === 'folder' && Boolean(row.children?.length);
+  return (
+    (row.entryType === 'folder' || row.entryType === 'trash') &&
+    (row.isExpandable === true || Boolean(row.children?.length))
+  );
 }
 
 function resolveMaxBodyHeight(value: number | string | undefined): string | undefined {
@@ -113,6 +120,7 @@ function FolderTable<T extends FolderTableRow>({
   expandedRowKeys = [],
   onExpandedChange,
   onRowActivate,
+  getRowProps,
   rowActions,
   loadMore,
   totalCount,
@@ -215,9 +223,39 @@ function FolderTable<T extends FolderTableRow>({
     [rowActions]
   );
 
+  const renderLoadMoreLabel = useCallback(
+    (row: FolderTableVisibleRow) => {
+      if (row.loadMoreLabel) {
+        return row.loadMoreLabel;
+      }
+      if (typeof row.loaded === 'number' && typeof row.total === 'number') {
+        return t('loadMoreExplicit', { loaded: row.loaded, total: row.total });
+      }
+      return t('loadMoreAction');
+    },
+    [t]
+  );
+
   const renderCellContent = useCallback(
     (column: FolderTableColumn<T>, row: FolderTableVisibleRow, ctx: FolderTableRowContext<T>) => {
       if (column.isNameColumn) {
+        if (row.entryType === 'loadMore') {
+          return (
+            <button
+              type="button"
+              className={styles.inlineLoadMoreButton}
+              disabled={row.loadMoreLoading}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (row.loadMoreLoading) return;
+                onRowActivate?.(row as T);
+              }}
+            >
+              {renderLoadMoreLabel(row)}
+            </button>
+          );
+        }
+
         const expandable = folderRowHasChildren(row);
         const expanded = expandedKeySet.has(row.id);
         return (
@@ -235,7 +273,7 @@ function FolderTable<T extends FolderTableRow>({
 
       if (column.isActionColumn) {
         const menuActions = toMenuActions(resolveRowActions(ctx.row, rowActions), ctx.row);
-        if (menuActions.length === 0) {
+        if (row.entryType === 'loadMore' || menuActions.length === 0) {
           return null;
         }
         return (
@@ -252,7 +290,15 @@ function FolderTable<T extends FolderTableRow>({
 
       return null;
     },
-    [expandedKeySet, handleRowAction, handleToggleExpand, onExpandedChange, rowActions]
+    [
+      expandedKeySet,
+      handleRowAction,
+      handleToggleExpand,
+      onExpandedChange,
+      onRowActivate,
+      renderLoadMoreLabel,
+      rowActions,
+    ]
   );
 
   const resolveColumnHeaderClass = useCallback(
@@ -347,13 +393,21 @@ function FolderTable<T extends FolderTableRow>({
                       rowId,
                       depth: row.depth,
                     };
+                    const rowProps = getRowProps?.(row as T, ctx) ?? {};
+                    const { className: rowClassName, id: _rowPropId, ...restRowProps } = rowProps;
+                    const isLoadMoreRow = row.entryType === 'loadMore';
 
                     return (
                       <Table.Row
+                        {...restRowProps}
                         key={rowId}
                         id={rowId}
                         textValue={row.name}
-                        className={styles.bodyRow}
+                        className={joinClassNames(
+                          styles.bodyRow,
+                          isLoadMoreRow ? styles.inlineLoadMoreRow : undefined,
+                          rowClassName
+                        )}
                         onAction={() => onRowActivate?.(row as T)}
                       >
                         {columns.map((column) => {
