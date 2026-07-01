@@ -1,7 +1,7 @@
 import { Separator } from '@heroui/react';
 
-import UserCapsule from '@/components/Common/UserCapsule';
 import ResourceInteractBar from '@/components/Resource/ResourceInteractBar';
+import UserCapsule from '@/components/UserCapsule';
 import type { NoteInfoBarProps } from './index.type';
 import styles from './style.module.less';
 

@@ -2,7 +2,7 @@ import { Copy } from 'lucide-react';
 import { useState } from 'react';
 import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router-dom';
 
-import { ResultState } from '@/components/Common/Feedback';
+import { ResultState } from '@/components/Feedback';
 import LandingNavbar from '@/layouts/Home/_components/LandingNavbar';
 import ResourceNotFound from '@/views/app/error/ResourceNotFound';
 import { Button, toast, Tooltip } from '@heroui/react';

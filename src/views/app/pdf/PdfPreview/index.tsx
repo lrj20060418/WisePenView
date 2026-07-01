@@ -1,7 +1,7 @@
-import EntryIcon from '@/components/Common/EntryIcon';
-import { ResultState, Spin } from '@/components/Common/Feedback';
-import IconText from '@/components/Common/IconText';
-import PdfViewer from '@/components/Pdf/PdfViewer/index';
+import EntryIcon from '@/components/EntryIcon';
+import { ResultState, Spin } from '@/components/Feedback';
+import IconText from '@/components/IconText';
+import PdfViewer from '@/components/PdfViewer/index';
 import ResourceInteractBar from '@/components/Resource/ResourceInteractBar';
 import ResourceViewerHeader from '@/components/Resource/ResourceViewerHeader';
 import rvhStyles from '@/components/Resource/ResourceViewerHeader/style.module.less';

@@ -1,12 +1,12 @@
-import { ResultState, Spin } from '@/components/Common/Feedback';
-import SegmentedTabs from '@/components/Common/SegmentedTabs';
+import { ResultState, Spin } from '@/components/Feedback';
+import SegmentedTabs from '@/components/SegmentedTabs';
 import { useRequest, useUnmount } from 'ahooks';
 import { ChevronsLeft, Menu } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import EntryIcon from '@/components/Common/EntryIcon';
-import IconText from '@/components/Common/IconText';
+import EntryIcon from '@/components/EntryIcon';
+import IconText from '@/components/IconText';
 import CustomBlockNote from '@/components/Note/CustomBlockNote';
 import type { NoteBodyEditorHandle } from '@/components/Note/CustomBlockNote/index.type';
 import NoteOutline from '@/components/Note/NoteOutline';
