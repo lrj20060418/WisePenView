@@ -1,15 +1,10 @@
 import { Button, ListBox, ListBoxItem, Popover } from '@heroui/react';
 import { Cloud, Plus, Upload } from 'lucide-react';
 import type { Key } from 'react';
-import type { UploadMenuProps } from './index.type';
 import styles from '../style.module.less';
+import type { UploadMenuProps } from './index.type';
 
-function UploadMenu({
-  open,
-  onOpenChange,
-  onLocalPress,
-  onCloudPress,
-}: UploadMenuProps) {
+function UploadMenu({ open, onOpenChange, onLocalPress, onCloudPress }: UploadMenuProps) {
   const handleAction = (key: Key) => {
     if (key === 'local-file') {
       onLocalPress();
@@ -22,14 +17,13 @@ function UploadMenu({
 
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
-      <Popover.Trigger>
+      <Popover.Trigger title="上传附件">
         <Button
           variant="ghost"
           size="sm"
           isIconOnly
           className={styles.toolbarCircleBtn}
           aria-label="上传附件"
-          title="上传附件"
         >
           <Plus size={18} />
         </Button>

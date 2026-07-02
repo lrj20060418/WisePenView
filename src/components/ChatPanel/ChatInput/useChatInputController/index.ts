@@ -353,13 +353,12 @@ export function useChatInputController({
     }
 
     const pendingImages: PendingImagePayload[] = currentModelVision
-      ? completionState.pendingImageMetas
-          .map((meta) => {
-            const base64 = base64MapRef.current.get(meta.id);
-            if (!base64) return null;
-            return { mimeType: meta.mimeType, base64, filename: meta.filename };
-          })
-          .filter((item): item is PendingImagePayload => item != null)
+      ? completionState.pendingImageMetas.reduce<PendingImagePayload[]>((images, meta) => {
+          const base64 = base64MapRef.current.get(meta.id);
+          if (!base64) return images;
+          images.push({ mimeType: meta.mimeType, base64, filename: meta.filename });
+          return images;
+        }, [])
       : [];
 
     try {

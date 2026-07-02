@@ -1,7 +1,7 @@
 import { Button, ListBox, ListBoxItem, Popover } from '@heroui/react';
 import { Check, Settings, Sparkles, Wrench } from 'lucide-react';
-import type { CapabilityMenuProps } from './index.type';
 import styles from '../style.module.less';
+import type { CapabilityMenuProps } from './index.type';
 
 function CapabilityMenu({
   open,
@@ -20,20 +20,22 @@ function CapabilityMenu({
   const toolSection = sections.find((section) => section.key === 'tools');
   const selectedSkillIds = selectedSkills.map((skill) => skill.skillId);
   const selectedToolIds = selectedTools.map((tool) => tool.toolId);
-  const externalItems = externalSection?.items.filter((item) => item.kind === 'external-skill') ?? [];
+  const externalItems =
+    externalSection?.items.filter((item) => item.kind === 'external-skill') ?? [];
 
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
-      <Popover.Trigger>
+      <Popover.Trigger title="配置 Agent">
         <span className={styles.toolButtonWrap}>
-          {capabilityCount > 0 ? <span className={styles.capabilityBadge}>{capabilityCount}</span> : null}
+          {capabilityCount > 0 ? (
+            <span className={styles.capabilityBadge}>{capabilityCount}</span>
+          ) : null}
           <Button
             variant="ghost"
             size="sm"
             isIconOnly
             className={styles.toolbarCircleBtn}
             aria-label="配置 Agent"
-            title="配置 Agent"
           >
             <Settings size={17} />
           </Button>

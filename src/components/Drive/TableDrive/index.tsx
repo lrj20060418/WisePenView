@@ -28,7 +28,7 @@ function getTypeLabel(node: DriveNode): string {
     case 'folder':
       return '文件夹';
     case 'resource':
-      return node.resourceType;
+      return node.resourceType ?? '资源';
     case 'link':
       return '链接';
     case 'loading':
@@ -51,7 +51,7 @@ function toDriveTableRow(node: DriveRow): DriveTableRow {
     id: node.id,
     name: getDriveNodeLabel(node),
     entryType: node.type,
-    resourceType: node.type === 'resource' || node.type === 'link' ? node.resourceType : undefined,
+    resourceType: node.type === 'resource' ? node.resourceType : undefined,
     resourceIconType:
       node.type === 'resource' || node.type === 'link' ? node.resourceIconType : undefined,
     sizeLabel: '—',

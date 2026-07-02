@@ -2,8 +2,8 @@ import type { ChatAgentOption } from '@/store';
 import { Button, ListBox, ListBoxItem, Popover } from '@heroui/react';
 import { Bot, Check } from 'lucide-react';
 import { useState } from 'react';
-import type { AgentPickerProps } from './index.type';
 import styles from '../style.module.less';
+import type { AgentPickerProps } from './index.type';
 
 function AgentPicker({ selectedAgent, agents, onChange }: AgentPickerProps) {
   const [open, setOpen] = useState(false);
@@ -15,14 +15,13 @@ function AgentPicker({ selectedAgent, agents, onChange }: AgentPickerProps) {
 
   return (
     <Popover isOpen={open} onOpenChange={setOpen}>
-      <Popover.Trigger>
+      <Popover.Trigger title={selectedAgent.label}>
         <Button
           variant="ghost"
           size="sm"
           isIconOnly
           className={styles.toolbarCircleBtn}
           aria-label="选择 Agent"
-          title={selectedAgent.label}
         >
           <Bot size={17} />
         </Button>
