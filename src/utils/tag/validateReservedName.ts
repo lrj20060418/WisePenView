@@ -1,5 +1,5 @@
 /**
- * tag / folder / sticker 等命名场景的通用前缀保留校验。
+ * tag / folder 等命名场景的通用前缀保留校验。
  *
  * 背景：
  * - `/` 前缀代表路径型（folder）节点，由 Folder 域统一托管；
