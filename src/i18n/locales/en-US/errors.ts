@@ -44,6 +44,7 @@ const enUSErrors = {
     '131': 'Please enter a 16-character voucher code.',
     '132': 'Voucher has already been used.',
     '133': 'Invalid voucher code.',
+    '134': 'Shortcut cannot be moved to its primary location.',
     '999': 'Operation failed. Please try again later.',
     '1000': 'System error.',
     '1001': 'Request error.',

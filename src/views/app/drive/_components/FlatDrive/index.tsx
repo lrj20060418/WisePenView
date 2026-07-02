@@ -6,6 +6,7 @@ import FileList from './FileList';
 import type { FlatDriveProps } from './index.type';
 import styles from './style.module.less';
 
+/** @deprecated Sticker/标签管理视图已雪藏，仅保留代码用于历史兼容。 */
 const DEFAULT_FILTER: FileFilterValue = {
   tagIds: [],
   tagNames: [],

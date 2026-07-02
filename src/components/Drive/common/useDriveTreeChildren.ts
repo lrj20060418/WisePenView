@@ -1,5 +1,6 @@
 import { useDriveService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
+import { buildLoadingNode } from '@/domains/Drive/mapper/DriveServices.map';
 import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
 import { useState } from 'react';
@@ -11,7 +12,6 @@ interface UseDriveTreeChildrenParams {
 interface UseDriveTreeChildrenReturn {
   childrenMap: Map<string, DriveNode[]>;
   loadChildren: (nodeId: string) => Promise<DriveNode[]>;
-  loadMore: (node: LoadMoreNode) => Promise<DriveNode[]>;
   reset: () => void;
 }
 
@@ -30,23 +30,14 @@ export function useDriveTreeChildren({
   };
 
   const loadChildren = async (nodeId: string): Promise<DriveNode[]> => {
+    setNodeChildren(nodeId, [buildLoadingNode(nodeId, '正在加载...')]);
     try {
-      const children = await driveService.loadNodeChildren({ nodeId, groupId });
+      const children = await driveService.listNodeChildren({ nodeId, groupId });
       setNodeChildren(nodeId, children);
       return children;
     } catch (err) {
       toast.danger(parseErrorMessage(err));
-      return [];
-    }
-  };
-
-  const loadMore = async (node: LoadMoreNode): Promise<DriveNode[]> => {
-    try {
-      const children = await driveService.loadMore({ parentNodeId: node.parentId, groupId });
-      setNodeChildren(node.parentId, children);
-      return children;
-    } catch (err) {
-      toast.danger(parseErrorMessage(err));
+      setNodeChildren(nodeId, []);
       return [];
     }
   };
@@ -58,7 +49,6 @@ export function useDriveTreeChildren({
   return {
     childrenMap,
     loadChildren,
-    loadMore,
     reset,
   };
 }

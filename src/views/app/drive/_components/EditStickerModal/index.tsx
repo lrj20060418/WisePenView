@@ -11,6 +11,7 @@ import AddStickerModal from '../AddStickerModal';
 import styles from './index.module.less';
 import type { EditStickerModalProps } from './index.type';
 
+/** @deprecated Sticker/标签管理视图已雪藏，仅保留代码用于历史兼容。 */
 function EditStickerModal({ isOpen, onOpenChange, onSuccess, file }: EditStickerModalProps) {
   const stickerService = useStickerService();
   const [stickers, setStickers] = useState<Sticker[]>([]);

@@ -7,7 +7,7 @@ import IconText from '@/components/IconText';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import { useDriveService, useGroupService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
 import { useChatPageStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
 import { Button, Modal, toast } from '@heroui/react';
@@ -27,8 +27,8 @@ interface ScopeInfo {
   groupId?: string;
 }
 
-type RenderableType = 'folder' | 'resource' | 'link' | 'trash';
-type SelectableType = 'folder' | 'resource' | 'link';
+type RenderableType = 'root' | 'folder' | 'resource' | 'link';
+type SelectableType = 'root' | 'folder' | 'resource' | 'link';
 
 function buildScopeKey(scopeId: string): string {
   return `${SCOPE_KEY_PREFIX}:${scopeId}`;
@@ -80,7 +80,7 @@ function buildScopeRootNode(key: string, title: string, scopeType: 'personal' | 
   };
 }
 
-const RENDERABLE_TYPES = new Set<RenderableType>(['folder', 'resource', 'link']);
+const RENDERABLE_TYPES = new Set<RenderableType>(['root', 'folder', 'resource', 'link']);
 const SELECTABLE_TYPES = new Set<SelectableType>(['resource', 'link']);
 const EMPTY_STRING_SET = new Set<string>();
 
@@ -105,9 +105,6 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
         renderableTypes: RENDERABLE_TYPES,
         selectableTypes: SELECTABLE_TYPES,
         disabledNodeIds: EMPTY_STRING_SET,
-        onLoadMoreClick: (node: LoadMoreNode) => {
-          void handleLoadMore(scopeKey, node);
-        },
       },
       rawNodeMap
     );
@@ -124,16 +121,13 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
     if (!scopeInfo) return;
 
     try {
-      const rootNode = await driveService.getDriveTree({
-        rootId: DRIVE_ROOT_ID,
-        groupId: scopeInfo.groupId,
-      });
-      if (rootNode.type !== 'folder') {
+      const rootNode = await driveService.getRootNode({ groupId: scopeInfo.groupId });
+      if (rootNode.type !== 'root') {
         setTreeData((prev) => replaceTreeNodeChildren(prev, scopeKey, []));
         return;
       }
 
-      const driveChildren = await driveService.loadNodeChildren({
+      const driveChildren = await driveService.listNodeChildren({
         nodeId: rootNode.id,
         groupId: scopeInfo.groupId,
       });
@@ -149,32 +143,15 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
     const scopedKey = buildScopedKey(scopeKey, driveNodeId);
     const scopeInfo = scopeMapRef.current.get(scopeKey);
     const driveNode = scopedDriveNodeMapRef.current.get(scopedKey);
-    if (!driveNode || (driveNode.type !== 'folder' && driveNode.type !== 'trash')) return;
+    if (!driveNode || (driveNode.type !== 'root' && driveNode.type !== 'folder')) return;
 
     try {
-      const driveChildren = await driveService.loadNodeChildren({
+      const driveChildren = await driveService.listNodeChildren({
         nodeId: driveNodeId,
         groupId: scopeInfo?.groupId,
       });
       setTreeData((prev) =>
         replaceTreeNodeChildren(prev, scopedKey, buildScopedChildren(scopeKey, driveChildren))
-      );
-    } catch (err) {
-      toast.danger(parseErrorMessage(err));
-    }
-  }
-
-  async function handleLoadMore(scopeKey: string, node: LoadMoreNode): Promise<void> {
-    const scopeInfo = scopeMapRef.current.get(scopeKey);
-    const parentKey = buildScopedKey(scopeKey, node.parentId);
-
-    try {
-      const driveChildren = await driveService.loadMore({
-        parentNodeId: node.parentId,
-        groupId: scopeInfo?.groupId,
-      });
-      setTreeData((prev) =>
-        replaceTreeNodeChildren(prev, parentKey, buildScopedChildren(scopeKey, driveChildren))
       );
     } catch (err) {
       toast.danger(parseErrorMessage(err));

@@ -20,7 +20,7 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
     {
       manual: true,
       onSuccess: () => {
-        toast.success('删除成功');
+        toast.success('已移入最近删除');
         onSuccess?.();
         onOpenChange(false);
       },
@@ -36,10 +36,10 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
   };
 
   const isFolder = node?.type === 'folder';
-  const title = isFolder ? '删除文件夹' : '删除文件';
+  const title = isFolder ? '移入最近删除' : '移入最近删除';
   const description = isFolder
-    ? `确定删除「${getNodeName(node)}」及其下属内容吗？此操作不可撤销。`
-    : `确定删除「${getNodeName(node)}」吗？此操作不可撤销。`;
+    ? `确定将「${getNodeName(node)}」及其下属内容移入最近删除吗？`
+    : `确定将「${getNodeName(node)}」移入最近删除吗？`;
 
   return (
     <Modal isOpen={isOpen && !!node} onOpenChange={onOpenChange}>
@@ -59,7 +59,7 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
                 取消
               </Button>
               <Button variant="danger" isDisabled={loading} onPress={() => void handleConfirm()}>
-                删除
+                移入最近删除
               </Button>
             </Modal.Footer>
           </Modal.Dialog>

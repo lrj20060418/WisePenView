@@ -11,6 +11,7 @@ import type {
   SearchQueryRequest,
   SearchResultPage,
 } from '@/domains/Resource';
+import { resolveResourceIconType } from '@/domains/Resource';
 import {
   useNewNoteStore,
   useNoteSelectionStore,
@@ -25,6 +26,12 @@ const toResourceItem = (
   item: Omit<ResourceItem, 'ownerInfo'> & { ownerInfo?: ResourceItem['ownerInfo'] }
 ): ResourceItem => ({
   ...item,
+  resourceIconType:
+    item.resourceIconType ??
+    resolveResourceIconType({
+      resourceType: item.resourceType,
+      resourceName: item.resourceName,
+    }),
   ownerInfo: item.ownerInfo ?? {},
 });
 

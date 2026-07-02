@@ -12,6 +12,7 @@ import {
   TAG_QUERY_LOGIC_MODE,
   type ResourceActionKey,
 } from '../enum';
+import { resolveResourceIconType } from '../utils/resolveResourceIconType';
 import type {
   GetUserResourcesRequest,
   ResourceListPage,
@@ -82,11 +83,18 @@ const mapListResourceItemsRequest = (
 /** 单条资源：Java Long 字符串、标签派生字段 */
 const mapResourceItemFromApi = (raw: ResourceItem): ResourceItem => {
   const item = normalizeResourceItem(raw) as ResourceItem;
-  // fallback：无 currentTags 时按空对象处理
-  const tagIds = Object.keys(item.currentTags ?? {});
+  const currentTags =
+    item.currentTags && !Array.isArray(item.currentTags) ? item.currentTags : undefined;
+  // fallback：后端暂未返回有序 tagIds 时，只能按 currentTags 的对象顺序派生。
+  const tagIds = Object.keys(currentTags ?? {});
 
   return {
     ...item,
+    currentTags,
+    resourceIconType: resolveResourceIconType({
+      resourceType: item.resourceType,
+      resourceName: item.resourceName,
+    }),
     // fallback：无标签时为 undefined
     mainTagId: tagIds[0],
     // fallback：仅一个或无标签时为 []
@@ -174,6 +182,10 @@ const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractSt
 const mapSearchHitFromApi = (raw: GlobalSearchApiResponse['list'][number]): SearchHitItem => ({
   ...raw,
   resourceType: normalizeSearchResourceType(raw.resourceType),
+  resourceIconType: resolveResourceIconType({
+    resourceType: raw.resourceType,
+    resourceName: raw.resourceName,
+  }),
 });
 
 const mapSearchResultPageFromApi = (data: GlobalSearchApiResponse): SearchResultPage => ({

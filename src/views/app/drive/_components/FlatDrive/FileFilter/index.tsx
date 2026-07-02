@@ -23,6 +23,7 @@ const DEFAULT_VALUE: FileFilterValue = {
   sortDir: RESOURCE_SORT_DIR.DESC,
 };
 
+/** @deprecated Sticker/标签筛选视图已雪藏，仅保留历史兼容。 */
 function FileFilter({ value, onChange }: FileFilterProps) {
   const stickerService = useStickerService();
   const [innerValue, setInnerValue] = useState<FileFilterValue>(DEFAULT_VALUE);

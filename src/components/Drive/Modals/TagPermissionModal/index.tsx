@@ -92,9 +92,9 @@ async function findFolderNodeIdByTagId(params: {
   rootId: string;
   groupId?: string;
   tagId: string;
-  loadNodeChildren: (nodeId: string, groupId?: string) => Promise<DriveNode[]>;
+  listNodeChildren: (nodeId: string, groupId?: string) => Promise<DriveNode[]>;
 }): Promise<string | undefined> {
-  const { rootId, groupId, tagId, loadNodeChildren } = params;
+  const { rootId, groupId, tagId, listNodeChildren } = params;
   const queue: string[] = [rootId];
   const visited = new Set<string>();
 
@@ -103,7 +103,7 @@ async function findFolderNodeIdByTagId(params: {
     if (!currentId || visited.has(currentId)) continue;
     visited.add(currentId);
 
-    const children = await loadNodeChildren(currentId, groupId);
+    const children = await listNodeChildren(currentId, groupId);
     for (const child of children) {
       if (child.type !== 'folder') continue;
       if (child.tagId === tagId) return child.id;
@@ -182,8 +182,8 @@ const TagPermissionModal = ({
         rootId: DEFAULT_DRIVE_ROOT_ID,
         groupId,
         tagId,
-        loadNodeChildren: (nodeId, currentGroupId) =>
-          driveService.loadNodeChildren({ nodeId, groupId: currentGroupId }),
+        listNodeChildren: (nodeId, currentGroupId) =>
+          driveService.listNodeChildren({ nodeId, groupId: currentGroupId }),
       });
       return nodeId ? [nodeId] : undefined;
     },
@@ -467,7 +467,7 @@ const TagPermissionModal = ({
                       <div className={styles.leftTitle}>选择标签</div>
                       <DriveNav
                         scope={groupId ? { type: 'group', groupId } : undefined}
-                        renderableTypes={['folder']}
+                        renderableTypes={['root', 'folder']}
                         selectableTypes={['folder']}
                         multiple={false}
                         refreshTrigger={tagRefreshSeed}

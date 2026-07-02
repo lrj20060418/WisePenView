@@ -1,21 +1,22 @@
 import { ROOT_DISPLAY } from '@/components/Drive/common/constants';
 import EntryIcon from '@/components/EntryIcon';
 import IconText from '@/components/IconText';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
 import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
 import styles from './style.module.less';
 
 interface DriveTreeNodeTitleProps {
-  node: Exclude<DriveNode, LoadMoreNode>;
+  node: DriveNode;
 }
 
 function getNodeDisplayName(node: DriveTreeNodeTitleProps['node'], resourceName: string): string {
+  if (node.type === 'root') return node.name || ROOT_DISPLAY;
   if (node.type === 'folder') {
     if (!node.parentId) return ROOT_DISPLAY;
     return node.name || ROOT_DISPLAY;
   }
   if (node.type === 'resource' || node.type === 'link') return resourceName;
-  return '回收站';
+  return node.label || '正在加载...';
 }
 
 function DriveTreeNodeTitle({ node }: DriveTreeNodeTitleProps) {
@@ -24,11 +25,20 @@ function DriveTreeNodeTitle({ node }: DriveTreeNodeTitleProps) {
   const resourceName = useResourceDisplayName(resourceId, fallbackName, '未命名文件');
   const resourceType =
     node.type === 'resource' || node.type === 'link' ? node.resourceType : undefined;
+  const resourceIconType =
+    node.type === 'resource' || node.type === 'link' ? node.resourceIconType : undefined;
 
   return (
     <IconText
       className={styles.nodeTitle}
-      icon={<EntryIcon entryType={node.type} resourceType={resourceType} size={14} />}
+      icon={
+        <EntryIcon
+          entryType={node.type}
+          resourceType={resourceType}
+          resourceIconType={resourceIconType}
+          size={14}
+        />
+      }
       iconSize={14}
       gap="4px"
       ellipsis

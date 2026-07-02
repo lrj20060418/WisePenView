@@ -1,9 +1,10 @@
 import type { DragEventHandler, ReactNode } from 'react';
+import type { ResourceIconType } from '@/domains/Resource';
 import type { FolderColumnWidth } from '../shared/TableBase/columnWidth';
 import type { TableColumnBase, TableLoadMore } from '../shared/TableBase/index.type';
 import type { TableRowAction } from '../shared/TableRowActions/index.type';
 
-export type FolderTableEntryType = 'folder' | 'link' | 'resource' | 'trash' | 'loadMore';
+export type FolderTableEntryType = 'root' | 'folder' | 'link' | 'resource' | 'loading';
 
 export interface FolderTableRow {
   id: string;
@@ -11,14 +12,11 @@ export interface FolderTableRow {
   entryType: FolderTableEntryType;
   /** resource 类型时使用 EntryIcon */
   resourceType?: string;
+  /** resource 类型时使用 EntryIcon 的细分图标 */
+  resourceIconType?: ResourceIconType;
   /** 展示用，如「—」「45 KB」 */
   sizeLabel?: string;
   typeLabel: string;
-  /** loadMore 行展示用 */
-  loaded?: number;
-  total?: number;
-  loadMoreLabel?: string;
-  loadMoreLoading?: boolean;
   /** 是否展示展开控件；适合懒加载 children 的目录行 */
   isExpandable?: boolean;
   /** 树形子节点；展开后插入当前层级下方 */

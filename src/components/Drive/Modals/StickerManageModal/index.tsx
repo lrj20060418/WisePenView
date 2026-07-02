@@ -12,6 +12,7 @@ import { useState } from 'react';
 import type { StickerManageModalProps } from './index.type';
 import styles from './style.module.less';
 
+/** @deprecated Sticker/标签管理视图已雪藏，仅保留代码用于历史兼容。 */
 function StickerManageModal({ isOpen, onOpenChange, onSuccess }: StickerManageModalProps) {
   const stickerService = useStickerService();
   const [stickers, setStickers] = useState<Sticker[]>([]);

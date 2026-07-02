@@ -24,7 +24,7 @@ async function collectFolderDescendantIds(
   if (visited.has(folderId)) return;
   visited.add(folderId);
 
-  const children = await driveService.loadNodeChildren({ nodeId: folderId, groupId });
+  const children = await driveService.listNodeChildren({ nodeId: folderId, groupId });
   const folderChildren = children.filter((child): child is FolderNode => child.type === 'folder');
   await Promise.all(
     folderChildren.map((child) =>
@@ -65,11 +65,22 @@ function MoveNodeModal({
   );
 
   const finalBlockedIds = useMemo(() => blockedIds ?? new Set<string>(), [blockedIds]);
+  const disabledTargetIds = useMemo(() => {
+    const next = new Set(finalBlockedIds);
+    if (groupId && node && (node.type === 'resource' || node.type === 'link')) {
+      next.add(rootId);
+    }
+    return next;
+  }, [finalBlockedIds, groupId, node, rootId]);
 
   const { loading: moving, run: runMove } = useRequest(
     async () => {
       if (!node || !selectedTargetId) return;
-      await driveService.moveNode({ nodeId: node.id, newParentId: selectedTargetId, groupId });
+      await driveService.moveToFolder({
+        nodeId: node.id,
+        targetFolderNodeId: selectedTargetId,
+        groupId,
+      });
     },
     {
       manual: true,
@@ -109,11 +120,13 @@ function MoveNodeModal({
                   <DriveNav
                     rootId={rootId}
                     groupId={groupId}
-                    renderableTypes={['folder']}
-                    selectableTypes={['folder']}
-                    disabledNodeIds={[...finalBlockedIds]}
+                    renderableTypes={['root', 'folder']}
+                    selectableTypes={['root', 'folder']}
+                    disabledNodeIds={[...disabledTargetIds]}
                     onChange={(selected) => {
-                      const targetFolder = selected.find((item) => item.kind === 'folder');
+                      const targetFolder = selected.find(
+                        (item) => item.kind === 'root' || item.kind === 'folder'
+                      );
                       setSelectedTargetId(targetFolder?.nodeId);
                     }}
                   />

@@ -20,8 +20,7 @@ function NewFolderNodeModal({
   const [name, setName] = useState('');
 
   const { loading, run: runCreateFolder } = useRequest(
-    async (trimmed: string) =>
-      driveService.createNode({ parentId, name: trimmed, type: 'folder', groupId }),
+    async (trimmed: string) => driveService.createFolder({ parentId, name: trimmed, groupId }),
     {
       manual: true,
       onSuccess: () => {

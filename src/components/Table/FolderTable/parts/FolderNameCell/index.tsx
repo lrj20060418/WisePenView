@@ -34,7 +34,12 @@ function FolderTableNameCell<T extends FolderTableRow>({
       ) : (
         <span className={styles.expandPlaceholder} aria-hidden />
       )}
-      <EntryIcon entryType={row.entryType} resourceType={row.resourceType} size={iconSize} />
+      <EntryIcon
+        entryType={row.entryType}
+        resourceType={row.resourceType}
+        resourceIconType={row.resourceIconType}
+        size={iconSize}
+      />
       <TableTextCell emphasis className={styles.nameText}>
         {row.name}
       </TableTextCell>

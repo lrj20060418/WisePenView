@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 import { zustandSessionStorage } from './sessionStorage';
 
+/** @deprecated flat 是已雪藏的标签管理视图，仅用于兼容历史持久化值。 */
 export type DriveViewMode = 'flat' | 'uploadQueue' | 'tableDrive';
 
 const DEFAULT_DRIVE_PREFERENCES = {

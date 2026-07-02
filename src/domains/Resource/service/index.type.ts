@@ -5,6 +5,7 @@
 
 import type {
   ResourceAction,
+  ResourceIconType,
   ResourceItem,
   ResourceSortBy,
   ResourceSortDir,
@@ -59,6 +60,7 @@ export interface SearchQueryRequest {
 export interface SearchHitItem {
   resourceId: string;
   resourceType: SearchResourceType;
+  resourceIconType: ResourceIconType;
   resourceName: string;
   highlightContent: string | null;
   updateTime: string;

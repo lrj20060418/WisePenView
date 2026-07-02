@@ -6,6 +6,7 @@ import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import type { AddStickerModalProps } from './index.type';
 
+/** @deprecated Sticker/标签管理视图已雪藏，仅保留代码用于历史兼容。 */
 function AddStickerModal({ isOpen, onOpenChange, onSuccess }: AddStickerModalProps) {
   const stickerService = useStickerService();
   const [name, setName] = useState('');

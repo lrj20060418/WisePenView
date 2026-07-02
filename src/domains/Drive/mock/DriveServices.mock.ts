@@ -1,14 +1,16 @@
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
-import type { DriveNode, FolderNode, TrashNode } from '../entity/drive';
+import { resolveResourceIconType } from '@/domains/Resource';
+import type { DriveNode, FolderNode, RootNode } from '../entity/drive';
 import type {
   CreateDriveServiceOptions,
-  CreateNodeParams,
+  CreateFolderParams,
   GetDriveTreeParams,
-  GetPathByIdParams,
+  GetNodePathParams,
+  GetRootNodeParams,
   IDriveService,
-  LoadMoreParams,
-  LoadNodeChildrenParams,
+  ListNodeChildrenParams,
   MoveNodeParams,
+  MoveToFolderParams,
   RemoveNodeParams,
   RenameNodeParams,
 } from '../service/index.type';
@@ -16,63 +18,127 @@ import mockdata from './mockdata.json';
 
 const DEFAULT_PAGE_SIZE = 50;
 const NETWORK_DELAY_MS = 150;
+const ROOT_ID = 'drive-root';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+type LegacyNode = {
+  id?: string;
+  type?: string;
+  parentId?: string | null;
+  tagId?: string;
+  name?: string;
+  childrenIds?: string[];
+  expanded?: boolean;
+  resourceId?: string;
+  title?: string;
+  resourceType?: string;
+  primaryTagId?: string;
+};
+
 type MockJson = {
   rootId: string;
-  nodes: Record<string, DriveNode>;
+  nodes: Record<string, LegacyNode>;
 };
 
 const md = mockdata as unknown as MockJson;
 
+const toRootNode = (node: LegacyNode): RootNode => ({
+  id: ROOT_ID,
+  type: 'root',
+  parentId: null,
+  name: node.name ?? '个人云盘',
+  scope: 'personal',
+  childrenIds: node.childrenIds ?? [],
+});
+
+const normalizeNode = (node: LegacyNode): DriveNode | null => {
+  if (!node.id) return null;
+  if (node.id === ROOT_ID || node.type === 'root') return toRootNode(node);
+  if (node.type === 'folder' && node.tagId) {
+    return {
+      id: node.id,
+      type: 'folder',
+      parentId: node.parentId ?? null,
+      tagId: node.tagId,
+      name: node.name ?? '未命名文件夹',
+      childrenIds: node.childrenIds ?? [],
+    };
+  }
+  if (node.type === 'resource' && node.resourceId) {
+    return {
+      id: node.id,
+      type: 'resource',
+      parentId: node.parentId ?? null,
+      resourceId: node.resourceId,
+      title: node.title ?? '未命名文件',
+      resourceType: node.resourceType,
+      resourceIconType: resolveResourceIconType({
+        resourceType: node.resourceType,
+        resourceName: node.title,
+      }),
+      folderTagId: node.tagId ?? node.parentId ?? '',
+    };
+  }
+  if (node.type === 'link' && node.resourceId) {
+    return {
+      id: node.id,
+      type: 'link',
+      parentId: node.parentId ?? null,
+      resourceId: node.resourceId,
+      title: node.title ?? '未命名文件',
+      resourceType: node.resourceType,
+      resourceIconType: resolveResourceIconType({
+        resourceType: node.resourceType,
+        resourceName: node.title,
+      }),
+      folderTagId: node.tagId ?? node.parentId ?? '',
+      primaryTagId: node.primaryTagId,
+    };
+  }
+  return null;
+};
+
 function createDriveServiceMock(opts?: CreateDriveServiceOptions): IDriveService {
   const pageSize = opts?.pageSize ?? DEFAULT_PAGE_SIZE;
+  void pageSize;
 
   /** 内存 nodeMap：从 JSON 反序列化的副本（避免污染原始 import） */
-  const nodes = new Map<string, DriveNode>(
-    Object.entries(md.nodes).map(([id, node]) => [id, { ...(node as DriveNode) }])
-  );
-
-  /** 每个 folder 已加载的页数；首次访问初始化为 1 */
-  const loadedPages = new Map<string, number>();
-
-  function getFolder(id: string): FolderNode | undefined {
-    const node = nodes.get(id);
-    return node && node.type === 'folder' ? node : undefined;
+  const nodes = new Map<string, DriveNode>();
+  for (const [id, node] of Object.entries(md.nodes)) {
+    const normalized = normalizeNode({ ...node, id: node.id ?? id });
+    if (normalized) nodes.set(id, normalized);
   }
-
-  function getContainer(id: string): FolderNode | TrashNode | undefined {
-    const node = nodes.get(id);
-    return node && (node.type === 'folder' || node.type === 'trash') ? node : undefined;
+  if (!nodes.has(ROOT_ID)) {
+    nodes.set(ROOT_ID, {
+      id: ROOT_ID,
+      type: 'root',
+      parentId: null,
+      name: '个人云盘',
+      scope: 'personal',
+      childrenIds: [],
+    });
   }
-
-  /** 按当前已加载页数拼出 children；未拉满时末尾追加 LoadMoreNode */
-  function buildChildren(parentId: string): DriveNode[] {
-    const parent = getContainer(parentId);
-    if (!parent) return [];
-    const allIds = parent.childrenIds;
-    const page = loadedPages.get(parentId) ?? 1;
-    const loaded = Math.min(allIds.length, page * pageSize);
-
-    const children: DriveNode[] = allIds
-      .slice(0, loaded)
-      .map((id) => nodes.get(id))
-      .filter((n): n is DriveNode => n != null);
-
-    if (loaded < allIds.length) {
-      children.push({
-        id: `loadMore-${parentId}`,
-        type: 'loadMore',
-        parentId,
-        loaded,
-        total: allIds.length,
-      });
+  for (const node of nodes.values()) {
+    if (node.type === 'root' || node.type === 'folder') {
+      node.childrenIds = node.childrenIds.filter((id) => nodes.has(id));
     }
-    return children;
   }
 
-  /** 从父节点 childrenIds 中移除指定 id */
+  function getContainer(id: string): RootNode | FolderNode | undefined {
+    const node = nodes.get(id);
+    return node && (node.type === 'root' || node.type === 'folder') ? node : undefined;
+  }
+
+  function isDescendantOf(nodeId: string, ancestorId: string): boolean {
+    let cur = nodes.get(nodeId);
+    while (cur?.parentId) {
+      if (cur.parentId === ancestorId) return true;
+      cur = nodes.get(cur.parentId);
+    }
+    return false;
+  }
+
   function detachFromParent(nodeId: string): void {
     const node = nodes.get(nodeId);
     if (!node || !node.parentId) return;
@@ -81,102 +147,144 @@ function createDriveServiceMock(opts?: CreateDriveServiceOptions): IDriveService
     parent.childrenIds = parent.childrenIds.filter((id) => id !== nodeId);
   }
 
+  function buildPath(nodeId: string): Array<RootNode | FolderNode> {
+    const path: Array<RootNode | FolderNode> = [];
+    let cur: DriveNode | undefined = nodes.get(nodeId);
+    if (!cur) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, { nodeId });
+    }
+    if (cur.type !== 'root' && cur.type !== 'folder') {
+      cur = cur.parentId ? nodes.get(cur.parentId) : undefined;
+    }
+    while (cur) {
+      if (cur.type === 'root' || cur.type === 'folder') path.unshift(cur);
+      cur = cur.parentId ? nodes.get(cur.parentId) : undefined;
+    }
+    return path;
+  }
+
+  const getRootNode = async (_params?: GetRootNodeParams): Promise<RootNode> => {
+    await delay(NETWORK_DELAY_MS);
+    const root = nodes.get(ROOT_ID);
+    if (!root || root.type !== 'root') {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, { nodeId: ROOT_ID });
+    }
+    return root;
+  };
+
+  const listNodeChildren = async (params: ListNodeChildrenParams): Promise<DriveNode[]> => {
+    await delay(NETWORK_DELAY_MS);
+    const parent = getContainer(params.nodeId);
+    if (!parent) return [];
+    return parent.childrenIds
+      .map((id) => nodes.get(id))
+      .filter((node): node is DriveNode => node != null && node.type !== 'loading');
+  };
+
+  const getNodePath: IDriveService['getNodePath'] = async (params: GetNodePathParams) => {
+    await delay(NETWORK_DELAY_MS);
+    return buildPath(params.nodeId);
+  };
+
+  const moveToFolder = async (params: MoveToFolderParams): Promise<void> => {
+    await delay(NETWORK_DELAY_MS);
+    const node = nodes.get(params.nodeId);
+    const newParent = getContainer(params.targetFolderNodeId);
+    if (!node || !newParent) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
+        nodeId: node ? params.targetFolderNodeId : params.nodeId,
+      });
+    }
+    if (node.type !== 'folder' && node.type !== 'resource' && node.type !== 'link') {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_UNSUPPORTED_MOVE);
+    }
+    if (node.type === 'folder' && isDescendantOf(params.targetFolderNodeId, node.id)) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_UNSUPPORTED_MOVE);
+    }
+    if (node.type === 'link' && newParent.type === 'folder') {
+      if (node.primaryTagId === newParent.tagId) {
+        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_LINK_MOVE_TO_PRIMARY_TAG);
+      }
+      node.folderTagId = newParent.tagId;
+    }
+    if (node.type === 'resource' && newParent.type === 'folder') {
+      node.folderTagId = newParent.tagId;
+    }
+    detachFromParent(params.nodeId);
+    node.parentId = params.targetFolderNodeId;
+    newParent.childrenIds.push(params.nodeId);
+  };
+
+  const removeNode = async (params: RemoveNodeParams): Promise<void> => {
+    await delay(NETWORK_DELAY_MS);
+    detachFromParent(params.nodeId);
+    nodes.delete(params.nodeId);
+  };
+
+  const renameNode = async (params: RenameNodeParams): Promise<void> => {
+    await delay(NETWORK_DELAY_MS);
+    const node = nodes.get(params.nodeId);
+    if (!node) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
+        nodeId: params.nodeId,
+      });
+    }
+    if (node.type === 'folder' || node.type === 'root') {
+      node.name = params.newName;
+    } else if (node.type === 'resource' || node.type === 'link') {
+      node.title = params.newName;
+    }
+  };
+
+  const createFolder = async (params: CreateFolderParams): Promise<string> => {
+    await delay(NETWORK_DELAY_MS);
+    const parent = getContainer(params.parentId);
+    if (!parent) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
+        nodeId: params.parentId,
+      });
+    }
+    const newId = `folder-mock-${Date.now()}`;
+    const node: FolderNode = {
+      id: newId,
+      type: 'folder',
+      parentId: params.parentId,
+      tagId: `tag-${newId}`,
+      name: params.name,
+      childrenIds: [],
+    };
+    nodes.set(newId, node);
+    parent.childrenIds.push(newId);
+    return node.tagId;
+  };
+
   return {
+    getRootNode,
+    listNodeChildren,
+    getNodePath,
+    moveToFolder,
+    removeNode,
+    renameNode,
+    createFolder,
     async getDriveTree(params: GetDriveTreeParams) {
-      await delay(NETWORK_DELAY_MS);
-      const node = nodes.get(params.rootId);
-      if (!node) {
+      if (params.rootId !== ROOT_ID) {
         throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
           nodeId: params.rootId,
         });
       }
-      return node;
+      return getRootNode({ groupId: params.groupId });
     },
-
-    async loadNodeChildren(params: LoadNodeChildrenParams) {
-      await delay(NETWORK_DELAY_MS);
-      if (!loadedPages.has(params.nodeId)) loadedPages.set(params.nodeId, 1);
-      return buildChildren(params.nodeId);
+    loadNodeChildren: listNodeChildren,
+    getPathById: getNodePath,
+    moveNode(params: MoveNodeParams) {
+      return moveToFolder({
+        nodeId: params.nodeId,
+        targetFolderNodeId: params.newParentId,
+        groupId: params.groupId,
+      });
     },
-
-    async loadMore(params: LoadMoreParams) {
-      await delay(NETWORK_DELAY_MS);
-      const current = loadedPages.get(params.parentNodeId) ?? 1;
-      loadedPages.set(params.parentNodeId, current + 1);
-      return buildChildren(params.parentNodeId);
-    },
-
-    async getPathById(params: GetPathByIdParams) {
-      await delay(NETWORK_DELAY_MS);
-      const path: DriveNode[] = [];
-      let cur: DriveNode | undefined = nodes.get(params.nodeId);
-      if (!cur) {
-        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
-          nodeId: params.nodeId,
-        });
-      }
-      while (cur) {
-        path.unshift(cur);
-        cur = cur.parentId ? nodes.get(cur.parentId) : undefined;
-      }
-      return path;
-    },
-
-    async moveNode(params: MoveNodeParams) {
-      await delay(NETWORK_DELAY_MS);
-      const node = nodes.get(params.nodeId);
-      const newParent = getContainer(params.newParentId);
-      if (!node || !newParent) {
-        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
-          nodeId: node ? params.newParentId : params.nodeId,
-        });
-      }
-      detachFromParent(params.nodeId);
-      node.parentId = params.newParentId;
-      newParent.childrenIds.push(params.nodeId);
-    },
-
-    async removeNode(params: RemoveNodeParams) {
-      await delay(NETWORK_DELAY_MS);
-      detachFromParent(params.nodeId);
-      nodes.delete(params.nodeId);
-    },
-
-    async renameNode(params: RenameNodeParams) {
-      await delay(NETWORK_DELAY_MS);
-      const node = nodes.get(params.nodeId);
-      if (!node) {
-        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
-          nodeId: params.nodeId,
-        });
-      }
-      if (node.type === 'folder') {
-        node.name = params.newName;
-      } else if (node.type === 'resource' || node.type === 'link') {
-        node.title = params.newName;
-      }
-    },
-
-    async createNode(params: CreateNodeParams) {
-      await delay(NETWORK_DELAY_MS);
-      const parent = getFolder(params.parentId);
-      if (!parent) {
-        throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_NOT_FOUND, {
-          nodeId: params.parentId,
-        });
-      }
-      const newId = `${params.type}-mock-${Date.now()}`;
-      const node: DriveNode = {
-        id: newId,
-        type: 'folder',
-        parentId: params.parentId,
-        tagId: `tag-${newId}`,
-        name: params.name,
-        expanded: false,
-        childrenIds: [],
-      };
-      nodes.set(newId, node);
-      parent.childrenIds.push(newId);
+    async createNode(params) {
+      await createFolder(params);
     },
   };
 }

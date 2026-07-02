@@ -46,7 +46,7 @@ function flattenFolderRows<T extends FolderTableRow>(
     result.push({ ...row, depth });
     const hasChildren = Boolean(row.children?.length);
     if (
-      (row.entryType === 'folder' || row.entryType === 'trash') &&
+      (row.entryType === 'root' || row.entryType === 'folder') &&
       hasChildren &&
       expandedKeys.has(row.id)
     ) {
@@ -59,7 +59,7 @@ function flattenFolderRows<T extends FolderTableRow>(
 
 function folderRowHasChildren(row: FolderTableRow): boolean {
   return (
-    (row.entryType === 'folder' || row.entryType === 'trash') &&
+    (row.entryType === 'root' || row.entryType === 'folder') &&
     (row.isExpandable === true || Boolean(row.children?.length))
   );
 }
@@ -223,37 +223,11 @@ function FolderTable<T extends FolderTableRow>({
     [rowActions]
   );
 
-  const renderLoadMoreLabel = useCallback(
-    (row: FolderTableVisibleRow) => {
-      if (row.loadMoreLabel) {
-        return row.loadMoreLabel;
-      }
-      if (typeof row.loaded === 'number' && typeof row.total === 'number') {
-        return t('loadMoreExplicit', { loaded: row.loaded, total: row.total });
-      }
-      return t('loadMoreAction');
-    },
-    [t]
-  );
-
   const renderCellContent = useCallback(
     (column: FolderTableColumn<T>, row: FolderTableVisibleRow, ctx: FolderTableRowContext<T>) => {
       if (column.isNameColumn) {
-        if (row.entryType === 'loadMore') {
-          return (
-            <button
-              type="button"
-              className={styles.inlineLoadMoreButton}
-              disabled={row.loadMoreLoading}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (row.loadMoreLoading) return;
-                onRowActivate?.(ctx.row);
-              }}
-            >
-              {renderLoadMoreLabel(row)}
-            </button>
-          );
+        if (row.entryType === 'loading') {
+          return <span className={styles.inlineLoadMoreButton}>{row.name || '正在加载...'}</span>;
         }
 
         const expandable = folderRowHasChildren(row);
@@ -273,7 +247,7 @@ function FolderTable<T extends FolderTableRow>({
 
       if (column.isActionColumn) {
         const menuActions = toMenuActions(resolveRowActions(ctx.row, rowActions), ctx.row);
-        if (row.entryType === 'loadMore' || menuActions.length === 0) {
+        if (row.entryType === 'loading' || menuActions.length === 0) {
           return null;
         }
         return (
@@ -295,8 +269,6 @@ function FolderTable<T extends FolderTableRow>({
       handleRowAction,
       handleToggleExpand,
       onExpandedChange,
-      onRowActivate,
-      renderLoadMoreLabel,
       rowActions,
     ]
   );
@@ -395,7 +367,7 @@ function FolderTable<T extends FolderTableRow>({
                     };
                     const rowProps = getRowProps?.(row as T, ctx) ?? {};
                     const { className: rowClassName, ...restRowProps } = rowProps;
-                    const isLoadMoreRow = row.entryType === 'loadMore';
+                    const isLoadMoreRow = row.entryType === 'loading';
 
                     return (
                       <Table.Row

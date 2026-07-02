@@ -8,10 +8,9 @@ import { parseErrorMessage } from '@/utils/error';
 import { formatFileSize } from '@/utils/format/formatFileSize';
 import { Chip, Dropdown, ListBox, Select, toast } from '@heroui/react';
 import { usePagination } from 'ahooks';
-import { EllipsisVertical, Pencil, Tag as TagIcon, Trash2 } from 'lucide-react';
+import { EllipsisVertical, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import DeleteFileModal from '../../DeleteFileModal';
-import EditStickerModal from '../../EditStickerModal';
 import RenameFileModal from '../../RenameFileModal';
 import type { FileListProps } from './index.type';
 import styles from './style.module.less';
@@ -26,12 +25,28 @@ type ResourceTableRow = ResourceItem & {
 interface ColumnBuildProps {
   onDelete: (record: ResourceTableRow) => void;
   onRename: (record: ResourceTableRow) => void;
-  onEditSticker: (record: ResourceTableRow) => void;
   onOpenResource: (record: ResourceTableRow) => void;
   onCloseDropdown: () => void;
   openDropdownKey: string | null;
   setOpenDropdownKey: (key: string | null) => void;
 }
+
+const normalizeCurrentTags = (record: ResourceItem): Array<{ id: string; name: string }> => {
+  const raw = record.currentTags;
+  if (!raw || Array.isArray(raw)) return [];
+  return Object.entries(raw).map(([id, name]) => ({ id, name }));
+};
+
+const getPathTagName = (record: ResourceItem): string => {
+  const pathTag = normalizeCurrentTags(record).find(({ name }) => name.startsWith('/'));
+  if (!pathTag) return record.path || '-';
+  if (pathTag.name === '/') return '根目录';
+  return pathTag.name.replace(/^\//, '');
+};
+
+const getLinkTags = (record: ResourceItem): Array<{ id: string; name: string }> => {
+  return normalizeCurrentTags(record).filter(({ name }) => !name.startsWith('/'));
+};
 
 const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow>[] => [
   {
@@ -47,7 +62,14 @@ const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow
       >
         <IconText
           className={styles.nameCell}
-          icon={<EntryIcon entryType="resource" resourceType={record.resourceType} color="#666" />}
+          icon={
+            <EntryIcon
+              entryType="resource"
+              resourceType={record.resourceType}
+              resourceIconType={record.resourceIconType}
+              color="#666"
+            />
+          }
           iconSize={18}
           gap="var(--space-sm)"
           ellipsis
@@ -58,12 +80,25 @@ const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow
     ),
   },
   {
-    id: 'currentTags',
-    label: '标签',
+    id: 'drivePath',
+    label: '位置',
+    width: 'md',
+    renderCell: (record) => (
+      <button
+        type="button"
+        className={styles.cellButton}
+        onClick={() => props.onOpenResource(record)}
+      >
+        {getPathTagName(record)}
+      </button>
+    ),
+  },
+  {
+    id: 'linkTags',
+    label: '关联',
     width: 'lg',
     renderCell: (record) => {
-      const raw = record.currentTags;
-      const entries = raw ? Object.entries(raw).filter(([, name]) => !name.startsWith('/')) : [];
+      const entries = getLinkTags(record);
       return (
         <button
           type="button"
@@ -72,7 +107,7 @@ const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow
         >
           {entries.length ? (
             <span className={styles.tagList}>
-              {entries.map(([id, name]) => (
+              {entries.map(({ id, name }) => (
                 <Chip key={id} size="sm" variant="secondary" className={styles.tagChip}>
                   <Chip.Label>{name}</Chip.Label>
                 </Chip>
@@ -141,10 +176,6 @@ const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow
               aria-label="文件操作"
               onAction={(key) => {
                 props.onCloseDropdown();
-                if (key === 'editTag') {
-                  props.onEditSticker(record);
-                  return;
-                }
                 if (key === 'rename') {
                   props.onRename(record);
                   return;
@@ -154,11 +185,6 @@ const buildColumns = (props: ColumnBuildProps): DataTableColumn<ResourceTableRow
                 }
               }}
             >
-              <Dropdown.Item key="editTag" id="editTag" textValue="编辑标签">
-                <IconText icon={<TagIcon />} iconSize={14} gap="var(--space-xs)">
-                  编辑标签
-                </IconText>
-              </Dropdown.Item>
               <Dropdown.Item key="rename" id="rename" textValue="重命名">
                 <IconText icon={<Pencil />} iconSize={14} gap="var(--space-xs)">
                   重命名
@@ -185,10 +211,8 @@ function FileList({ groupId, filter }: FileListProps) {
   const [total, setTotal] = useState(0);
   const [renameFileModalOpen, setRenameFileModalOpen] = useState(false);
   const [deleteFileModalOpen, setDeleteFileModalOpen] = useState(false);
-  const [editStickerModalOpen, setEditStickerModalOpen] = useState(false);
   const [renameFileTarget, setRenameFileTarget] = useState<ResourceItem | null>(null);
   const [deleteFileTarget, setDeleteFileTarget] = useState<ResourceItem | null>(null);
-  const [editStickerTarget, setEditStickerTarget] = useState<ResourceItem | null>(null);
 
   const {
     loading,
@@ -243,11 +267,6 @@ function FileList({ groupId, filter }: FileListProps) {
     setRenameFileTarget(null);
   };
 
-  const handleEditStickerModalClose = () => {
-    setEditStickerModalOpen(false);
-    setEditStickerTarget(null);
-  };
-
   const handleDeleteFileModalClose = () => {
     setDeleteFileModalOpen(false);
     setDeleteFileTarget(null);
@@ -280,10 +299,6 @@ function FileList({ groupId, filter }: FileListProps) {
         onRename: (file) => {
           setRenameFileTarget(file);
           setRenameFileModalOpen(true);
-        },
-        onEditSticker: (file) => {
-          setEditStickerTarget(file);
-          setEditStickerModalOpen(true);
         },
         onOpenResource: handleOpenResource,
         onCloseDropdown: () => setOpenDropdownKey(null),
@@ -361,12 +376,6 @@ function FileList({ groupId, filter }: FileListProps) {
         isOpen={deleteFileModalOpen}
         file={deleteFileTarget}
         onOpenChange={(open) => !open && handleDeleteFileModalClose()}
-        onSuccess={fetchList}
-      />
-      <EditStickerModal
-        isOpen={editStickerModalOpen}
-        file={editStickerTarget}
-        onOpenChange={(open) => !open && handleEditStickerModalClose()}
         onSuccess={fetchList}
       />
     </>

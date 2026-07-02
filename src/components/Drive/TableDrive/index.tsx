@@ -23,30 +23,26 @@ import { useTableDriveActions } from './useTableDriveActions';
 
 function getTypeLabel(node: DriveNode): string {
   switch (node.type) {
+    case 'root':
+      return '云盘';
     case 'folder':
       return '文件夹';
     case 'resource':
       return node.resourceType;
     case 'link':
       return '链接';
-    case 'trash':
-      return '回收站';
-    case 'loadMore':
+    case 'loading':
       return '';
   }
 }
 
-function toDriveTableRow(node: DriveRow, loadingMoreParentId: string | null): DriveTableRow {
-  if (node.type === 'loadMore') {
+function toDriveTableRow(node: DriveRow): DriveTableRow {
+  if (node.type === 'loading') {
     return {
       id: node.id,
-      name: '加载更多',
-      entryType: 'loadMore',
+      name: node.label || '正在加载...',
+      entryType: 'loading',
       typeLabel: '',
-      loaded: node.loaded,
-      total: node.total,
-      loadMoreLabel: loadingMoreParentId === node.parentId ? '加载中...' : undefined,
-      loadMoreLoading: loadingMoreParentId === node.parentId,
       node,
     };
   }
@@ -56,17 +52,19 @@ function toDriveTableRow(node: DriveRow, loadingMoreParentId: string | null): Dr
     name: getDriveNodeLabel(node),
     entryType: node.type,
     resourceType: node.type === 'resource' || node.type === 'link' ? node.resourceType : undefined,
+    resourceIconType:
+      node.type === 'resource' || node.type === 'link' ? node.resourceIconType : undefined,
     sizeLabel: '—',
     typeLabel: getTypeLabel(node),
-    isExpandable: node.type === 'folder' || node.type === 'trash',
-    children: node.children?.map((child) => toDriveTableRow(child, loadingMoreParentId)),
+    isExpandable: node.type === 'root' || node.type === 'folder',
+    children: node.children?.map((child) => toDriveTableRow(child)),
     node,
   };
 }
 
 function toBreadcrumbItems(pathNodes: DriveNode[]): FolderTableBreadcrumbItem[] {
   return pathNodes
-    .filter((node) => node.type !== 'loadMore')
+    .filter((node) => node.type !== 'loading')
     .map((node, index) => ({
       id: node.id,
       label: getDriveNodeLabel(node),
@@ -83,26 +81,20 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     dataSource,
     pathNodes,
     loading,
-    loadingMoreParentId,
     expandedRowKeys,
     enterFolder,
-    handleLoadMore,
     handleExpand,
     refresh,
   } = useTableDrive({ rootId: finalRootId, groupId: finalGroupId });
 
   const handleClickNode = useClickNode({
     enterFolder,
-    loadMore: handleLoadMore,
     groupId: finalGroupId,
   });
   const { onDrop } = useDriveDrop({ refresh, groupId: finalGroupId });
-  const rows = useMemo(
-    () => dataSource.map((node) => toDriveTableRow(node, loadingMoreParentId)),
-    [dataSource, loadingMoreParentId]
-  );
+  const rows = useMemo(() => dataSource.map((node) => toDriveTableRow(node)), [dataSource]);
   const currentDirectoryItemCount = useMemo(
-    () => rows.filter((row) => row.entryType !== 'loadMore').length,
+    () => rows.filter((row) => row.entryType !== 'loading').length,
     [rows]
   );
   const breadcrumbItems = useMemo(() => toBreadcrumbItems(pathNodes), [pathNodes]);
@@ -150,10 +142,8 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     const node = row.node;
     const base: FolderTableRowProps = {};
 
-    if (node.type === 'loadMore') {
-      if (loadingMoreParentId === node.parentId) {
-        base['aria-busy'] = true;
-      }
+    if (node.type === 'loading') {
+      base['aria-busy'] = true;
       return base;
     }
 
@@ -253,7 +243,7 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
 function findRowById(rows: DriveRow[], id: string): DriveRow | undefined {
   for (const row of rows) {
     if (row.id === id) return row;
-    if (row.type !== 'loadMore' && row.children?.length) {
+    if (row.type !== 'loading' && row.children?.length) {
       const child = findRowById(row.children, id);
       if (child) return child;
     }

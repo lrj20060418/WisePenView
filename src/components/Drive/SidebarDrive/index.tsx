@@ -2,7 +2,7 @@ import { Empty, Spin } from '@/components/Feedback';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import { useDriveService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
 import { useNavigateResource } from '@/hooks/useNavigateResource';
 import { useActiveDriveScopeStore } from '@/store';
 import { useRequest } from 'ahooks';
@@ -14,12 +14,13 @@ import { useDriveTreeChildren } from '../common/useDriveTreeChildren';
 import { buildDriveTreeData, replaceTreeNodeChildren } from '../DriveNav/buildTreeData';
 import styles from './style.module.less';
 
-const RENDERABLE_TYPES = new Set<'folder' | 'resource' | 'link' | 'trash'>([
+const RENDERABLE_TYPES = new Set<'root' | 'folder' | 'resource' | 'link'>([
+  'root',
   'folder',
   'resource',
   'link',
 ]);
-const SELECTABLE_TYPES = new Set<'folder' | 'resource' | 'link'>(['resource', 'link']);
+const SELECTABLE_TYPES = new Set<'root' | 'folder' | 'resource' | 'link'>(['resource', 'link']);
 const EMPTY_DISABLED_IDS = new Set<string>();
 
 function SidebarDrive() {
@@ -27,7 +28,7 @@ function SidebarDrive() {
   const groupId = useActiveDriveScopeStore((state) => state.groupId);
   const navigateResource = useNavigateResource(groupId);
 
-  const { loadChildren, loadMore, reset } = useDriveTreeChildren({ groupId });
+  const { loadChildren, reset } = useDriveTreeChildren({ groupId });
   const nodeMapRef = useRef<Map<string, DriveNode>>(new Map());
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
@@ -39,16 +40,9 @@ function SidebarDrive() {
         renderableTypes: RENDERABLE_TYPES,
         selectableTypes: SELECTABLE_TYPES,
         disabledNodeIds: EMPTY_DISABLED_IDS,
-        onLoadMoreClick: (next) => void handleLoadMore(next),
       },
       nodeMapRef.current
     );
-  }
-
-  async function handleLoadMore(node: LoadMoreNode): Promise<void> {
-    const children = await loadMore(node);
-    const childData = buildChildrenData(children);
-    setTreeData((prev) => replaceTreeNodeChildren(prev, node.parentId, childData));
   }
 
   const { loading: treeLoading } = useRequest(
@@ -56,13 +50,10 @@ function SidebarDrive() {
       nodeMapRef.current.clear();
       reset();
       setSelectedKeys([]);
-      const rootNode = await driveService.getDriveTree({
-        rootId: DEFAULT_DRIVE_ROOT_ID,
-        groupId,
-      });
+      const rootNode = await driveService.getRootNode({ groupId });
       const baseRoot = buildChildrenData([rootNode])[0];
       if (!baseRoot) return [];
-      if (rootNode.type !== 'folder') return [baseRoot];
+      if (rootNode.type !== 'root') return [baseRoot];
       const children = await loadChildren(rootNode.id);
       const childData = buildChildrenData(children);
       return [{ ...baseRoot, children: childData }];
@@ -76,7 +67,7 @@ function SidebarDrive() {
   const handleLoadData = async (treeNode: DataNode): Promise<void> => {
     const key = String(treeNode.key);
     const node = nodeMapRef.current.get(key);
-    if (!node || (node.type !== 'folder' && node.type !== 'trash')) return;
+    if (!node || (node.type !== 'root' && node.type !== 'folder')) return;
     const children = await loadChildren(node.id);
     const childData = buildChildrenData(children);
     setTreeData((prev) => replaceTreeNodeChildren(prev, node.id, childData));

@@ -2,7 +2,7 @@ import { Empty, Spin } from '@/components/Feedback';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import { useDriveService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
 import { useRequest } from 'ahooks';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -12,13 +12,13 @@ import { buildDriveTreeData, replaceTreeNodeChildren } from './buildTreeData';
 import type { DriveNavProps } from './index.type';
 import styles from './style.module.less';
 
-const DEFAULT_RENDERABLE_TYPES: Array<'folder' | 'resource' | 'link' | 'trash'> = [
+const DEFAULT_RENDERABLE_TYPES: Array<'root' | 'folder' | 'resource' | 'link'> = [
+  'root',
   'folder',
   'resource',
   'link',
-  'trash',
 ];
-const DEFAULT_SELECTABLE_TYPES: Array<'folder' | 'resource' | 'link'> = ['folder'];
+const DEFAULT_SELECTABLE_TYPES: Array<'root' | 'folder' | 'resource' | 'link'> = ['folder'];
 
 function buildSetFromStableKey<T extends string>(key: string): Set<T> {
   if (!key) return new Set<T>();
@@ -42,7 +42,7 @@ function DriveNav({
   const resolvedScope = useMemo(() => resolveDriveScope(scope, groupId), [scope, groupId]);
   const finalRootId = rootId ?? resolvedScope.rootId;
   const finalGroupId = resolvedScope.groupId;
-  const { loadChildren, loadMore, reset } = useDriveTreeChildren({ groupId: finalGroupId });
+  const { loadChildren, reset } = useDriveTreeChildren({ groupId: finalGroupId });
   const nodeMapRef = useRef<Map<string, DriveNode>>(new Map());
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -52,11 +52,11 @@ function DriveNav({
   const disabledNodeIdKey = [...(disabledNodeIds ?? [])].sort().join('\u0001');
 
   const renderableTypeSet = useMemo(
-    () => buildSetFromStableKey<'folder' | 'resource' | 'link' | 'trash'>(renderableTypeKey),
+    () => buildSetFromStableKey<'root' | 'folder' | 'resource' | 'link'>(renderableTypeKey),
     [renderableTypeKey]
   );
   const selectableTypeSet = useMemo(
-    () => buildSetFromStableKey<'folder' | 'resource' | 'link'>(selectableTypeKey),
+    () => buildSetFromStableKey<'root' | 'folder' | 'resource' | 'link'>(selectableTypeKey),
     [selectableTypeKey]
   );
   const disabledNodeIdSet = useMemo(
@@ -71,8 +71,7 @@ function DriveNav({
         .filter(
           (node): node is DriveNode =>
             node != null &&
-            node.type !== 'loadMore' &&
-            node.type !== 'trash' &&
+            node.type !== 'loading' &&
             !disabledNodeIdSet.has(node.id) &&
             selectableTypeSet.has(node.type)
         );
@@ -88,8 +87,7 @@ function DriveNav({
         const node = nodeMapRef.current.get(key);
         return (
           node != null &&
-          node.type !== 'loadMore' &&
-          node.type !== 'trash' &&
+          node.type !== 'loading' &&
           !disabledNodeIdSet.has(node.id) &&
           selectableTypeSet.has(node.type)
         );
@@ -105,16 +103,9 @@ function DriveNav({
         renderableTypes: renderableTypeSet,
         selectableTypes: selectableTypeSet,
         disabledNodeIds: disabledNodeIdSet,
-        onLoadMoreClick: (node) => void handleLoadMore(node),
       },
       nodeMapRef.current
     );
-  }
-
-  async function handleLoadMore(node: LoadMoreNode): Promise<void> {
-    const children = await loadMore(node);
-    const childData = buildChildrenData(children);
-    setTreeData((prev) => replaceTreeNodeChildren(prev, node.parentId, childData));
   }
 
   const { loading } = useRequest(
@@ -122,23 +113,19 @@ function DriveNav({
       nodeMapRef.current.clear();
       reset();
 
-      const rootNode = await driveService.getDriveTree({
-        rootId: finalRootId,
-        groupId: finalGroupId,
-      });
+      const rootNode = await driveService.getRootNode({ groupId: finalGroupId });
       const baseRoot = buildDriveTreeData(
         [rootNode],
         {
           renderableTypes: renderableTypeSet,
           selectableTypes: selectableTypeSet,
           disabledNodeIds: disabledNodeIdSet,
-          onLoadMoreClick: (node) => void handleLoadMore(node),
         },
         nodeMapRef.current
       )[0];
       if (!baseRoot) return [];
 
-      if (rootNode.type !== 'folder') return [baseRoot];
+      if (rootNode.type !== 'root') return [baseRoot];
 
       const children = await loadChildren(rootNode.id);
       const childData = buildChildrenData(children);
@@ -174,7 +161,7 @@ function DriveNav({
   const handleLoadData = async (treeNode: DataNode) => {
     const key = String(treeNode.key);
     const node = nodeMapRef.current.get(key);
-    if (!node || (node.type !== 'folder' && node.type !== 'trash')) return;
+    if (!node || (node.type !== 'root' && node.type !== 'folder')) return;
     const children = await loadChildren(node.id);
     const childData = buildChildrenData(children);
     setTreeData((prev) => replaceTreeNodeChildren(prev, node.id, childData));

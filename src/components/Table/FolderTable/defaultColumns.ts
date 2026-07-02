@@ -18,13 +18,13 @@ export function createDefaultFolderColumns<T extends FolderTableRow = FolderTabl
       label: t('column.size'),
       width: 'folderSize',
       renderCell: (row) =>
-        row.entryType === 'loadMore' ? '' : (row.sizeLabel ?? t('placeholder.dash')),
+        row.entryType === 'loading' ? '' : (row.sizeLabel ?? t('placeholder.dash')),
     },
     {
       id: 'type',
       label: t('column.type'),
       width: 'folderType',
-      renderCell: (row) => (row.entryType === 'loadMore' ? '' : row.typeLabel),
+      renderCell: (row) => (row.entryType === 'loading' ? '' : row.typeLabel),
     },
     {
       id: 'actions',
