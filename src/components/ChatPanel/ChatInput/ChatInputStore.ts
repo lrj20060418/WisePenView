@@ -1,0 +1,301 @@
+import {
+  buildDefaultPersonalAgent,
+  type CapabilitySkillSelection,
+  type CapabilityToolOption,
+} from '@/domains/Chat';
+import type { SkillSummary } from '@/domains/Resource';
+import type { ChatAgentOption } from '@/store';
+import { createContext, useContext } from 'react';
+import { useStore } from 'zustand';
+import { createStore, type StoreApi } from 'zustand/vanilla';
+import type {
+  LocalAttachmentPayload,
+  LocalAttachmentUpload,
+  LocalPendingImageMeta,
+  LocalResourcePayload,
+} from './index.type';
+
+export const DEFAULT_PERSONAL_AGENT = buildDefaultPersonalAgent();
+
+function buildSkillSelection(
+  skill: SkillSummary,
+  options?: { sourceAgent?: ChatAgentOption | null; external?: boolean }
+): CapabilitySkillSelection {
+  const sourceAgent = options?.sourceAgent;
+  const external =
+    options?.external ??
+    (Boolean(sourceAgent) &&
+      (sourceAgent?.agentType === 'GROUP'
+        ? sourceAgent.groupId !== skill.groupId
+        : skill.scopeType === 'GROUP'));
+
+  return {
+    skillId: skill.skillId,
+    displayName: skill.displayName,
+    currentVersionId: skill.currentVersionId,
+    scopeType: skill.scopeType,
+    groupId: skill.groupId,
+    groupName: skill.groupName,
+    sourceAgentId: sourceAgent?.agentId,
+    sourceAgentLabel: sourceAgent?.label,
+    external,
+  };
+}
+
+export interface ChatInputCompletionState {
+  value: string;
+  selectedModelId: string | null;
+  selectedAgent: ChatAgentOption;
+  selectedSkills: CapabilitySkillSelection[];
+  selectedTools: CapabilityToolOption[];
+  activeDocRefs: LocalResourcePayload[];
+  activeAttachments: LocalAttachmentPayload[];
+  pendingImageMetas: LocalPendingImageMeta[];
+}
+
+interface ChatInputState {
+  activeDocRefs: LocalResourcePayload[];
+  activeAttachments: LocalAttachmentPayload[];
+  attachmentOpen: boolean;
+  capabilityOpen: boolean;
+  documentPickerOpen: boolean;
+  isComposing: boolean;
+  isDragOver: boolean;
+  modelOpen: boolean;
+  otherSkillModalOpen: boolean;
+  pendingAttachmentUploads: LocalAttachmentUpload[];
+  pendingImageMetas: LocalPendingImageMeta[];
+  selectedAgent: ChatAgentOption;
+  selectedModelId: string | null;
+  selectedSkills: CapabilitySkillSelection[];
+  selectedTools: CapabilityToolOption[];
+  value: string;
+}
+
+interface ChatInputActions {
+  addActiveAttachment: (attachment: LocalAttachmentPayload) => void;
+  addDocRefs: (resources: LocalResourcePayload[]) => void;
+  addPendingAttachmentUpload: (upload: LocalAttachmentUpload) => void;
+  addPendingImageMeta: (meta: LocalPendingImageMeta) => void;
+  clearAfterSend: () => void;
+  clearCapabilities: () => void;
+  removeActiveAttachment: (attachmentId: string) => void;
+  removeDocRef: (resourceId: string) => void;
+  removePendingAttachmentUpload: (id: string) => void;
+  removePendingImageMeta: (id: string) => void;
+  removeSkill: (skillId: string) => void;
+  removeTool: (toolId: string) => void;
+  replaceAgentIfMissing: (fallbackAgent: ChatAgentOption) => void;
+  replaceExternalSkills: (
+    selected: Array<{ skill: SkillSummary; sourceAgent: ChatAgentOption | null }>
+  ) => void;
+  setAttachmentOpen: (open: boolean) => void;
+  setCapabilityOpen: (open: boolean) => void;
+  setDocumentPickerOpen: (open: boolean) => void;
+  setIsComposing: (isComposing: boolean) => void;
+  setIsDragOver: (isDragOver: boolean) => void;
+  setModelOpen: (open: boolean) => void;
+  setOtherSkillModalOpen: (open: boolean) => void;
+  setPendingAttachmentUploadFailed: (id: string) => void;
+  setSelectedAgent: (agent: ChatAgentOption) => void;
+  setSelectedModelId: (modelId: string | null) => void;
+  setValue: (value: string) => void;
+  toggleSkill: (skill: SkillSummary, sourceAgent: ChatAgentOption) => void;
+  toggleTool: (tool: CapabilityToolOption) => void;
+}
+
+export type ChatInputStoreState = ChatInputState & ChatInputActions;
+export type ChatInputStoreApi = StoreApi<ChatInputStoreState>;
+
+export const ChatInputStoreContext = createContext<ChatInputStoreApi | null>(null);
+
+const INITIAL_STATE: ChatInputState = {
+  activeDocRefs: [],
+  activeAttachments: [],
+  attachmentOpen: false,
+  capabilityOpen: false,
+  documentPickerOpen: false,
+  isComposing: false,
+  isDragOver: false,
+  modelOpen: false,
+  otherSkillModalOpen: false,
+  pendingAttachmentUploads: [],
+  pendingImageMetas: [],
+  selectedAgent: DEFAULT_PERSONAL_AGENT,
+  selectedModelId: null,
+  selectedSkills: [],
+  selectedTools: [],
+  value: '',
+};
+
+export function createChatInputStore(): ChatInputStoreApi {
+  return createStore<ChatInputStoreState>()((set) => ({
+    ...INITIAL_STATE,
+
+    addActiveAttachment: (attachment) =>
+      set((state) => ({
+        activeAttachments: state.activeAttachments.some(
+          (item) => item.attachmentId === attachment.attachmentId
+        )
+          ? state.activeAttachments
+          : [...state.activeAttachments, attachment],
+      })),
+
+    addDocRefs: (resources) =>
+      set((state) => {
+        const existingIds = new Set(state.activeDocRefs.map((resource) => resource.resourceId));
+        const additions = resources.filter((resource) => !existingIds.has(resource.resourceId));
+        return { activeDocRefs: [...state.activeDocRefs, ...additions] };
+      }),
+
+    addPendingAttachmentUpload: (upload) =>
+      set((state) => ({
+        pendingAttachmentUploads: [...state.pendingAttachmentUploads, upload],
+      })),
+
+    addPendingImageMeta: (meta) =>
+      set((state) => ({
+        pendingImageMetas: [...state.pendingImageMetas, meta],
+      })),
+
+    clearAfterSend: () =>
+      set({
+        activeDocRefs: [],
+        activeAttachments: [],
+        pendingAttachmentUploads: [],
+        pendingImageMetas: [],
+        selectedSkills: [],
+        selectedTools: [],
+        value: '',
+      }),
+
+    clearCapabilities: () =>
+      set({
+        selectedSkills: [],
+        selectedTools: [],
+      }),
+
+    removeActiveAttachment: (attachmentId) =>
+      set((state) => ({
+        activeAttachments: state.activeAttachments.filter(
+          (attachment) => attachment.attachmentId !== attachmentId
+        ),
+      })),
+
+    removeDocRef: (resourceId) =>
+      set((state) => ({
+        activeDocRefs: state.activeDocRefs.filter((resource) => resource.resourceId !== resourceId),
+      })),
+
+    removePendingAttachmentUpload: (id) =>
+      set((state) => ({
+        pendingAttachmentUploads: state.pendingAttachmentUploads.filter(
+          (upload) => upload.id !== id
+        ),
+      })),
+
+    removePendingImageMeta: (id) =>
+      set((state) => ({
+        pendingImageMetas: state.pendingImageMetas.filter((meta) => meta.id !== id),
+      })),
+
+    removeSkill: (skillId) =>
+      set((state) => ({
+        selectedSkills: state.selectedSkills.filter((item) => item.skillId !== skillId),
+      })),
+
+    removeTool: (toolId) =>
+      set((state) => ({
+        selectedTools: state.selectedTools.filter((item) => item.toolId !== toolId),
+      })),
+
+    replaceAgentIfMissing: (fallbackAgent) =>
+      set((state) =>
+        fallbackAgent.agentId === state.selectedAgent.agentId
+          ? {}
+          : { selectedAgent: fallbackAgent }
+      ),
+
+    replaceExternalSkills: (selected) =>
+      set((state) => {
+        const selectedIds = new Set(selected.map((item) => item.skill.skillId));
+        const kept = state.selectedSkills.filter(
+          (item) => !item.external || selectedIds.has(item.skillId)
+        );
+        const existingIds = new Set(kept.map((item) => item.skillId));
+        const additions = selected
+          .filter(({ skill }) => !existingIds.has(skill.skillId))
+          .map(({ skill, sourceAgent }) =>
+            buildSkillSelection(skill, { sourceAgent, external: true })
+          );
+        return { selectedSkills: [...kept, ...additions] };
+      }),
+
+    setAttachmentOpen: (attachmentOpen) => set({ attachmentOpen }),
+    setCapabilityOpen: (capabilityOpen) => set({ capabilityOpen }),
+    setDocumentPickerOpen: (documentPickerOpen) => set({ documentPickerOpen }),
+    setIsComposing: (isComposing) => set({ isComposing }),
+    setIsDragOver: (isDragOver) => set({ isDragOver }),
+    setModelOpen: (modelOpen) => set({ modelOpen }),
+    setOtherSkillModalOpen: (otherSkillModalOpen) => set({ otherSkillModalOpen }),
+
+    setPendingAttachmentUploadFailed: (id) =>
+      set((state) => ({
+        pendingAttachmentUploads: state.pendingAttachmentUploads.map((upload) =>
+          upload.id === id ? { ...upload, status: 'failed' } : upload
+        ),
+      })),
+
+    setSelectedAgent: (selectedAgent) => set({ selectedAgent }),
+    setSelectedModelId: (selectedModelId) => set({ selectedModelId }),
+    setValue: (value) => set({ value }),
+
+    toggleSkill: (skill, sourceAgent) =>
+      set((state) => {
+        const exists = state.selectedSkills.some((item) => item.skillId === skill.skillId);
+        return {
+          selectedSkills: exists
+            ? state.selectedSkills.filter((item) => item.skillId !== skill.skillId)
+            : [...state.selectedSkills, buildSkillSelection(skill, { sourceAgent })],
+        };
+      }),
+
+    toggleTool: (tool) =>
+      set((state) => {
+        const exists = state.selectedTools.some((item) => item.toolId === tool.toolId);
+        return {
+          selectedTools: exists
+            ? state.selectedTools.filter((item) => item.toolId !== tool.toolId)
+            : [...state.selectedTools, tool],
+        };
+      }),
+  }));
+}
+
+export function selectChatInputCompletionState(
+  state: ChatInputStoreState
+): ChatInputCompletionState {
+  return {
+    value: state.value,
+    selectedModelId: state.selectedModelId,
+    selectedAgent: state.selectedAgent,
+    selectedSkills: state.selectedSkills,
+    selectedTools: state.selectedTools,
+    activeDocRefs: state.activeDocRefs,
+    activeAttachments: state.activeAttachments,
+    pendingImageMetas: state.pendingImageMetas,
+  };
+}
+
+export function useChatInputStoreApi(): ChatInputStoreApi {
+  const store = useContext(ChatInputStoreContext);
+  if (store == null) {
+    throw new Error('useChatInputStoreApi must be used within ChatInputStoreProvider');
+  }
+  return store;
+}
+
+export function useChatInputStore<T>(selector: (state: ChatInputStoreState) => T): T {
+  const store = useChatInputStoreApi();
+  return useStore(store, selector);
+}

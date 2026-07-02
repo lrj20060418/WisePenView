@@ -3,9 +3,7 @@ import { useChatService } from '@/domains';
 import {
   buildAdvancedSkillTreeGroups,
   buildCapabilityPickerSections,
-  buildDefaultPersonalAgent,
   getPrimarySkillsForAgent,
-  type CapabilitySkillSelection,
   type CapabilityToolOption,
   type SkillScopeTreeGroup,
 } from '@/domains/Chat';
@@ -16,82 +14,115 @@ import { base64ToFile, fileToBase64, generateThumbnail } from '@/utils/file/uplo
 import { toast } from '@heroui/react';
 import { useRequest, useUpdateEffect } from 'ahooks';
 import {
+  useMemo,
+  useRef,
   type ChangeEvent,
   type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
-  useMemo,
-  useRef,
-  useState,
 } from 'react';
-import type {
-  LocalAttachmentPayload,
-  LocalAttachmentUpload,
-  LocalPendingImageMeta,
-  LocalResourcePayload,
-  PendingImagePayload,
-} from '../index.type';
-import type { UseChatInputControllerOptions } from './index.type';
+import { useShallow } from 'zustand/react/shallow';
+import {
+  DEFAULT_PERSONAL_AGENT,
+  selectChatInputCompletionState,
+  useChatInputStore,
+  useChatInputStoreApi,
+} from '../ChatInputStore';
+import type { ChatInputProps, PendingImagePayload } from '../index.type';
 
-const DEFAULT_PERSONAL_AGENT = buildDefaultPersonalAgent();
 const MAX_IMAGE_BASE64_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_RAW_BYTES_APPROX = Math.floor(MAX_IMAGE_BASE64_BYTES * 0.75);
 const MAX_IMAGE_COUNT = 10;
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']);
 
-function buildSkillSelection(
-  skill: SkillSummary,
-  options?: { sourceAgent?: ChatAgentOption | null; external?: boolean }
-): CapabilitySkillSelection {
-  const sourceAgent = options?.sourceAgent;
-  const external =
-    options?.external ??
-    (Boolean(sourceAgent) &&
-      (sourceAgent?.agentType === 'GROUP'
-        ? sourceAgent.groupId !== skill.groupId
-        : skill.scopeType === 'GROUP'));
-
-  return {
-    skillId: skill.skillId,
-    displayName: skill.displayName,
-    currentVersionId: skill.currentVersionId,
-    scopeType: skill.scopeType,
-    groupId: skill.groupId,
-    groupName: skill.groupName,
-    sourceAgentId: sourceAgent?.agentId,
-    sourceAgentLabel: sourceAgent?.label,
-    external,
-  };
+interface UseChatInputControllerOptions {
+  onSend: ChatInputProps['onSend'];
+  sending: boolean;
+  hasSelectedContext: ChatInputProps['hasSelectedContext'];
+  selectedContextText: string;
+  onClearSelectedContext: ChatInputProps['onClearSelectedContext'];
 }
 
 export function useChatInputController({
   onSend,
   sending,
+  hasSelectedContext,
   selectedContextText,
+  onClearSelectedContext,
 }: UseChatInputControllerOptions) {
   const chatService = useChatService();
+  const store = useChatInputStoreApi();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const base64MapRef = useRef<Map<string, string>>(new Map());
   const dragCounterRef = useRef(0);
 
-  const [value, setValue] = useState('');
-  const [isComposing, setIsComposing] = useState(false);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<ChatAgentOption>(DEFAULT_PERSONAL_AGENT);
-  const [selectedSkills, setSelectedSkills] = useState<CapabilitySkillSelection[]>([]);
-  const [selectedTools, setSelectedTools] = useState<CapabilityToolOption[]>([]);
-  const [pendingImageMetas, setPendingImageMetas] = useState<LocalPendingImageMeta[]>([]);
-  const [activeDocRefs, setActiveDocRefs] = useState<LocalResourcePayload[]>([]);
-  const [activeAttachments, setActiveAttachments] = useState<LocalAttachmentPayload[]>([]);
-  const [pendingAttachmentUploads, setPendingAttachmentUploads] = useState<LocalAttachmentUpload[]>(
-    []
+  const {
+    activeAttachments,
+    activeDocRefs,
+    attachmentOpen,
+    capabilityOpen,
+    documentPickerOpen,
+    isComposing,
+    isDragOver,
+    modelOpen,
+    otherSkillModalOpen,
+    pendingAttachmentUploads,
+    pendingImageMetas,
+    selectedAgent,
+    selectedModelId,
+    selectedSkills,
+    selectedTools,
+    value,
+  } = useChatInputStore(
+    useShallow((state) => ({
+      activeAttachments: state.activeAttachments,
+      activeDocRefs: state.activeDocRefs,
+      attachmentOpen: state.attachmentOpen,
+      capabilityOpen: state.capabilityOpen,
+      documentPickerOpen: state.documentPickerOpen,
+      isComposing: state.isComposing,
+      isDragOver: state.isDragOver,
+      modelOpen: state.modelOpen,
+      otherSkillModalOpen: state.otherSkillModalOpen,
+      pendingAttachmentUploads: state.pendingAttachmentUploads,
+      pendingImageMetas: state.pendingImageMetas,
+      selectedAgent: state.selectedAgent,
+      selectedModelId: state.selectedModelId,
+      selectedSkills: state.selectedSkills,
+      selectedTools: state.selectedTools,
+      value: state.value,
+    }))
   );
-  const [attachmentOpen, setAttachmentOpen] = useState(false);
-  const [capabilityOpen, setCapabilityOpen] = useState(false);
-  const [modelOpen, setModelOpen] = useState(false);
-  const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
-  const [otherSkillModalOpen, setOtherSkillModalOpen] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const completionState = useChatInputStore(useShallow(selectChatInputCompletionState));
+  const {
+    addActiveAttachment,
+    addDocRefs: addStoredDocRefs,
+    addPendingAttachmentUpload,
+    addPendingImageMeta,
+    clearAfterSend,
+    clearCapabilities,
+    removeActiveAttachment: removeStoredAttachment,
+    removeDocRef: removeStoredDocRef,
+    removePendingAttachmentUpload: removeStoredUpload,
+    removePendingImageMeta: removeStoredPendingImage,
+    removeSkill: removeStoredSkill,
+    removeTool: removeStoredTool,
+    replaceAgentIfMissing,
+    replaceExternalSkills,
+    setAttachmentOpen,
+    setCapabilityOpen,
+    setDocumentPickerOpen,
+    setIsComposing,
+    setIsDragOver,
+    setModelOpen,
+    setOtherSkillModalOpen,
+    setPendingAttachmentUploadFailed,
+    setSelectedAgent,
+    setSelectedModelId,
+    setValue,
+    toggleSkill: toggleStoredSkill,
+    toggleTool: toggleStoredTool,
+  } = store.getState();
 
   const { data: workspace, loading: workspaceLoading } = useRequest(
     () => chatService.getWorkspace(),
@@ -166,14 +197,11 @@ export function useChatInputController({
     const nextAgent =
       agentOptions.find((agent) => agent.agentId === selectedAgent.agentId) ??
       DEFAULT_PERSONAL_AGENT;
-    if (nextAgent.agentId !== selectedAgent.agentId) {
-      setSelectedAgent(nextAgent);
-    }
+    replaceAgentIfMissing(nextAgent);
   }, [agentOptions, selectedAgent.agentId]);
 
   useUpdateEffect(() => {
-    setSelectedSkills([]);
-    setSelectedTools([]);
+    clearCapabilities();
   }, [selectedAgent.agentId]);
 
   useUpdateEffect(() => {
@@ -186,102 +214,68 @@ export function useChatInputController({
   }, [pendingImageMetas]);
 
   function removeAttachment(attachmentId: string): void {
-    setActiveAttachments((prev) =>
-      prev.filter((attachment) => attachment.attachmentId !== attachmentId)
-    );
+    removeStoredAttachment(attachmentId);
   }
 
-  function addDocRefs(resources: LocalResourcePayload[]): void {
-    setActiveDocRefs((prev) => {
-      const existingIds = new Set(prev.map((resource) => resource.resourceId));
-      const additions = resources.filter((resource) => !existingIds.has(resource.resourceId));
-      return [...prev, ...additions];
-    });
+  function addDocRefs(resources: Parameters<typeof addStoredDocRefs>[0]): void {
+    addStoredDocRefs(resources);
   }
 
   function removeDocRef(resourceId: string): void {
-    setActiveDocRefs((prev) => prev.filter((resource) => resource.resourceId !== resourceId));
+    removeStoredDocRef(resourceId);
   }
 
   function removePendingImage(id: string): void {
-    setPendingImageMetas((prev) => prev.filter((meta) => meta.id !== id));
+    removeStoredPendingImage(id);
     base64MapRef.current.delete(id);
   }
 
   function removeUpload(id: string): void {
-    setPendingAttachmentUploads((prev) => prev.filter((upload) => upload.id !== id));
+    removeStoredUpload(id);
   }
 
   function toggleSkill(skillId: string): void {
     const skill = primarySkills.find((item) => item.skillId === skillId);
     if (!skill) return;
-    setSelectedSkills((prev) => {
-      const exists = prev.some((item) => item.skillId === skillId);
-      if (exists) return prev.filter((item) => item.skillId !== skillId);
-      return [...prev, buildSkillSelection(skill, { sourceAgent: selectedAgent })];
-    });
+    toggleStoredSkill(skill, selectedAgent);
   }
 
   function removeSkill(skillId: string): void {
-    setSelectedSkills((prev) => prev.filter((item) => item.skillId !== skillId));
+    removeStoredSkill(skillId);
   }
 
   function toggleTool(toolId: string): void {
     const tool = toolOptions.find((item) => item.toolId === toolId);
     if (!tool) return;
-    setSelectedTools((prev) => {
-      const exists = prev.some((item) => item.toolId === toolId);
-      return exists ? prev.filter((item) => item.toolId !== toolId) : [...prev, tool];
-    });
+    toggleStoredTool(tool);
   }
 
   function removeTool(tool: CapabilityToolOption): void {
-    toggleTool(tool.toolId);
+    removeStoredTool(tool.toolId);
   }
 
   function handleOtherSkillConfirm(
     selected: Array<{ skill: SkillSummary; sourceAgent: ChatAgentOption | null }>
   ): void {
-    const selectedIds = new Set(selected.map((item) => item.skill.skillId));
-    setSelectedSkills((prev) => {
-      const kept = prev.filter((item) => !item.external || selectedIds.has(item.skillId));
-      const existingIds = new Set(kept.map((item) => item.skillId));
-      const additions = selected
-        .filter(({ skill }) => !existingIds.has(skill.skillId))
-        .map(({ skill, sourceAgent }) =>
-          buildSkillSelection(skill, { sourceAgent, external: true })
-        );
-      return [...kept, ...additions];
-    });
+    replaceExternalSkills(selected);
   }
 
   async function uploadAndAddAttachment(file: File): Promise<void> {
     const id = crypto.randomUUID();
-    setPendingAttachmentUploads((prev) => [
-      ...prev,
-      { id, filename: file.name, status: 'uploading' },
-    ]);
+    addPendingAttachmentUpload({ id, filename: file.name, status: 'uploading' });
     try {
       const result = await chatService.uploadAttachment({
         file,
         saveToLibrary: false,
       });
-      setPendingAttachmentUploads((prev) => prev.filter((item) => item.id !== id));
-      setActiveAttachments((prev) => {
-        if (prev.some((item) => item.attachmentId === result.attachmentId)) return prev;
-        return [
-          ...prev,
-          {
-            attachmentId: result.attachmentId,
-            filename: result.filename ?? file.name,
-            enabled: true,
-          },
-        ];
+      removeStoredUpload(id);
+      addActiveAttachment({
+        attachmentId: result.attachmentId,
+        filename: result.filename ?? file.name,
+        enabled: true,
       });
     } catch (err) {
-      setPendingAttachmentUploads((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status: 'failed' } : item))
-      );
+      setPendingAttachmentUploadFailed(id);
       toast.danger(`附件上传失败: ${parseErrorMessage(err)}`);
     }
   }
@@ -296,10 +290,7 @@ export function useChatInputController({
       const id = crypto.randomUUID();
       const thumbnailUrl = await generateThumbnail(file, 48).catch(() => '');
       base64MapRef.current.set(id, base64);
-      setPendingImageMetas((prev) => [
-        ...prev,
-        { id, filename: file.name, mimeType, thumbnailUrl },
-      ]);
+      addPendingImageMeta({ id, filename: file.name, mimeType, thumbnailUrl });
     } catch (err) {
       toast.danger(`图片添加失败: ${parseErrorMessage(err)}`);
     }
@@ -354,7 +345,7 @@ export function useChatInputController({
   }
 
   async function handleSend(): Promise<void> {
-    const text = value.trim();
+    const text = completionState.value.trim();
     if (!text || sending || !selectedModel) return;
     if (pendingAttachmentUploads.some((upload) => upload.status === 'uploading')) {
       toast.warning('附件仍在上传中，请稍后再发送');
@@ -362,7 +353,7 @@ export function useChatInputController({
     }
 
     const pendingImages: PendingImagePayload[] = currentModelVision
-      ? pendingImageMetas
+      ? completionState.pendingImageMetas
           .map((meta) => {
             const base64 = base64MapRef.current.get(meta.id);
             if (!base64) return null;
@@ -374,17 +365,11 @@ export function useChatInputController({
     try {
       await onSend(text, {
         model: selectedModel,
-        activeDocRefs,
-        activeAttachments,
+        activeDocRefs: completionState.activeDocRefs,
+        activeAttachments: completionState.activeAttachments,
         pendingImages: pendingImages.length > 0 ? pendingImages : undefined,
       });
-      setValue('');
-      setSelectedSkills([]);
-      setSelectedTools([]);
-      setActiveDocRefs([]);
-      setActiveAttachments([]);
-      setPendingImageMetas([]);
-      setPendingAttachmentUploads([]);
+      clearAfterSend();
       base64MapRef.current.clear();
     } catch (err) {
       toast.danger(`发送失败: ${parseErrorMessage(err)}`);
@@ -466,59 +451,82 @@ export function useChatInputController({
   }
 
   return {
-    activeDocRefs,
-    activeAttachments,
-    addDocRefs,
-    agentOptions,
-    attachmentOpen,
-    capabilityOpen,
-    capabilitySections,
-    documentPickerOpen,
-    fileInputRef,
-    handleDragEnter,
-    handleDragLeave,
-    handleDragOver,
-    handleDrop,
+    containerProps: {
+      onDragEnter: handleDragEnter,
+      onDragOver: handleDragOver,
+      onDragLeave: handleDragLeave,
+      onDrop: handleDrop,
+    },
+    dropOverlayProps: {
+      visible: isDragOver,
+    },
+    attachmentStripProps: {
+      selectedContextText,
+      selectedPreview,
+      hasSelectedContext,
+      resources: activeDocRefs,
+      attachments: activeAttachments,
+      images: pendingImageMetas,
+      uploads: pendingAttachmentUploads,
+      skills: selectedSkills,
+      tools: selectedTools,
+      onClearSelectedContext,
+      onRemoveResource: removeDocRef,
+      onRemoveAttachment: removeAttachment,
+      onRemoveImage: removePendingImage,
+      onRemoveUpload: removeUpload,
+      onRemoveSkill: removeSkill,
+      onRemoveTool: removeTool,
+    },
+    textAreaProps: {
+      value,
+      onChange: (e: ChangeEvent<HTMLTextAreaElement>) => setValue(e.target.value),
+      onKeyDown: handleKeyDown,
+      onCompositionStart: () => setIsComposing(true),
+      onCompositionEnd: () => setIsComposing(false),
+      onPaste: handlePaste,
+    },
+    toolbarProps: {
+      attachmentOpen,
+      capabilityOpen,
+      modelOpen,
+      agentOptions,
+      selectedAgent,
+      selectedModel,
+      models,
+      modelsLoading,
+      selectedSkills,
+      selectedTools,
+      capabilitySections,
+      sendDisabled,
+      onAttachmentOpenChange: setAttachmentOpen,
+      onCapabilityOpenChange: setCapabilityOpen,
+      onModelOpenChange: setModelOpen,
+      onLocalAttachPress: openUploadPicker,
+      onCloudAttachPress: openDocumentPicker,
+      onAgentChange: setSelectedAgent,
+      onModelChange: handleModelChange,
+      onToggleSkill: toggleSkill,
+      onToggleTool: toggleTool,
+      onRemoveSkill: removeSkill,
+      onSelectOtherSkill: openOtherSkillModal,
+      onSend: () => void handleSend(),
+    },
     handleFileInputChange,
-    handleKeyDown,
-    handleModelChange,
-    handleOtherSkillConfirm,
-    handlePaste,
-    handleSend,
-    isDragOver,
-    modelOpen,
-    models,
-    modelsLoading,
-    openDocumentPicker,
-    openOtherSkillModal,
-    openUploadPicker,
-    otherSkillGroups,
-    otherSkillModalOpen,
-    pendingAttachmentUploads,
-    pendingImageMetas,
-    removeAttachment,
-    removeDocRef,
-    removePendingImage,
-    removeSkill,
-    removeTool,
-    removeUpload,
-    selectedAgent,
-    selectedModel,
-    selectedPreview,
-    selectedSkills,
-    selectedTools,
-    sendDisabled,
-    setAttachmentOpen,
-    setCapabilityOpen,
-    setDocumentPickerOpen,
-    setIsComposing,
-    setModelOpen,
-    setOtherSkillModalOpen,
-    setSelectedAgent,
-    setValue,
-    toggleSkill,
-    toggleTool,
-    value,
+    otherSkillModalProps: {
+      open: otherSkillModalOpen,
+      groups: otherSkillGroups,
+      currentAgent: selectedAgent,
+      selectedSkills,
+      onClose: () => setOtherSkillModalOpen(false),
+      onConfirm: handleOtherSkillConfirm,
+    },
+    documentPickerModalProps: {
+      open: documentPickerOpen,
+      onClose: () => setDocumentPickerOpen(false),
+      onConfirm: addDocRefs,
+    },
+    fileInputRef,
     workspaceLoading,
   };
 }
