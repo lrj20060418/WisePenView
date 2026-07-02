@@ -1,4 +1,4 @@
-/* 顶栏铺满父级（中间栏）；与正文对齐宽度由父级设置 --resource-view-max-width */
+/* 顶栏铺满父级（中间栏）；与正文对齐宽度由父级设置 --workspace-view-max-width */
 .root {
   box-sizing: border-box;
   flex-shrink: 0;
@@ -12,7 +12,7 @@
   width: 100%;
   flex-shrink: 0;
   padding: var(--space-sm) var(--space-xl);
-  /* 与 AppLayout.middleContent、正文区一致 */
+  /* 与具体 layout 的 middleContent、正文区一致 */
   background: var(--surface);
   /* 底部分割线（控制位置）：主色边线 + 2px，较 secondary 1px 更易辨认 */
   border-bottom: 1px solid var(--border);
@@ -93,7 +93,7 @@
 .titleBlockInner {
   box-sizing: border-box;
   width: 100%;
-  max-width: var(--resource-view-max-width, 1400px);
+  max-width: var(--workspace-view-max-width, 1400px);
   margin: 0 auto;
   padding-inline: var(--space-xl);
 }

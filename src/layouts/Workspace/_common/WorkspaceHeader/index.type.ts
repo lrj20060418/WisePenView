@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export interface ResourceViewerHeaderProps {
+export interface WorkspaceHeaderProps {
   /** 无应用内历史可退时的兜底路由，默认云盘 */
   fallbackTo?: string;
   /** 返回控件文案 */

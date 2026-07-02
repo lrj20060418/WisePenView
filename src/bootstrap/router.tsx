@@ -6,6 +6,7 @@ import AdminLayout from '@/layouts/Admin/AdminLayout';
 import AppLayout from '@/layouts/App/AppLayout';
 import AuthLayout from '@/layouts/Auth/AuthLayout';
 import HomeLayout from '@/layouts/Home/HomeLayout';
+import WorkspaceLayout from '@/layouts/Workspace/WorkspaceLayout';
 import AdminRouteGuard from '@/views/admin/guard/AdminRouteGuard';
 
 // 页面使用 lazy load，按路由切分 chunk
@@ -112,58 +113,67 @@ const router = createBrowserRouter([
   // ==============================
   {
     path: '/app',
-    element: <AppLayout />, // 承载：左侧导航 + 右侧助手 + 中间内容
     errorElement: <AppError />,
     children: [
-      // 默认重定向到文档列表
       {
-        index: true,
-        element: <Navigate to="/app/drive" replace />,
+        element: <AppLayout />, // 承载：普通 app 页面导航 + 右侧助手 + 中间内容
+        children: [
+          // 默认重定向到文档列表
+          {
+            index: true,
+            element: <Navigate to="/app/drive" replace />,
+          },
+          {
+            path: 'chat',
+            element: <ChatPage />,
+          },
+          {
+            path: 'chat/:sessionId',
+            element: <ChatPage />,
+          },
+          // 文档与云盘页
+          {
+            path: 'drive',
+            element: <Drive />,
+          },
+          {
+            path: 'my-group',
+            element: <MyGroup />,
+          },
+          {
+            path: 'my-group/:id',
+            element: <GroupDetail />,
+          },
+          {
+            path: 'profile/usage',
+            element: <Usage />,
+          },
+          {
+            path: 'profile/account',
+            element: <Account />,
+          },
+          {
+            path: 'profile/appearance',
+            element: <Appearance />,
+          },
+        ],
       },
       {
-        path: 'note',
-        element: <NoteView />,
-      },
-      {
-        path: 'chat',
-        element: <ChatPage />,
-      },
-      {
-        path: 'chat/:sessionId',
-        element: <ChatPage />,
-      },
-      {
-        path: 'note/:noteId',
-        element: <NoteView />,
-      },
-      // 文档与云盘页
-      {
-        path: 'drive',
-        element: <Drive />,
-      },
-      {
-        path: 'my-group',
-        element: <MyGroup />,
-      },
-      {
-        path: 'my-group/:id',
-        element: <GroupDetail />,
-      },
-      {
-        path: 'profile/usage',
-        element: <Usage />,
-      },
-      {
-        path: 'profile/account',
-        element: <Account />,
-      },
-      {
-        path: 'profile/appearance',
-        element: <Appearance />,
-      },
-      {
-        path: 'pdf/:resourceId',
-        element: <PdfPreview />,
+        element: <WorkspaceLayout />,
+        children: [
+          {
+            path: 'note',
+            element: <NoteView />,
+          },
+          {
+            path: 'note/:noteId',
+            element: <NoteView />,
+          },
+          {
+            path: 'pdf/:resourceId',
+            element: <PdfPreview />,
+          },
+        ],
       },
     ],
   },

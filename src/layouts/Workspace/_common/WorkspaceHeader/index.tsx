@@ -3,20 +3,20 @@ import { ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import IconText from '@/components/IconText';
-import type { ResourceViewerHeaderProps } from './index.type';
+import type { WorkspaceHeaderProps } from './index.type';
 import styles from './style.module.less';
 
 const DEFAULT_FALLBACK_TO = '/app/drive';
 const DEFAULT_BACK_LABEL = '返回';
 
-function ResourceViewerHeader({
+function WorkspaceHeader({
   fallbackTo = DEFAULT_FALLBACK_TO,
   backLabel = DEFAULT_BACK_LABEL,
   inlineTitle,
   extra,
   titleBlock,
   className,
-}: ResourceViewerHeaderProps) {
+}: WorkspaceHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,4 +52,4 @@ function ResourceViewerHeader({
   );
 }
 
-export default ResourceViewerHeader;
+export default WorkspaceHeader;

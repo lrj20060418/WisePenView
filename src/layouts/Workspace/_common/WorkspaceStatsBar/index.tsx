@@ -5,10 +5,10 @@ import { useRequest } from 'ahooks';
 
 import { useResourceService } from '@/domains';
 import { formatReadCount } from '@/utils/format/formatNumber';
-import type { ResourceInteractBarProps } from './index.type';
+import type { WorkspaceStatsBarProps } from './index.type';
 import styles from './style.module.less';
 
-function ResourceInteractBar({ resourceId }: ResourceInteractBarProps) {
+function WorkspaceStatsBar({ resourceId }: WorkspaceStatsBarProps) {
   const resourceService = useResourceService();
 
   const { data } = useRequest(() => resourceService.getInteractStats(resourceId), {
@@ -50,4 +50,4 @@ function ResourceInteractBar({ resourceId }: ResourceInteractBarProps) {
   );
 }
 
-export default ResourceInteractBar;
+export default WorkspaceStatsBar;

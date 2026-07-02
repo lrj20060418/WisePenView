@@ -32,9 +32,9 @@ export interface IResourceService {
   removeResources(params: RemoveResourcesRequest): Promise<void>;
   updateResourceTags(params: UpdateResourceTagsRequest): Promise<void>;
   updateResourceActionPermission(params: UpdateResourceActionPermissionRequest): Promise<void>;
-  /** 获取当前用户点赞状态，供 ResourceLikeButton 薄层调用 */
+  /** 获取当前用户点赞状态，供点赞组件薄层调用 */
   getLikeStatus(resourceId: string): Promise<{ liked: boolean }>;
-  /** 获取当前用户评分，供 ResourceRating 薄层调用 */
+  /** 获取当前用户评分，供评分组件薄层调用 */
   getRate(resourceId: string): Promise<{ score: number }>;
   /** 点赞 / 取消点赞 */
   interactToggleLike(params: InteractToggleLikeRequest): Promise<void>;
@@ -42,7 +42,7 @@ export interface IResourceService {
   interactRate(params: InteractRateRequest): Promise<void>;
   /** 上报资源阅读（详情页 / 文档预览页进入时调用一次） */
   interactRead(resourceId: string): Promise<void>;
-  /** 获取资源聚合互动统计（readCount / likeCount / scoreAvg），供 ResourceInteractBar 自行请求 */
+  /** 获取资源聚合互动统计（readCount / likeCount / scoreAvg），供互动统计组件自行请求 */
   getInteractStats(resourceId: string): Promise<ResourceInteractStats>;
   /** 全局全文搜索（ACL 过滤 + 高亮，分页） */
   globalSearch(params: SearchQueryRequest): Promise<SearchResultPage>;

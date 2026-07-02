@@ -1,23 +1,14 @@
-/* 相对 AppLayout.middleContent（position: relative）铺满中间栏，不盖住侧栏与右侧面板 */
+/* 相对 WorkspaceLayout.middleContent（position: relative）铺满中间栏，不盖住侧栏与右侧面板 */
 .pageWrap {
-  --resource-view-max-width: 1200px;
-
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+  --workspace-view-max-width: 1200px;
 }
 
-/* 顶栏下方主区：失败/加载态 overlay 相对此层定位，不盖住 ResourceViewerHeader */
-.statesBelowHeader {
+.toolbarTitleText {
   flex: 1;
-  min-height: 0;
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 会话未就绪时仍挂载子树（跑 Yjs / BlockNote），但不交互、不可见 */

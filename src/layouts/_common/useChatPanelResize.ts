@@ -33,7 +33,7 @@ export interface UseChatPanelResizeResult {
 }
 
 /** 右侧对话栏宽度：挂载归一化、拖拽调整与 resize 引导线 */
-export function useChatPanelResize(): UseChatPanelResizeResult {
+export function useChatPanelResize(enabled = true): UseChatPanelResizeResult {
   const chatPanelWidth = useChatPanelStore((state) => state.chatPanelWidth);
   const setChatPanelWidth = useChatPanelStore((state) => state.setChatPanelWidth);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -42,6 +42,7 @@ export function useChatPanelResize(): UseChatPanelResizeResult {
   const [chatResizing, setChatResizing] = useState(false);
 
   useMount(() => {
+    if (!enabled) return;
     const normalizedWidth = clampWidth(
       chatPanelWidth,
       MIN_CHAT_PANEL_WIDTH,
@@ -59,6 +60,7 @@ export function useChatPanelResize(): UseChatPanelResizeResult {
   }, [chatPanelWidth]);
 
   const onResizeStart = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (!enabled) return;
     event.preventDefault();
     const startX = event.clientX;
     const startWidth = chatPanelWidthRef.current;

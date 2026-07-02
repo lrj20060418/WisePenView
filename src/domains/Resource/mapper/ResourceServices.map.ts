@@ -12,7 +12,6 @@ import {
   TAG_QUERY_LOGIC_MODE,
   type ResourceActionKey,
 } from '../enum';
-import { resolveResourceIconType } from '../utils/resolveResourceIconType';
 import type {
   GetUserResourcesRequest,
   ResourceListPage,
@@ -20,6 +19,7 @@ import type {
   SearchResultPage,
   UpdateResourceActionPermissionRequest,
 } from '../service/index.type';
+import { resolveResourceIconType } from '../utils/resolveResourceIconType';
 
 /** 后端 ResourceItemResponse 中的嵌套互动统计结构 */
 interface RawInteractionInfo {
@@ -159,7 +159,7 @@ const mapRateFromApi = (
   score: res?.score ?? 0,
 });
 
-/** 资源互动聚合统计（供 ResourceInteractBar 展示） */
+/** 资源互动聚合统计（供互动统计组件展示） */
 export interface ResourceInteractStats {
   readCount?: number | null;
   likeCount?: number | null;
@@ -167,7 +167,7 @@ export interface ResourceInteractStats {
   scoreAvgText: string;
 }
 
-/** ResourceItem → 聚合互动统计，供 ResourceInteractBar 展示 */
+/** ResourceItem → 聚合互动统计，供互动统计组件展示 */
 const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractStats => {
   const normalized = normalizeResourceItem(resourceInfo);
   const scoreAvg = normalized.scoreAvg ?? null;
