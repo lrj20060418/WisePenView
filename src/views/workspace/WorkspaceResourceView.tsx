@@ -1,5 +1,8 @@
 import { ResultState } from '@/components/Feedback';
-import { useWorkspaceLayoutConfig } from '@/layouts/Workspace/WorkspaceOutletContext';
+import {
+  useWorkspaceLayoutConfig,
+  type WorkspaceLayoutConfig,
+} from '@/layouts/Workspace/WorkspaceOutletContext';
 import {
   RESOURCE_EDITOR_TYPE,
   isDocumentEditorType,
@@ -18,7 +21,7 @@ interface UnsupportedResourceProps {
 }
 
 function UnsupportedResource({ editorType, resourceId }: UnsupportedResourceProps) {
-  const frameConfig = useMemo(() => ({ header: false }), []);
+  const frameConfig = useMemo<WorkspaceLayoutConfig>(() => ({ header: false }), []);
   useWorkspaceLayoutConfig(frameConfig);
 
   const readableType = editorType ? `当前类型：${editorType}` : undefined;
