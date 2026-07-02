@@ -1,9 +1,21 @@
 import type { Message } from '@/components/ChatPanel/index.type';
-import { useMount, useUpdateEffect } from 'ahooks';
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+  useMessageScrollerScrollable,
+} from '@/components/_shadcn';
+import { useLatest, useUpdateEffect } from 'ahooks';
+import { ArrowDown } from 'lucide-react';
 import { useRef } from 'react';
 import MessageItem from './MessageItem';
 import Welcome from './Welcome';
 import styles from './style.module.less';
+
+const AUTO_LOAD_EDGE_THRESHOLD = 96;
 
 interface MessageListProps {
   messages: Message[];
@@ -20,78 +32,87 @@ function MessageList({
   onLoadMoreHistory,
   onPromptClick,
 }: MessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const lastMessage = messages[messages.length - 1];
+  return (
+    <MessageScrollerProvider
+      autoScroll
+      defaultScrollPosition="end"
+      scrollEdgeThreshold={AUTO_LOAD_EDGE_THRESHOLD}
+      scrollPreviousItemPeek={72}
+    >
+      <MessageScroller className={styles.container}>
+        <MessageScrollerViewport className={styles.viewport}>
+          <MessageScrollerContent className={styles.content}>
+            {messages.length === 0 ? (
+              <MessageScrollerItem className={styles.welcomeItem}>
+                <Welcome onPromptClick={onPromptClick} />
+              </MessageScrollerItem>
+            ) : (
+              <>
+                <AutoLoadHistory
+                  canLoadMoreHistory={canLoadMoreHistory}
+                  loadingMoreHistory={loadingMoreHistory}
+                  onLoadMoreHistory={onLoadMoreHistory}
+                />
 
-  const scrollToBottom = () => {
-    const element = scrollRef.current;
-    if (!element) return;
-    element.scrollTop = element.scrollHeight;
-  };
+                <HistoryLoadingMarker visible={loadingMoreHistory} />
 
-  const restoreScrollPositionWithoutSmooth = (element: HTMLDivElement, nextScrollTop: number) => {
-    const previousScrollBehavior = element.style.scrollBehavior;
-    element.style.scrollBehavior = 'auto';
-    element.scrollTop = nextScrollTop;
-    requestAnimationFrame(() => {
-      element.style.scrollBehavior = previousScrollBehavior;
-    });
-  };
+                {messages.map((message) => (
+                  <MessageScrollerItem
+                    key={message.id}
+                    messageId={message.id}
+                    scrollAnchor={message.role === 'ai'}
+                  >
+                    <MessageItem message={message} />
+                  </MessageScrollerItem>
+                ))}
+              </>
+            )}
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
 
-  useMount(() => {
-    requestAnimationFrame(() => {
-      scrollToBottom();
-    });
-  });
+        <MessageScrollerButton className={styles.scrollToBottomButton}>
+          <ArrowDown size={14} />
+          <span className={styles.srOnly}>滚动到底部</span>
+        </MessageScrollerButton>
+      </MessageScroller>
+    </MessageScrollerProvider>
+  );
+}
+
+interface AutoLoadHistoryProps {
+  canLoadMoreHistory: boolean;
+  loadingMoreHistory: boolean;
+  onLoadMoreHistory: () => Promise<void>;
+}
+
+function AutoLoadHistory({
+  canLoadMoreHistory,
+  loadingMoreHistory,
+  onLoadMoreHistory,
+}: AutoLoadHistoryProps) {
+  const { start } = useMessageScrollerScrollable();
+  const loadMoreRef = useLatest(onLoadMoreHistory);
+  const pendingRef = useRef(false);
 
   useUpdateEffect(() => {
-    scrollToBottom();
-  }, [lastMessage?.id, lastMessage?.content]);
+    if (start || !canLoadMoreHistory || loadingMoreHistory || pendingRef.current) return;
 
-  const handleLoadMore = async () => {
-    if (loadingMoreHistory) return;
-    const element = scrollRef.current;
-    if (!element) {
-      await onLoadMoreHistory();
-      return;
-    }
-
-    const previousScrollTop = element.scrollTop;
-    const previousScrollHeight = element.scrollHeight;
-    await onLoadMoreHistory();
-
-    requestAnimationFrame(() => {
-      const currentElement = scrollRef.current;
-      if (!currentElement) return;
-      const scrollHeightDelta = currentElement.scrollHeight - previousScrollHeight;
-      restoreScrollPositionWithoutSmooth(currentElement, previousScrollTop + scrollHeightDelta);
+    pendingRef.current = true;
+    void loadMoreRef.current().finally(() => {
+      pendingRef.current = false;
     });
-  };
+  }, [canLoadMoreHistory, loadingMoreHistory, start]);
+
+  return null;
+}
+
+function HistoryLoadingMarker({ visible }: { visible: boolean }) {
+  if (!visible) return null;
 
   return (
-    <div className={styles.container} ref={scrollRef}>
-      {messages.length === 0 ? (
-        <Welcome onPromptClick={onPromptClick} />
-      ) : (
-        <div>
-          {canLoadMoreHistory && (
-            <div className={styles.loadMoreWrapper}>
-              <button
-                type="button"
-                className={styles.loadMoreBtn}
-                onClick={() => void handleLoadMore()}
-                disabled={loadingMoreHistory}
-              >
-                {loadingMoreHistory ? '加载中...' : '加载更多'}
-              </button>
-            </div>
-          )}
-          {messages.map((msg) => (
-            <MessageItem key={msg.id} message={msg} />
-          ))}
-        </div>
-      )}
-    </div>
+    <MessageScrollerItem className={styles.loadMoreWrapper}>
+      <div className={styles.historyLoadingText}>正在加载更早消息...</div>
+    </MessageScrollerItem>
   );
 }
 
