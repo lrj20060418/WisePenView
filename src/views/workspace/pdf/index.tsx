@@ -4,15 +4,64 @@ import IconText from '@/components/IconText';
 import PdfViewer from '@/components/PdfViewer/index';
 import { useDocumentService, useResourceService } from '@/domains';
 import { RESOURCE_TYPE } from '@/domains/Resource';
+import { useWorkspaceLayoutConfig } from '@/layouts/Workspace/WorkspaceOutletContext';
 import { parseErrorMessage } from '@/utils/error';
-import ResourceInteractBar from '@/views/workspace/_common/ResourceInteractBar';
-import ResourceViewerHeader from '@/views/workspace/_common/ResourceViewerHeader';
-import rvhStyles from '@/views/workspace/_common/ResourceViewerHeader/style.module.less';
 import { Button } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import styles from './style.module.less';
+
+interface PdfToolbarTitleProps {
+  resourceName: string;
+  resourceType?: string;
+}
+
+function PdfToolbarTitle({ resourceName, resourceType }: PdfToolbarTitleProps) {
+  return (
+    <IconText
+      className={styles.toolbarTitleText}
+      icon={<EntryIcon entryType="resource" resourceType={resourceType ?? RESOURCE_TYPE.FILE} />}
+      iconSize={18}
+      gap="var(--space-sm)"
+      ellipsis
+    >
+      {resourceName}
+    </IconText>
+  );
+}
+
+interface PdfLayoutConfigProps {
+  children: ReactNode;
+  resourceName?: string;
+  resourceType?: string;
+  statsResourceId?: string;
+}
+
+function PdfLayoutConfig({
+  children,
+  resourceName,
+  resourceType,
+  statsResourceId,
+}: PdfLayoutConfigProps) {
+  const frameConfig = useMemo(
+    () => ({
+      className: styles.container,
+      header: resourceName
+        ? {
+            inlineTitle: (
+              <PdfToolbarTitle resourceName={resourceName} resourceType={resourceType} />
+            ),
+            statsResourceId,
+          }
+        : {},
+    }),
+    [resourceName, resourceType, statsResourceId]
+  );
+  useWorkspaceLayoutConfig(frameConfig);
+
+  return <>{children}</>;
+}
 
 function PdfPreview() {
   const { resourceId } = useParams<{ resourceId: string }>();
@@ -53,154 +102,110 @@ function PdfPreview() {
 
   if (!resourceId) {
     return (
-      <div className={styles.container}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开文档"
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <PdfLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开文档"
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </PdfLayoutConfig>
     );
   }
 
   if (docInfoError) {
     return (
-      <div className={styles.container}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开文档"
-                subTitle={parseErrorMessage(docInfoError)}
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <PdfLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开文档"
+              subTitle={parseErrorMessage(docInfoError)}
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </PdfLayoutConfig>
     );
   }
 
   // 仅在初次加载（尚无数据）时展示全页 spinner；refresh 时保留旧 docInfo，不触发全页 loading
   if (isDocInfoLoading && !docInfo) {
     return (
-      <div className={styles.container}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
-            <div className={styles.middleOverlayLoading}>
-              <Spin size="large" />
-              <span className={styles.middleOverlayText}>正在加载文档信息...</span>
-            </div>
+      <PdfLayoutConfig>
+        <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
+          <div className={styles.middleOverlayLoading}>
+            <Spin size="large" />
+            <span className={styles.middleOverlayText}>正在加载文档信息...</span>
           </div>
         </div>
-      </div>
+      </PdfLayoutConfig>
     );
   }
 
   if (!docInfo) {
     return (
-      <div className={styles.container}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开文档"
-                subTitle="文档信息为空，请稍后重试"
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <PdfLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开文档"
+              subTitle="文档信息为空，请稍后重试"
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </PdfLayoutConfig>
     );
   }
 
   if (viewerError) {
     return (
-      <div className={styles.container}>
-        <ResourceViewerHeader
-          inlineTitle={
-            <IconText
-              className={rvhStyles.inlineTitleText}
-              icon={
-                <EntryIcon
-                  entryType="resource"
-                  resourceType={docInfo.resourceInfo.resourceType ?? RESOURCE_TYPE.FILE}
-                />
+      <PdfLayoutConfig
+        resourceName={docInfo.resourceInfo.resourceName}
+        resourceType={docInfo.resourceInfo.resourceType}
+      >
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="文档预览失败"
+              subTitle={parseErrorMessage(viewerError)}
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
               }
-              iconSize={18}
-              gap="var(--space-sm)"
-              ellipsis
-            >
-              {docInfo.resourceInfo.resourceName}
-            </IconText>
-          }
-        />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="文档预览失败"
-                subTitle={parseErrorMessage(viewerError)}
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+            />
           </div>
         </div>
-      </div>
+      </PdfLayoutConfig>
     );
   }
 
   return (
-    <div className={styles.container}>
-      <ResourceViewerHeader
-        inlineTitle={
-          <IconText
-            className={rvhStyles.inlineTitleText}
-            icon={
-              <EntryIcon
-                entryType="resource"
-                resourceType={docInfo.resourceInfo.resourceType ?? RESOURCE_TYPE.FILE}
-              />
-            }
-            iconSize={18}
-            gap="var(--space-sm)"
-            ellipsis
-          >
-            {docInfo.resourceInfo.resourceName}
-          </IconText>
-        }
-        extra={<ResourceInteractBar resourceId={resourceId as string} />}
-      />
+    <PdfLayoutConfig
+      resourceName={docInfo.resourceInfo.resourceName}
+      resourceType={docInfo.resourceInfo.resourceType}
+      statsResourceId={resourceId}
+    >
       <div className={styles.content}>
         <div className={styles.root}>
           <PdfViewer
@@ -211,7 +216,7 @@ function PdfPreview() {
           />
         </div>
       </div>
-    </div>
+    </PdfLayoutConfig>
   );
 }
 

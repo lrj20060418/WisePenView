@@ -5,6 +5,17 @@ import type { ResourceAction } from '../enum';
  * path 与 tags：path 为路径/文件夹归属；currentTags 与 docs/apis/resource.openapi.json ResourceItemResponse 字段一致
  */
 
+export type ResourceIconType =
+  | 'file'
+  | 'doc'
+  | 'ppt'
+  | 'xls'
+  | 'pdf'
+  | 'md'
+  | 'note'
+  | 'skill'
+  | 'agent';
+
 /** 资源项（与 OpenAPI ResourceItemResponse 字段一致） */
 export interface ResourceItem {
   resourceId: string;
@@ -20,6 +31,8 @@ export interface ResourceItem {
   path?: string;
   /** 当前标签映射（tagId → tagName），与接口返回一致 */
   currentTags?: Record<string, string>;
+  /** 图标展示用资源细分类型，避免污染 resourceType 的跳转语义 */
+  resourceIconType?: ResourceIconType;
   /** 主挂载标签（约定取 currentTags 的第一项） */
   mainTagId?: string;
   /** 链接挂载标签（currentTags 去掉 mainTagId 后的其余项） */

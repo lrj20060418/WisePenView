@@ -1,5 +1,5 @@
 import { useDriveService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
+import type { DriveNode } from '@/domains/Drive';
 import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
@@ -19,12 +19,9 @@ interface UseTableDriveReturn {
   /** breadcrumb 路径（含目标节点本身） */
   pathNodes: DriveNode[];
   loading: boolean;
-  loadingMoreParentId: string | null;
   expandedRowKeys: string[];
-  /** 进入容器目录（folder / trash 调用） */
+  /** 进入容器目录（root / folder 调用） */
   enterFolder: (nodeId: string) => void;
-  /** 点击 LoadMoreNode 行：再加载一页 */
-  handleLoadMore: (node: LoadMoreNode) => Promise<void>;
   /** Table 的 onExpand 回调 */
   handleExpand: (expanded: boolean, record: DriveRow) => Promise<void>;
   /** 重新拉取当前层级 children（drop / 重命名 / 删除 等操作后调用） */
@@ -38,12 +35,11 @@ interface UseTableDriveReturn {
  */
 export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTableDriveReturn {
   const driveService = useDriveService();
-  const { childrenMap, loadChildren, loadMore, reset } = useDriveTreeChildren({ groupId });
+  const { childrenMap, loadChildren, reset } = useDriveTreeChildren({ groupId });
 
   const [currentNodeId, setCurrentNodeId] = useState<string>(rootId);
   const [rows, setRows] = useState<DriveRow[]>([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const [loadingMoreParentId, setLoadingMoreParentId] = useState<string | null>(null);
 
   // 切换 currentNodeId / groupId：拉取当前层级 children
   const { loading, refresh } = useRequest(
@@ -64,7 +60,7 @@ export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTabl
 
   // 派生 breadcrumb 路径
   const { data: pathNodes = [] } = useRequest(
-    () => driveService.getPathById({ nodeId: currentNodeId, groupId }),
+    () => driveService.getNodePath({ nodeId: currentNodeId, groupId }),
     {
       refreshDeps: [currentNodeId, groupId],
       onError: (err) => {
@@ -78,22 +74,8 @@ export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTabl
     setCurrentNodeId(nodeId);
   };
 
-  const handleLoadMore = async (node: LoadMoreNode) => {
-    // 加载期间忽略重复点击
-    if (loadingMoreParentId === node.parentId) return;
-    setLoadingMoreParentId(node.parentId);
-    try {
-      const next = await loadMore(node);
-      if (node.parentId === currentNodeId) {
-        setRows(next as DriveRow[]);
-      }
-    } finally {
-      setLoadingMoreParentId(null);
-    }
-  };
-
   const handleExpand = async (expanded: boolean, record: DriveRow) => {
-    if (!expanded || (record.type !== 'folder' && record.type !== 'trash')) {
+    if (!expanded || (record.type !== 'root' && record.type !== 'folder')) {
       setExpandedRowKeys((keys) => keys.filter((k) => k !== record.id));
       return;
     }
@@ -113,17 +95,15 @@ export function useTableDrive({ rootId, groupId }: UseTableDriveParams): UseTabl
     dataSource,
     pathNodes,
     loading,
-    loadingMoreParentId,
     expandedRowKeys,
     enterFolder,
-    handleLoadMore,
     handleExpand,
     refresh,
   };
 }
 
 function attachChildren(row: DriveRow, map: Map<string, DriveNode[]>): DriveRow {
-  if (row.type !== 'folder' && row.type !== 'trash') return row;
+  if (row.type !== 'root' && row.type !== 'folder') return row;
   const cached = map.get(row.id) as DriveRow[] | undefined;
   if (!cached) return row;
   return { ...row, children: cached.map((c) => attachChildren(c, map)) };

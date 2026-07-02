@@ -69,13 +69,13 @@ const updateResourceActionPermission = async (
   await ResourceItemApi.changeResourceActionPermission(request);
 };
 
-/** 获取当前用户点赞状态，供 ResourceLikeButton 薄层调用 */
+/** 获取当前用户点赞状态，供点赞组件薄层调用 */
 const getLikeStatus = async (resourceId: string): Promise<{ liked: boolean }> => {
   const res = await ResourceInteractApi.getUserInteractionRecord({ resourceId });
   return ResourceServicesMap.mapLikeStatusFromApi(res);
 };
 
-/** 获取当前用户评分，供 ResourceRating 薄层调用 */
+/** 获取当前用户评分，供评分组件薄层调用 */
 const getRate = async (resourceId: string): Promise<{ score: number }> => {
   const res = await ResourceInteractApi.getUserInteractionRecord({ resourceId });
   return ResourceServicesMap.mapRateFromApi(res);
@@ -96,7 +96,7 @@ const interactRead = async (resourceId: string): Promise<void> => {
   await ResourceInteractApi.read({ resourceId });
 };
 
-/** 获取资源聚合互动统计，供 ResourceInteractBar 自行请求；编排 note 和 document 两个接口 */
+/** 获取资源聚合互动统计，供互动统计组件自行请求；编排 note 和 document 两个接口 */
 const getInteractStats = async (resourceId: string): Promise<ResourceInteractStats> => {
   try {
     const data = await NoteApi.getNoteInfo({ resourceId });

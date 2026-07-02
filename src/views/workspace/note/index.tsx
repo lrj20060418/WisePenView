@@ -2,7 +2,7 @@ import { ResultState, Spin } from '@/components/Feedback';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useRequest, useUnmount } from 'ahooks';
 import { ChevronsLeft, Menu } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import EntryIcon from '@/components/EntryIcon';
@@ -20,11 +20,9 @@ import { AI_DIFF_DISPLAY_MODE, AI_DIFF_DISPLAY_MODE_LABELS, useNoteSession } fro
 import { RESOURCE_TYPE } from '@/domains/Resource';
 import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
 import { useSmoothFlag } from '@/hooks/useSmoothFlag';
+import { useWorkspaceLayoutConfig } from '@/layouts/Workspace/WorkspaceOutletContext';
 import { useAiDiffDisplayStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
-import ResourceInteractFooter from '@/views/workspace/_common/ResourceInteractFooter';
-import ResourceViewerHeader from '@/views/workspace/_common/ResourceViewerHeader';
-import rvhStyles from '@/views/workspace/_common/ResourceViewerHeader/style.module.less';
 import { Alert, Button, Dropdown, toast } from '@heroui/react';
 import NoteInfoBar from './_components/NoteInfoBar';
 import NotePermissionModal from './_components/NotePermissionModal';
@@ -44,12 +42,34 @@ interface NoteToolbarTitleProps {
   fallbackTitle?: string;
 }
 
+const AI_DIFF_DISPLAY_OPTIONS: Array<{ value: AiDiffDisplayMode; label: string }> = [
+  {
+    value: AI_DIFF_DISPLAY_MODE.OLD_ONLY,
+    label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.OLD_ONLY],
+  },
+  {
+    value: AI_DIFF_DISPLAY_MODE.NEW_ONLY,
+    label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.NEW_ONLY],
+  },
+  {
+    value: AI_DIFF_DISPLAY_MODE.COMPARE,
+    label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.COMPARE],
+  },
+];
+
+function NoteLayoutConfig({ children }: { children: ReactNode }) {
+  const frameConfig = useMemo(() => ({ className: styles.pageWrap }), []);
+  useWorkspaceLayoutConfig(frameConfig);
+
+  return <>{children}</>;
+}
+
 function NoteToolbarTitle({ resourceId, fallbackTitle }: NoteToolbarTitleProps) {
   const title = useResourceDisplayName(resourceId, fallbackTitle, '未命名笔记');
 
   return (
     <IconText
-      className={rvhStyles.inlineTitleText}
+      className={styles.toolbarTitleText}
       icon={<EntryIcon entryType="resource" resourceType={RESOURCE_TYPE.NOTE} />}
       iconSize={18}
       gap="var(--space-sm)"
@@ -134,20 +154,6 @@ function NoteViewConnected({
     }, 2000);
   };
 
-  const aiDiffDisplayOptions: Array<{ value: AiDiffDisplayMode; label: string }> = [
-    {
-      value: AI_DIFF_DISPLAY_MODE.OLD_ONLY,
-      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.OLD_ONLY],
-    },
-    {
-      value: AI_DIFF_DISPLAY_MODE.NEW_ONLY,
-      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.NEW_ONLY],
-    },
-    {
-      value: AI_DIFF_DISPLAY_MODE.COMPARE,
-      label: AI_DIFF_DISPLAY_MODE_LABELS[AI_DIFF_DISPLAY_MODE.COMPARE],
-    },
-  ];
   const showAiDiffDisplayModeSwitch =
     aiDiffPresence.resourceId === resourceId && aiDiffPresence.hasAiDiffContent;
 
@@ -158,7 +164,7 @@ function NoteViewConnected({
     [resourceId]
   );
 
-  const handlePrintPdf = async () => {
+  const handlePrintPdf = useCallback(async () => {
     const bodyApi = bodyEditorRef.current;
     if (!bodyApi) {
       toast.info('编辑器未就绪');
@@ -175,9 +181,9 @@ function NoteViewConnected({
     } finally {
       setPdfExportLoading(false);
     }
-  };
+  }, [noteInfoDisplay?.noteTitle]);
 
-  const handleDownloadMarkdown = async () => {
+  const handleDownloadMarkdown = useCallback(async () => {
     const bodyApi = bodyEditorRef.current;
     if (!bodyApi) {
       toast.info('编辑器未就绪');
@@ -194,40 +200,44 @@ function NoteViewConnected({
     } finally {
       setIsDownloadingMarkdown(false);
     }
-  };
+  }, [noteInfoDisplay?.noteTitle]);
 
   const headerMorePending = pdfExportLoading || isDownloadingMarkdown;
   const canManageNotePermission =
     Boolean(noteInfoDisplay.ownerId) && currentUser?.id === noteInfoDisplay.ownerId;
 
-  const handleMoreAction = (key: React.Key) => {
-    if (key === 'permission') {
-      setIsPermissionModalOpen(true);
-      return;
-    }
-    if (key === 'print-pdf') {
-      void handlePrintPdf();
-      return;
-    }
-    if (key === 'download-md') {
-      void handleDownloadMarkdown();
-    }
-  };
+  const handleMoreAction = useCallback(
+    (key: React.Key) => {
+      if (key === 'permission') {
+        setIsPermissionModalOpen(true);
+        return;
+      }
+      if (key === 'print-pdf') {
+        void handlePrintPdf();
+        return;
+      }
+      if (key === 'download-md') {
+        void handleDownloadMarkdown();
+      }
+    },
+    [handleDownloadMarkdown, handlePrintPdf]
+  );
 
-  return (
-    <div className={styles.pageWrap}>
-      <ResourceViewerHeader
-        inlineTitle={
+  const workspaceFrameConfig = useMemo(
+    () => ({
+      className: styles.pageWrap,
+      header: {
+        inlineTitle: (
           <NoteToolbarTitle resourceId={resourceId} fallbackTitle={noteInfoDisplay?.noteTitle} />
-        }
-        extra={
+        ),
+        extra: (
           <div className={styles.headerToolbarExtra}>
             {showAiDiffDisplayModeSwitch ? (
               <SegmentedTabs<AiDiffDisplayMode>
                 ariaLabel="AI 差异展示模式"
                 selectedKey={aiDiffDisplayMode}
                 className={styles.aiDiffDisplayModeSwitch}
-                items={aiDiffDisplayOptions.map((option) => ({
+                items={AI_DIFF_DISPLAY_OPTIONS.map((option) => ({
                   key: option.value,
                   label: option.label,
                   disabled: showFullPageSpin,
@@ -266,135 +276,154 @@ function NoteViewConnected({
               </Dropdown>
             </div>
           </div>
-        }
-      />
-      <div className={styles.statesBelowHeader}>
-        <div className={styles.mainScroll} ref={mainScrollRef}>
-          <div className={styles.contentRow}>
-            {isOutlineOpen ? (
-              <aside className={styles.outlineAside} aria-label="文档目录侧栏">
-                <div className={styles.outlineTopRow}>
-                  <span className={styles.outlineTopTitle}>目录</span>
-                  <button
-                    type="button"
-                    className={styles.outlineToggleBtn}
-                    aria-label="收起目录"
-                    onClick={() => setIsOutlineOpen(false)}
-                  >
-                    <ChevronsLeft size={20} />
-                  </button>
-                </div>
-                <div className={styles.outlineScrollArea}>
-                  <NoteOutline
-                    items={outlineItems}
-                    activeId={activeHeadingId}
-                    titleResourceId={resourceId}
-                    titleFallback={noteInfoDisplay?.noteTitle}
-                    onNavigate={(id) => {
-                      if (id === NOTE_OUTLINE_TITLE_ID) {
-                        const anchor = titleAnchorRef.current;
-                        if (anchor) {
-                          anchor.scrollIntoView({ block: 'start', behavior: 'smooth' });
-                          window.requestAnimationFrame(() => {
-                            const editable = anchor.querySelector(
-                              '[contenteditable="true"]'
-                            ) as HTMLElement | null;
-                            editable?.focus();
-                          });
-                        } else {
-                          mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                        }
-                        return;
-                      }
-                      bodyEditorRef.current?.navigateToBlock(id);
-                    }}
-                  />
-                </div>
-              </aside>
-            ) : (
-              <div className={styles.outlineCollapsedCol} aria-label="展开目录">
+        ),
+      },
+      footer: {
+        resourceId,
+        onRateSuccess: onRefreshNoteInfo,
+      },
+    }),
+    [
+      aiDiffDisplayMode,
+      canManageNotePermission,
+      handleMoreAction,
+      headerMorePending,
+      noteInfoDisplay?.noteTitle,
+      onRefreshNoteInfo,
+      resourceId,
+      setAiDiffDisplayMode,
+      showAiDiffDisplayModeSwitch,
+      showFullPageSpin,
+    ]
+  );
+  useWorkspaceLayoutConfig(workspaceFrameConfig);
+
+  return (
+    <>
+      <div className={styles.mainScroll} ref={mainScrollRef}>
+        <div className={styles.contentRow}>
+          {isOutlineOpen ? (
+            <aside className={styles.outlineAside} aria-label="文档目录侧栏">
+              <div className={styles.outlineTopRow}>
+                <span className={styles.outlineTopTitle}>目录</span>
                 <button
                   type="button"
                   className={styles.outlineToggleBtn}
-                  aria-label="展开目录"
-                  onClick={() => setIsOutlineOpen(true)}
+                  aria-label="收起目录"
+                  onClick={() => setIsOutlineOpen(false)}
                 >
-                  <Menu size={20} />
+                  <ChevronsLeft size={20} />
                 </button>
               </div>
-            )}
+              <div className={styles.outlineScrollArea}>
+                <NoteOutline
+                  items={outlineItems}
+                  activeId={activeHeadingId}
+                  titleResourceId={resourceId}
+                  titleFallback={noteInfoDisplay?.noteTitle}
+                  onNavigate={(id) => {
+                    if (id === NOTE_OUTLINE_TITLE_ID) {
+                      const anchor = titleAnchorRef.current;
+                      if (anchor) {
+                        anchor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                        window.requestAnimationFrame(() => {
+                          const editable = anchor.querySelector(
+                            '[contenteditable="true"]'
+                          ) as HTMLElement | null;
+                          editable?.focus();
+                        });
+                      } else {
+                        mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                      return;
+                    }
+                    bodyEditorRef.current?.navigateToBlock(id);
+                  }}
+                />
+              </div>
+            </aside>
+          ) : (
+            <div className={styles.outlineCollapsedCol} aria-label="展开目录">
+              <button
+                type="button"
+                className={styles.outlineToggleBtn}
+                aria-label="展开目录"
+                onClick={() => setIsOutlineOpen(true)}
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          )}
 
-            <div className={styles.mainCol}>
-              <div className={styles.root}>
-                {isDisconnected ? (
-                  <Alert className={styles.wsAlert} status="warning">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Description>
-                        网络连接已断开，当前可继续本地编辑；网络恢复后会自动同步到云端。
-                      </Alert.Description>
-                    </Alert.Content>
-                    <div className={styles.wsAlertAction}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        isDisabled={isReconnectLoading}
-                        onPress={handleReconnect}
-                      >
-                        重试
-                      </Button>
-                    </div>
-                  </Alert>
-                ) : null}
-                <div ref={titleAnchorRef}>
-                  <NoteTitle
-                    key={`${resourceId}-${noteInfoDisplay?.noteTitle ?? ''}-${noteInfoDisplay.canCollaborativeEdit}`}
-                    ref={titleEditorRef}
-                    id={resourceId}
-                    initialContent={noteInfoDisplay?.noteTitle}
-                    readOnly={isTitleReadOnly}
-                    focusOnMount={isConnected && !isTitleReadOnly}
-                    onEnterKey={focusBody}
-                  />
-                </div>
-                <NoteInfoBar noteInfoDisplay={noteInfoDisplay} />
-                <div className={styles.body}>
-                  <CustomBlockNote
-                    key={`${resourceId}-${noteInfoDisplay.canCollaborativeEdit}`}
-                    ref={bodyEditorRef}
-                    resourceId={resourceId}
-                    doc={doc}
-                    provider={provider}
-                    aiDiffDisplayMode={aiDiffDisplayMode}
-                    readOnly={isEditorReadOnly}
-                    blockLocalDocWrites={blockLocalDocWrites}
-                    onOutlineChange={setOutlineItems}
-                    onActiveHeadingChange={setActiveHeadingId}
-                    onAiDiffPresenceChange={handleAiDiffPresenceChange}
-                  />
-                </div>
-                <ResourceInteractFooter resourceId={resourceId} onRateSuccess={onRefreshNoteInfo} />
+          <div className={styles.mainCol}>
+            <div className={styles.root}>
+              {isDisconnected ? (
+                <Alert className={styles.wsAlert} status="warning">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>
+                      网络连接已断开，当前可继续本地编辑；网络恢复后会自动同步到云端。
+                    </Alert.Description>
+                  </Alert.Content>
+                  <div className={styles.wsAlertAction}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      isDisabled={isReconnectLoading}
+                      onPress={handleReconnect}
+                    >
+                      重试
+                    </Button>
+                  </div>
+                </Alert>
+              ) : null}
+              <div ref={titleAnchorRef}>
+                <NoteTitle
+                  key={`${resourceId}-${noteInfoDisplay?.noteTitle ?? ''}-${noteInfoDisplay.canCollaborativeEdit}`}
+                  ref={titleEditorRef}
+                  id={resourceId}
+                  initialContent={noteInfoDisplay?.noteTitle}
+                  readOnly={isTitleReadOnly}
+                  focusOnMount={isConnected && !isTitleReadOnly}
+                  onEnterKey={focusBody}
+                />
+              </div>
+              <NoteInfoBar noteInfoDisplay={noteInfoDisplay} />
+              <div className={styles.body}>
+                <CustomBlockNote
+                  key={`${resourceId}-${noteInfoDisplay.canCollaborativeEdit}`}
+                  ref={bodyEditorRef}
+                  resourceId={resourceId}
+                  doc={doc}
+                  provider={provider}
+                  aiDiffDisplayMode={aiDiffDisplayMode}
+                  readOnly={isEditorReadOnly}
+                  blockLocalDocWrites={blockLocalDocWrites}
+                  onOutlineChange={setOutlineItems}
+                  onActiveHeadingChange={setActiveHeadingId}
+                  onAiDiffPresenceChange={handleAiDiffPresenceChange}
+                />
               </div>
             </div>
           </div>
         </div>
-
-        {showFullPageSpin ? (
-          <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
-            <div className={styles.middleOverlayLoading}>
-              <Spin size="large" />
-              <span className={styles.middleOverlayText}>正在连接笔记服务...</span>
-            </div>
-          </div>
-        ) : null}
       </div>
+
+      {showFullPageSpin ? (
+        <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
+          <div className={styles.middleOverlayLoading}>
+            <Spin size="large" />
+            <span className={styles.middleOverlayText}>正在连接笔记服务...</span>
+          </div>
+        </div>
+      ) : null}
       <NotePermissionModal
         isOpen={isPermissionModalOpen}
         resourceId={resourceId}
         onOpenChange={setIsPermissionModalOpen}
         onSuccess={onRefreshNoteInfo}
       />
-    </div>
+    </>
   );
 }
 
@@ -414,88 +443,76 @@ function NoteView() {
 
   if (!resourceId) {
     return (
-      <div className={styles.pageWrap}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开笔记"
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <NoteLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开笔记"
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </NoteLayoutConfig>
     );
   }
 
   if (noteInfoError) {
     return (
-      <div className={styles.pageWrap}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开笔记"
-                subTitle={parseErrorMessage(noteInfoError)}
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <NoteLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开笔记"
+              subTitle={parseErrorMessage(noteInfoError)}
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </NoteLayoutConfig>
     );
   }
 
   if (isNoteInfoLoading && !noteInfoDisplay) {
     return (
-      <div className={styles.pageWrap}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
-            <div className={styles.middleOverlayLoading}>
-              <Spin size="large" />
-              <span className={styles.middleOverlayText}>正在加载笔记信息...</span>
-            </div>
+      <NoteLayoutConfig>
+        <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
+          <div className={styles.middleOverlayLoading}>
+            <Spin size="large" />
+            <span className={styles.middleOverlayText}>正在加载笔记信息...</span>
           </div>
         </div>
-      </div>
+      </NoteLayoutConfig>
     );
   }
 
   if (!noteInfoDisplay) {
     return (
-      <div className={styles.pageWrap}>
-        <ResourceViewerHeader />
-        <div className={styles.statesBelowHeader}>
-          <div className={styles.middleOverlay}>
-            <div className={styles.middleOverlayInner}>
-              <ResultState
-                status="warning"
-                title="无法打开笔记"
-                subTitle="笔记信息为空，请稍后重试"
-                extra={
-                  <Link to="/app/drive">
-                    <Button variant="secondary">返回云盘</Button>
-                  </Link>
-                }
-              />
-            </div>
+      <NoteLayoutConfig>
+        <div className={styles.middleOverlay}>
+          <div className={styles.middleOverlayInner}>
+            <ResultState
+              status="warning"
+              title="无法打开笔记"
+              subTitle="笔记信息为空，请稍后重试"
+              extra={
+                <Link to="/app/drive">
+                  <Button variant="secondary">返回云盘</Button>
+                </Link>
+              }
+            />
           </div>
         </div>
-      </div>
+      </NoteLayoutConfig>
     );
   }
 

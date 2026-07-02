@@ -1,14 +1,12 @@
 import GlobalSearchBox from '@/components/Drive/GlobalSearchBox';
-import { StickerManageModal } from '@/components/Drive/Modals';
 import TableDrive from '@/components/Drive/TableDrive';
 import IconText from '@/components/IconText';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useDrivePreferencesStore, type DriveViewMode } from '@/store';
 import { Button } from '@heroui/react';
-import { CloudUpload, Tags } from 'lucide-react';
+import { CloudUpload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import FlatDrive from '../_components/FlatDrive';
 import type { UploadQueueTabRef } from '../_components/UploadQueueTab';
 import UploadQueueTab from '../_components/UploadQueueTab';
 import { UploadDocumentModal } from './UploadDocumentModal';
@@ -16,7 +14,6 @@ import styles from './style.module.less';
 
 const VIEW_TABS: { key: DriveViewMode; label: string }[] = [
   { key: 'tableDrive', label: '云盘' },
-  { key: 'flat', label: '标签管理' },
   { key: 'uploadQueue', label: '上传队列' },
 ];
 
@@ -24,7 +21,6 @@ function Drive() {
   const viewMode = useDrivePreferencesStore((s) => s.viewMode);
   const setViewMode = useDrivePreferencesStore((s) => s.setViewMode);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [stickerManageOpen, setStickerManageOpen] = useState(false);
   const uploadQueueRef = useRef<UploadQueueTabRef>(null);
 
   const handleUploadSuccess = () => {
@@ -43,11 +39,6 @@ function Drive() {
         </div>
         <div className={styles.actionsRow}>
           <GlobalSearchBox />
-          <Button variant="secondary" onPress={() => setStickerManageOpen(true)}>
-            <IconText icon={<Tags />} iconSize={16}>
-              管理标签
-            </IconText>
-          </Button>
           <Button variant="primary" onPress={() => setUploadModalOpen(true)}>
             <IconText icon={<CloudUpload />} iconSize={16}>
               上传文件
@@ -65,7 +56,6 @@ function Drive() {
       />
 
       <div className={styles.previewContent}>
-        {activeViewMode === 'flat' && <FlatDrive />}
         {activeViewMode === 'tableDrive' && <TableDrive />}
         {activeViewMode === 'uploadQueue' && <UploadQueueTab ref={uploadQueueRef} />}
       </div>
@@ -75,7 +65,6 @@ function Drive() {
         onOpenChange={setUploadModalOpen}
         onSuccess={handleUploadSuccess}
       />
-      <StickerManageModal isOpen={stickerManageOpen} onOpenChange={setStickerManageOpen} />
     </div>
   );
 }

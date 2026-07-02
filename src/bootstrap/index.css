@@ -4,6 +4,27 @@
 @import '@heroui/styles';
 @import '../theme/heroui/wisepen.css' layer(theme);
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--surface-foreground);
+  --color-popover: var(--overlay);
+  --color-popover-foreground: var(--overlay-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-secondary: var(--surface-tertiary);
+  --color-secondary-foreground: var(--surface-tertiary-foreground);
+  --color-muted: var(--surface-tertiary);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--surface-hover);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--field-border);
+  --color-ring: var(--focus);
+}
+
 :root {
   --app-font-family:
     'Inter',
@@ -70,6 +91,55 @@ html {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: var(--scrollbar-width, 8px);
+    height: var(--scrollbar-width, 8px);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+    border-radius: 999px;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+  }
+
+  .contain-content {
+    contain: content;
+  }
+
+  .scroll-fade-b {
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 1.5rem), transparent 100%);
+  }
+
+  [data-slot='message-scroller-viewport'][data-autoscrolling] {
+    scrollbar-width: none;
+  }
+
+  [data-slot='message-scroller-viewport'][data-autoscrolling]::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* @media (prefers-color-scheme: light) {

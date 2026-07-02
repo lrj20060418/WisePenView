@@ -1,8 +1,8 @@
 import type { DriveNode } from '@/domains/Drive';
 import type { DriveScope, DriveSelectionItem } from '../common/driveComponentModel';
 
-export type DriveNavRenderableType = 'folder' | 'resource' | 'link' | 'trash';
-export type DriveNavSelectableType = 'folder' | 'resource' | 'link';
+export type DriveNavRenderableType = 'root' | 'folder' | 'resource' | 'link';
+export type DriveNavSelectableType = 'root' | 'folder' | 'resource' | 'link';
 
 export interface DriveNavProps {
   rootId?: string;

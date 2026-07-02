@@ -12,6 +12,7 @@
         "folder-work",
         "folder-study",
         "folder-life",
+        "folder-icon-samples",
         "folder-bulk",
         "link-shared-doc",
         "trash-root"
@@ -190,6 +191,97 @@
       "resourceId": "res-l-001",
       "title": "旅行清单",
       "resourceType": "note"
+    },
+    "folder-icon-samples": {
+      "id": "folder-icon-samples",
+      "type": "folder",
+      "parentId": "drive-root",
+      "tagId": "tag-icon-samples",
+      "name": "图标样例",
+      "expanded": false,
+      "childrenIds": [
+        "res-icon-file",
+        "res-icon-pdf",
+        "res-icon-doc",
+        "res-icon-ppt",
+        "res-icon-xls",
+        "res-icon-md",
+        "res-icon-note",
+        "res-icon-skill",
+        "res-icon-agent"
+      ]
+    },
+    "res-icon-file": {
+      "id": "res-icon-file",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-file",
+      "title": "通用文件.bin",
+      "resourceType": "file"
+    },
+    "res-icon-pdf": {
+      "id": "res-icon-pdf",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-pdf",
+      "title": "PDF 白皮书.pdf",
+      "resourceType": "file"
+    },
+    "res-icon-doc": {
+      "id": "res-icon-doc",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-doc",
+      "title": "Word 方案.docx",
+      "resourceType": "file"
+    },
+    "res-icon-ppt": {
+      "id": "res-icon-ppt",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-ppt",
+      "title": "演示文稿.pptx",
+      "resourceType": "file"
+    },
+    "res-icon-xls": {
+      "id": "res-icon-xls",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-xls",
+      "title": "数据表.xlsx",
+      "resourceType": "file"
+    },
+    "res-icon-md": {
+      "id": "res-icon-md",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-md",
+      "title": "Markdown 笔记.md",
+      "resourceType": "note"
+    },
+    "res-icon-note": {
+      "id": "res-icon-note",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-note",
+      "title": "在线笔记",
+      "resourceType": "note"
+    },
+    "res-icon-skill": {
+      "id": "res-icon-skill",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-skill",
+      "title": "摘要 Skill",
+      "resourceType": "SKILL"
+    },
+    "res-icon-agent": {
+      "id": "res-icon-agent",
+      "type": "resource",
+      "parentId": "folder-icon-samples",
+      "resourceId": "res-icon-agent",
+      "title": "研究 Agent",
+      "resourceType": "AGENT"
     },
     "folder-bulk": {
       "id": "folder-bulk",
@@ -747,7 +839,8 @@
       "parentId": "drive-root",
       "resourceId": "res-w-001",
       "title": "工作计划（链接）",
-      "resourceType": "document"
+      "resourceType": "document",
+      "primaryTagId": "tag-work"
     },
     "trash-root": {
       "id": "trash-root",

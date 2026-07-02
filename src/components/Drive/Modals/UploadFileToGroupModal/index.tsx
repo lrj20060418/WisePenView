@@ -113,7 +113,7 @@ function UploadFileToGroupModal({
                         <div className={styles.navTree}>
                           <DriveNav
                             key={`personal-${navRefreshKey}`}
-                            renderableTypes={['folder', 'resource', 'link']}
+                            renderableTypes={['root', 'folder', 'resource', 'link']}
                             selectableTypes={['resource', 'link']}
                             multiple
                             refreshTrigger={navRefreshKey}
@@ -131,7 +131,7 @@ function UploadFileToGroupModal({
                           <DriveNav
                             key={`group-tree-tag-${groupId}-${navRefreshKey}`}
                             scope={{ type: 'group', groupId }}
-                            renderableTypes={['folder']}
+                            renderableTypes={['root', 'folder']}
                             selectableTypes={['folder']}
                             onChange={handleTagsChange}
                           />

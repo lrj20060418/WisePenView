@@ -1,4 +1,4 @@
-import AdminSidebar from '@/components/Sidebar/AdminSidebar';
+import AdminSidebar from '@/layouts/_common/Sidebar/AdminSidebar';
 import clsx from 'clsx';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';

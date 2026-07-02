@@ -1,48 +1,52 @@
-export type DriveNodeType = 'folder' | 'resource' | 'trash' | 'link' | 'loadMore';
+import type { ResourceIconType } from '@/domains/Resource';
 
-type ResourceType = 'document' | 'note' | 'skill';
+export type DriveNodeType = 'root' | 'folder' | 'resource' | 'link' | 'loading';
 
 interface DriveNodeBase {
-  /**此处id由service分配，用于在service中查找节点 */
+  /** 此处 id 由 service 分配，用于在 service 中查找节点 */
   id: string;
   parentId: string | null;
+}
+
+interface RootNode extends DriveNodeBase {
+  type: 'root';
+  name: string;
+  scope: 'personal' | 'group';
+  childrenIds: string[];
 }
 
 interface FolderNode extends DriveNodeBase {
   type: 'folder';
   tagId: string;
   name: string;
-  expanded: boolean;
   childrenIds: string[];
 }
 
-interface ResourceNode extends DriveNodeBase {
+interface DriveResourceNodeBase extends DriveNodeBase {
+  resourceId: string;
+  title: string;
+  resourceType?: string;
+  resourceIconType: ResourceIconType;
+  /** 当前节点所在目录 tag，用来描述资源是主挂载还是辅助挂载 */
+  folderTagId: string;
+}
+
+interface ResourceNode extends DriveResourceNodeBase {
   type: 'resource';
-  resourceId: string;
-  title: string;
-  resourceType: ResourceType;
 }
 
-interface TrashNode extends DriveNodeBase {
-  type: 'trash';
-  tagId: string;
-  childrenIds: string[];
-}
-
-interface LinkNode extends DriveNodeBase {
+interface LinkNode extends DriveResourceNodeBase {
   type: 'link';
-  resourceId: string;
-  title: string;
-  resourceType: ResourceType;
+  /** 资源主挂载 tag；后端未返回有序 tag 时允许为空 */
+  primaryTagId?: string;
 }
 
-/** 列表末尾「加载更多」占位节点：用于提示某个父目录仍有资源分页，不代表真实文件或文件夹 */
-interface LoadMoreNode extends DriveNodeBase {
-  type: 'loadMore';
+/** 加载占位节点：仅用于组件展示当前目录正在拉取子节点，不代表真实文件或文件夹 */
+interface LoadingNode extends DriveNodeBase {
+  type: 'loading';
   parentId: string;
-  loaded: number;
-  total: number;
+  label?: string;
 }
 
-export type DriveNode = FolderNode | ResourceNode | TrashNode | LinkNode | LoadMoreNode;
-export type { FolderNode, LinkNode, LoadMoreNode, ResourceNode, TrashNode };
+export type DriveNode = RootNode | FolderNode | ResourceNode | LinkNode | LoadingNode;
+export type { FolderNode, LinkNode, LoadingNode, ResourceNode, RootNode };

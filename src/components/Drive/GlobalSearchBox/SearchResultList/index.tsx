@@ -32,7 +32,12 @@ function SearchHitRow({ item, active, flatIndex, onActivate, onOpen }: SearchHit
       onClick={() => onOpen(item)}
     >
       <div className={styles.rowIcon}>
-        <EntryIcon entryType="resource" resourceType={item.resourceType} size={18} />
+        <EntryIcon
+          entryType="resource"
+          resourceType={item.resourceType}
+          resourceIconType={item.resourceIconType}
+          size={18}
+        />
       </div>
       <div className={styles.rowText}>
         <div className={styles.rowTitle} dangerouslySetInnerHTML={{ __html: item.resourceName }} />

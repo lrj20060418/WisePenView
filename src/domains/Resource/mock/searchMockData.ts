@@ -5,7 +5,7 @@ import type {
   SearchResourceType,
   SearchResultPage,
 } from '@/domains/Resource';
-import { SEARCH_SCOPE } from '@/domains/Resource';
+import { SEARCH_SCOPE, resolveResourceIconType } from '@/domains/Resource';
 
 /** 一篇可被搜索的 mock 资源；content 仅 mock 内部用，后端不返回 */
 interface SearchCorpusItem {
@@ -262,6 +262,10 @@ export function simulateGlobalSearch(params: SearchQueryRequest): SearchResultPa
       const hit: SearchHitItem = {
         resourceId: item.resourceId,
         resourceType: item.resourceType,
+        resourceIconType: resolveResourceIconType({
+          resourceType: item.resourceType,
+          resourceName: item.resourceName,
+        }),
         resourceName: highlight(item.resourceName, keyword),
         highlightContent: contentSnippet,
         updateTime: item.updateTime,

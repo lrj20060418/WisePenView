@@ -19,6 +19,7 @@ import type {
   SearchResultPage,
   UpdateResourceActionPermissionRequest,
 } from '../service/index.type';
+import { resolveResourceIconType } from '../utils/resolveResourceIconType';
 
 /** 后端 ResourceItemResponse 中的嵌套互动统计结构 */
 interface RawInteractionInfo {
@@ -82,11 +83,18 @@ const mapListResourceItemsRequest = (
 /** 单条资源：Java Long 字符串、标签派生字段 */
 const mapResourceItemFromApi = (raw: ResourceItem): ResourceItem => {
   const item = normalizeResourceItem(raw) as ResourceItem;
-  // fallback：无 currentTags 时按空对象处理
-  const tagIds = Object.keys(item.currentTags ?? {});
+  const currentTags =
+    item.currentTags && !Array.isArray(item.currentTags) ? item.currentTags : undefined;
+  // fallback：后端暂未返回有序 tagIds 时，只能按 currentTags 的对象顺序派生。
+  const tagIds = Object.keys(currentTags ?? {});
 
   return {
     ...item,
+    currentTags,
+    resourceIconType: resolveResourceIconType({
+      resourceType: item.resourceType,
+      resourceName: item.resourceName,
+    }),
     // fallback：无标签时为 undefined
     mainTagId: tagIds[0],
     // fallback：仅一个或无标签时为 []
@@ -151,7 +159,7 @@ const mapRateFromApi = (
   score: res?.score ?? 0,
 });
 
-/** 资源互动聚合统计（供 ResourceInteractBar 展示） */
+/** 资源互动聚合统计（供互动统计组件展示） */
 export interface ResourceInteractStats {
   readCount?: number | null;
   likeCount?: number | null;
@@ -159,7 +167,7 @@ export interface ResourceInteractStats {
   scoreAvgText: string;
 }
 
-/** ResourceItem → 聚合互动统计，供 ResourceInteractBar 展示 */
+/** ResourceItem → 聚合互动统计，供互动统计组件展示 */
 const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractStats => {
   const normalized = normalizeResourceItem(resourceInfo);
   const scoreAvg = normalized.scoreAvg ?? null;
@@ -174,6 +182,10 @@ const mapInteractStatsFromApi = (resourceInfo: ResourceItem): ResourceInteractSt
 const mapSearchHitFromApi = (raw: GlobalSearchApiResponse['list'][number]): SearchHitItem => ({
   ...raw,
   resourceType: normalizeSearchResourceType(raw.resourceType),
+  resourceIconType: resolveResourceIconType({
+    resourceType: raw.resourceType,
+    resourceName: raw.resourceName,
+  }),
 });
 
 const mapSearchResultPageFromApi = (data: GlobalSearchApiResponse): SearchResultPage => ({

@@ -3,18 +3,15 @@ import { persist } from 'zustand/middleware';
 
 import { zustandSessionStorage } from './sessionStorage';
 
-export type DriveViewMode = 'flat' | 'uploadQueue' | 'tableDrive';
+export type DriveViewMode = 'uploadQueue' | 'tableDrive';
 
 const DEFAULT_DRIVE_PREFERENCES = {
   viewMode: 'tableDrive' as DriveViewMode,
-  filterCollapsed: true,
 };
 
 type DrivePreferencesState = {
   viewMode: DriveViewMode;
-  filterCollapsed: boolean;
   setViewMode: (v: DriveViewMode) => void;
-  setFilterCollapsed: (v: boolean) => void;
 };
 
 export const useDrivePreferencesStore = create<DrivePreferencesState>()(
@@ -22,7 +19,6 @@ export const useDrivePreferencesStore = create<DrivePreferencesState>()(
     (set) => ({
       ...DEFAULT_DRIVE_PREFERENCES,
       setViewMode: (v) => set({ viewMode: v }),
-      setFilterCollapsed: (v) => set({ filterCollapsed: v }),
     }),
     { name: 'drive-preferences', storage: zustandSessionStorage }
   )

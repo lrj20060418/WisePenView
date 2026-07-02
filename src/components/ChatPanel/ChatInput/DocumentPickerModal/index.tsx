@@ -7,8 +7,7 @@ import IconText from '@/components/IconText';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import { useDriveService, useGroupService } from '@/domains';
-import type { DriveNode, LoadMoreNode } from '@/domains/Drive';
-import { useChatPageStore } from '@/store';
+import type { DriveNode } from '@/domains/Drive';
 import { parseErrorMessage } from '@/utils/error';
 import { Button, Modal, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
@@ -18,7 +17,6 @@ import { useRef, useState } from 'react';
 import type { DocumentPickerModalProps } from './index.type';
 import styles from './style.module.less';
 
-const DRIVE_ROOT_ID = 'drive-root';
 const SCOPE_KEY_PREFIX = '__document_picker_scope__';
 const CHILD_KEY_SEPARATOR = '>';
 
@@ -27,8 +25,8 @@ interface ScopeInfo {
   groupId?: string;
 }
 
-type RenderableType = 'folder' | 'resource' | 'link' | 'trash';
-type SelectableType = 'folder' | 'resource' | 'link';
+type RenderableType = 'root' | 'folder' | 'resource' | 'link';
+type SelectableType = 'root' | 'folder' | 'resource' | 'link';
 
 function buildScopeKey(scopeId: string): string {
   return `${SCOPE_KEY_PREFIX}:${scopeId}`;
@@ -80,7 +78,7 @@ function buildScopeRootNode(key: string, title: string, scopeType: 'personal' | 
   };
 }
 
-const RENDERABLE_TYPES = new Set<RenderableType>(['folder', 'resource', 'link']);
+const RENDERABLE_TYPES = new Set<RenderableType>(['root', 'folder', 'resource', 'link']);
 const SELECTABLE_TYPES = new Set<SelectableType>(['resource', 'link']);
 const EMPTY_STRING_SET = new Set<string>();
 
@@ -88,10 +86,9 @@ function isSelectableNode(node: DriveNode | undefined): boolean {
   return node?.type === 'resource' || node?.type === 'link';
 }
 
-function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
+function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalProps) {
   const driveService = useDriveService();
   const groupService = useGroupService();
-  const addDocRef = useChatPageStore((s) => s.addDocRef);
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const scopeMapRef = useRef<Map<string, ScopeInfo>>(new Map());
@@ -105,9 +102,6 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
         renderableTypes: RENDERABLE_TYPES,
         selectableTypes: SELECTABLE_TYPES,
         disabledNodeIds: EMPTY_STRING_SET,
-        onLoadMoreClick: (node: LoadMoreNode) => {
-          void handleLoadMore(scopeKey, node);
-        },
       },
       rawNodeMap
     );
@@ -124,16 +118,13 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
     if (!scopeInfo) return;
 
     try {
-      const rootNode = await driveService.getDriveTree({
-        rootId: DRIVE_ROOT_ID,
-        groupId: scopeInfo.groupId,
-      });
-      if (rootNode.type !== 'folder') {
+      const rootNode = await driveService.getRootNode({ groupId: scopeInfo.groupId });
+      if (rootNode.type !== 'root') {
         setTreeData((prev) => replaceTreeNodeChildren(prev, scopeKey, []));
         return;
       }
 
-      const driveChildren = await driveService.loadNodeChildren({
+      const driveChildren = await driveService.listNodeChildren({
         nodeId: rootNode.id,
         groupId: scopeInfo.groupId,
       });
@@ -149,32 +140,15 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
     const scopedKey = buildScopedKey(scopeKey, driveNodeId);
     const scopeInfo = scopeMapRef.current.get(scopeKey);
     const driveNode = scopedDriveNodeMapRef.current.get(scopedKey);
-    if (!driveNode || (driveNode.type !== 'folder' && driveNode.type !== 'trash')) return;
+    if (!driveNode || (driveNode.type !== 'root' && driveNode.type !== 'folder')) return;
 
     try {
-      const driveChildren = await driveService.loadNodeChildren({
+      const driveChildren = await driveService.listNodeChildren({
         nodeId: driveNodeId,
         groupId: scopeInfo?.groupId,
       });
       setTreeData((prev) =>
         replaceTreeNodeChildren(prev, scopedKey, buildScopedChildren(scopeKey, driveChildren))
-      );
-    } catch (err) {
-      toast.danger(parseErrorMessage(err));
-    }
-  }
-
-  async function handleLoadMore(scopeKey: string, node: LoadMoreNode): Promise<void> {
-    const scopeInfo = scopeMapRef.current.get(scopeKey);
-    const parentKey = buildScopedKey(scopeKey, node.parentId);
-
-    try {
-      const driveChildren = await driveService.loadMore({
-        parentNodeId: node.parentId,
-        groupId: scopeInfo?.groupId,
-      });
-      setTreeData((prev) =>
-        replaceTreeNodeChildren(prev, parentKey, buildScopedChildren(scopeKey, driveChildren))
       );
     } catch (err) {
       toast.danger(parseErrorMessage(err));
@@ -274,17 +248,19 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
   }
 
   function handleConfirm(): void {
-    for (const key of checkedKeys) {
-      const driveNode = scopedDriveNodeMapRef.current.get(key);
-      if (!driveNode || (driveNode.type !== 'resource' && driveNode.type !== 'link')) continue;
-
-      addDocRef({
-        resourceId: driveNode.resourceId,
-        resourceName: driveNode.title || driveNode.resourceId,
-        resourceType: driveNode.resourceType,
+    const resources = checkedKeys
+      .map((key) => scopedDriveNodeMapRef.current.get(key))
+      .filter((node): node is Extract<DriveNode, { type: 'resource' | 'link' }> =>
+        Boolean(node && (node.type === 'resource' || node.type === 'link'))
+      )
+      .map((node) => ({
+        resourceId: node.resourceId,
+        resourceName: node.title || node.resourceId,
+        resourceType: node.resourceType ?? '',
         enabled: true,
-      });
-    }
+      }));
+
+    onConfirm(resources);
     handleClose();
   }
 
@@ -294,7 +270,7 @@ function DocumentPickerModal({ open, onClose }: DocumentPickerModalProps) {
         <Modal.Container size="md" placement="center">
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>文档库选择</Modal.Heading>
+              <Modal.Heading>从云盘选取</Modal.Heading>
             </Modal.Header>
             <Modal.Body>
               <div className={styles.wrapper}>

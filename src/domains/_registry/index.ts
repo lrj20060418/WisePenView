@@ -40,7 +40,6 @@ export {
   useNoteService,
   useQuotaService,
   useResourceService,
-  useStickerService,
   useTagService,
   useUserService,
   useWalletService,
