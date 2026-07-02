@@ -5,6 +5,7 @@ import {
   type FolderTableRowProps,
 } from '@/components/Table';
 import type { DriveNode } from '@/domains/Drive';
+import { findTreeNodeById } from '@/utils/tree/findTreeNodeById';
 import { Button } from '@heroui/react';
 import { CloudUpload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -102,7 +103,7 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
   const { onDrop } = useDriveDrop({ refresh, groupId: finalGroupId });
   const rows = useMemo(() => dataSource.map((node) => toDriveTableRow(node)), [dataSource]);
   const selectedNode = useMemo(
-    () => (selectedNodeId ? findRowById(rows, selectedNodeId) : undefined),
+    () => (selectedNodeId ? findTreeNodeById(rows, selectedNodeId) : undefined),
     [rows, selectedNodeId]
   );
   const currentDirectoryItemCount = useMemo(
@@ -134,7 +135,7 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
   const handleExpandedChange = async (keys: string[]) => {
     const addedKey = keys.find((key) => !expandedRowKeys.includes(key));
     if (addedKey) {
-      const row = findRowById(dataSource, addedKey);
+      const row = findTreeNodeById(dataSource, addedKey);
       if (row) {
         await handleExpand(true, row);
         return;
@@ -142,7 +143,7 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     }
     const removedKey = expandedRowKeys.find((key) => !keys.includes(key));
     if (removedKey) {
-      const row = findRowById(dataSource, removedKey);
+      const row = findTreeNodeById(dataSource, removedKey);
       if (row) {
         await handleExpand(false, row);
         return;
@@ -270,17 +271,6 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
       {ModalHost}
     </main>
   );
-}
-
-function findRowById(rows: DriveRow[], id: string): DriveRow | undefined {
-  for (const row of rows) {
-    if (row.id === id) return row;
-    if (row.type !== 'loading' && row.children?.length) {
-      const child = findRowById(row.children, id);
-      if (child) return child;
-    }
-  }
-  return undefined;
 }
 
 export default TableDrive;
