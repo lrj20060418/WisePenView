@@ -1,5 +1,5 @@
-import EntryIcon from '@/components/EntryIcon';
 import { Empty, Spin } from '@/components/Feedback';
+import EntryIcon from '@/components/Icons/EntryIcon';
 import { useResourceService } from '@/domains';
 import type { SearchHitItem, SearchResultPage } from '@/domains/Resource';
 import { SEARCH_SCOPE } from '@/domains/Resource';

@@ -1,3 +1,4 @@
+import type { Model } from '@/components/ChatPanel/index.type';
 import {
   buildDefaultPersonalAgent,
   type CapabilitySkillSelection,
@@ -57,7 +58,7 @@ interface ChatInputState {
   activeDocRefs: LocalResourcePayload[];
   activeAttachments: LocalAttachmentPayload[];
   attachmentOpen: boolean;
-  capabilityOpen: boolean;
+  availableModels: Model[];
   documentPickerOpen: boolean;
   isComposing: boolean;
   isDragOver: boolean;
@@ -69,6 +70,7 @@ interface ChatInputState {
   selectedModelId: string | null;
   selectedSkills: CapabilitySkillSelection[];
   selectedTools: CapabilityToolOption[];
+  skillMenuOpen: boolean;
   value: string;
 }
 
@@ -90,7 +92,7 @@ interface ChatInputActions {
     selected: Array<{ skill: SkillSummary; sourceAgent: ChatAgentOption | null }>
   ) => void;
   setAttachmentOpen: (open: boolean) => void;
-  setCapabilityOpen: (open: boolean) => void;
+  setAvailableModels: (models: Model[]) => void;
   setDocumentPickerOpen: (open: boolean) => void;
   setIsComposing: (isComposing: boolean) => void;
   setIsDragOver: (isDragOver: boolean) => void;
@@ -99,6 +101,7 @@ interface ChatInputActions {
   setPendingAttachmentUploadFailed: (id: string) => void;
   setSelectedAgent: (agent: ChatAgentOption) => void;
   setSelectedModelId: (modelId: string | null) => void;
+  setSkillMenuOpen: (open: boolean) => void;
   setValue: (value: string) => void;
   toggleSkill: (skill: SkillSummary, sourceAgent: ChatAgentOption) => void;
   toggleTool: (tool: CapabilityToolOption) => void;
@@ -113,7 +116,7 @@ const INITIAL_STATE: ChatInputState = {
   activeDocRefs: [],
   activeAttachments: [],
   attachmentOpen: false,
-  capabilityOpen: false,
+  availableModels: [],
   documentPickerOpen: false,
   isComposing: false,
   isDragOver: false,
@@ -125,6 +128,7 @@ const INITIAL_STATE: ChatInputState = {
   selectedModelId: null,
   selectedSkills: [],
   selectedTools: [],
+  skillMenuOpen: false,
   value: '',
 };
 
@@ -213,7 +217,7 @@ export function createChatInputStore(): ChatInputStoreApi {
       set((state) =>
         fallbackAgent.agentId === state.selectedAgent.agentId
           ? {}
-          : { selectedAgent: fallbackAgent }
+          : { selectedAgent: fallbackAgent, selectedSkills: [], selectedTools: [] }
       ),
 
     replaceExternalSkills: (selected) =>
@@ -232,7 +236,7 @@ export function createChatInputStore(): ChatInputStoreApi {
       }),
 
     setAttachmentOpen: (attachmentOpen) => set({ attachmentOpen }),
-    setCapabilityOpen: (capabilityOpen) => set({ capabilityOpen }),
+    setAvailableModels: (availableModels) => set({ availableModels }),
     setDocumentPickerOpen: (documentPickerOpen) => set({ documentPickerOpen }),
     setIsComposing: (isComposing) => set({ isComposing }),
     setIsDragOver: (isDragOver) => set({ isDragOver }),
@@ -246,8 +250,14 @@ export function createChatInputStore(): ChatInputStoreApi {
         ),
       })),
 
-    setSelectedAgent: (selectedAgent) => set({ selectedAgent }),
+    setSelectedAgent: (selectedAgent) =>
+      set((state) =>
+        state.selectedAgent.agentId === selectedAgent.agentId
+          ? { selectedAgent }
+          : { selectedAgent, selectedSkills: [], selectedTools: [] }
+      ),
     setSelectedModelId: (selectedModelId) => set({ selectedModelId }),
+    setSkillMenuOpen: (skillMenuOpen) => set({ skillMenuOpen }),
     setValue: (value) => set({ value }),
 
     toggleSkill: (skill, sourceAgent) =>
@@ -285,6 +295,18 @@ export function selectChatInputCompletionState(
     activeAttachments: state.activeAttachments,
     pendingImageMetas: state.pendingImageMetas,
   };
+}
+
+export function selectChatInputSelectedModel(state: ChatInputStoreState): Model | null {
+  if (state.availableModels.length === 0) return null;
+  const explicitModel = state.selectedModelId
+    ? state.availableModels.find((model) => model.id === state.selectedModelId)
+    : undefined;
+  return (
+    explicitModel ??
+    state.availableModels.find((model) => model.isDefault) ??
+    state.availableModels[0]
+  );
 }
 
 export function useChatInputStoreApi(): ChatInputStoreApi {

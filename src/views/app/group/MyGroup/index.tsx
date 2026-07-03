@@ -1,5 +1,4 @@
 import { Empty, Spin } from '@/components/Feedback';
-import IconText from '@/components/IconText';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useGroupService } from '@/domains';
 import type { FetchGroupListRequest, Group } from '@/domains/Group';
@@ -111,14 +110,12 @@ function MyGroup() {
         </div>
         <div className={layout.actionsRow}>
           <Button onPress={() => setJoinGroupModalOpen(true)}>
-            <IconText icon={<UserPlus />} iconSize={16}>
-              加入小组
-            </IconText>
+            <UserPlus size={16} aria-hidden="true" />
+            加入小组
           </Button>
           <Button variant="primary" onPress={() => setCreateGroupModalOpen(true)}>
-            <IconText icon={<Plus />} iconSize={16}>
-              新建小组
-            </IconText>
+            <Plus size={16} aria-hidden="true" />
+            新建小组
           </Button>
         </div>
       </div>

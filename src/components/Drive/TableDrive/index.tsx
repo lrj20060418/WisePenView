@@ -1,4 +1,3 @@
-import IconText from '@/components/IconText';
 import {
   FolderTable,
   type FolderTableBreadcrumbItem,
@@ -199,9 +198,8 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
       <div className={styles.toolbarActions}>
         {showUploadToGroup ? (
           <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
-            <IconText icon={<CloudUpload />} iconSize={16}>
-              上传文件
-            </IconText>
+            <CloudUpload size={16} aria-hidden="true" />
+            上传文件
           </Button>
         ) : null}
         {showManagePermission ? (

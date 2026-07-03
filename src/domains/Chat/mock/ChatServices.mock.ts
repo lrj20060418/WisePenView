@@ -1,4 +1,6 @@
 import type {
+  ChatDocumentPickerNode,
+  ChatServiceDeps,
   ChatSession,
   IChatService,
   ListHistoryMessagesRequest,
@@ -9,7 +11,14 @@ import type {
   UploadAttachmentParams,
   UploadAttachmentResult,
 } from '@/domains/Chat';
-import { MODEL_TYPE } from '@/domains/Chat';
+import {
+  buildAdvancedSkillTreeGroups,
+  buildDefaultPersonalAgent,
+  buildDocumentPickerScopes,
+  getPrimarySkillsForAgent,
+  mapDriveNodeToDocumentPickerNode,
+  MODEL_TYPE,
+} from '@/domains/Chat';
 import type { Group } from '@/domains/Group';
 
 type MockModelSeed = {
@@ -400,12 +409,148 @@ const getWorkspace: IChatService['getWorkspace'] = async () => {
   };
 };
 
+const getChatInputAgents: IChatService['getChatInputAgents'] = async () => {
+  const workspace = await getWorkspace();
+  return [buildDefaultPersonalAgent(), ...workspace.personalAgents, ...workspace.groupAgents];
+};
+
 const getTools = async (): Promise<ToolOption[]> => {
   return [
     { toolId: 'search_historical_messages', label: 'Search History' },
     { toolId: 'mock-tool-2', label: 'Mock Tool 2' },
   ];
 };
+
+const getChatInputCapabilityOptions: IChatService['getChatInputCapabilityOptions'] = async ({
+  agent,
+}) => {
+  const [workspace, tools] = await Promise.all([getWorkspace(), getTools()]);
+  const primarySkills = getPrimarySkillsForAgent(workspace.skills, agent);
+  const primaryIds = new Set(primarySkills.map((skill) => skill.skillId));
+  const otherSkillGroups = buildAdvancedSkillTreeGroups(
+    workspace.skills,
+    workspace.groups,
+    agent,
+    primarySkills
+  )
+    .map((group) => ({
+      ...group,
+      skills: group.skills.filter((skill) => !primaryIds.has(skill.skillId)),
+    }))
+    .filter((group) => group.skills.length > 0);
+
+  return {
+    primarySkills,
+    otherSkillGroups,
+    tools,
+  };
+};
+
+const getDocumentPickerScopes: IChatService['getDocumentPickerScopes'] = async () => {
+  const workspace = await getWorkspace();
+  return buildDocumentPickerScopes(workspace.groups);
+};
+
+const buildMockDocumentNode = (
+  node: Omit<
+    ChatDocumentPickerNode,
+    'groupId' | 'resourceId' | 'resourceName' | 'resourceType' | 'isLeaf' | 'selectable'
+  > &
+    Partial<
+      Pick<ChatDocumentPickerNode, 'groupId' | 'resourceId' | 'resourceName' | 'resourceType'>
+    >
+): ChatDocumentPickerNode => ({
+  ...node,
+  groupId: node.groupId ?? null,
+  resourceId: node.resourceId ?? null,
+  resourceName: node.resourceName ?? null,
+  resourceType: node.resourceType ?? null,
+  isLeaf: node.type === 'resource' || node.type === 'link',
+  selectable: node.type === 'resource' || node.type === 'link',
+});
+
+const MOCK_DOCUMENT_CHILDREN_BY_PARENT: Record<string, ChatDocumentPickerNode[]> = {
+  'drive-root': [
+    buildMockDocumentNode({
+      nodeId: 'mock-folder-personal-notes',
+      title: '个人笔记',
+      type: 'folder',
+    }),
+    buildMockDocumentNode({
+      nodeId: 'mock-resource-personal-guide',
+      title: '产品使用说明',
+      type: 'resource',
+      resourceId: 'mock-resource-personal-guide',
+      resourceName: '产品使用说明',
+      resourceType: 'DOCUMENT',
+    }),
+  ],
+  'mock-folder-personal-notes': [
+    buildMockDocumentNode({
+      nodeId: 'mock-resource-personal-meeting',
+      title: '会议纪要',
+      type: 'resource',
+      resourceId: 'mock-resource-personal-meeting',
+      resourceName: '会议纪要',
+      resourceType: 'DOCUMENT',
+    }),
+  ],
+  'drive-root:group:1': [
+    buildMockDocumentNode({
+      nodeId: 'mock-folder-group-1-project',
+      title: '项目资料',
+      type: 'folder',
+      groupId: '1',
+    }),
+  ],
+  'mock-folder-group-1-project': [
+    buildMockDocumentNode({
+      nodeId: 'mock-resource-group-1-plan',
+      title: '项目计划',
+      type: 'resource',
+      groupId: '1',
+      resourceId: 'mock-resource-group-1-plan',
+      resourceName: '项目计划',
+      resourceType: 'DOCUMENT',
+    }),
+  ],
+  'drive-root:group:2': [
+    buildMockDocumentNode({
+      nodeId: 'mock-resource-group-2-component-spec',
+      title: '组件规范',
+      type: 'resource',
+      groupId: '2',
+      resourceId: 'mock-resource-group-2-component-spec',
+      resourceName: '组件规范',
+      resourceType: 'DOCUMENT',
+    }),
+  ],
+};
+
+const createListDocumentPickerChildren =
+  (deps?: ChatServiceDeps): IChatService['listDocumentPickerChildren'] =>
+  async ({ rootId, groupId, parentNodeId }) => {
+    const staticChildren = MOCK_DOCUMENT_CHILDREN_BY_PARENT[parentNodeId ?? rootId];
+    if (staticChildren) return staticChildren;
+    if (!deps) return [];
+
+    const rootNode = parentNodeId
+      ? null
+      : await deps.driveService.getRootNode({
+          rootId,
+          groupId,
+        });
+    const targetNodeId = parentNodeId ?? rootNode?.id;
+    if (!targetNodeId) return [];
+
+    const children = await deps.driveService.listNodeChildren({
+      nodeId: targetNodeId,
+      groupId,
+    });
+    return children
+      .map((node) => mapDriveNodeToDocumentPickerNode(node))
+      .filter((node): node is ChatDocumentPickerNode => Boolean(node));
+  };
 
 const uploadAttachment = async ({
   file,
@@ -419,9 +564,13 @@ const uploadAttachment = async ({
     }, 500);
   });
 };
-export const ChatServicesMock: IChatService = {
+export const createChatServicesMock = (deps?: ChatServiceDeps): IChatService => ({
   getWorkspace,
   getModels,
+  getChatInputAgents,
+  getChatInputCapabilityOptions,
+  getDocumentPickerScopes,
+  listDocumentPickerChildren: createListDocumentPickerChildren(deps),
   createSession,
   renameSession,
   deleteSession,
@@ -429,4 +578,6 @@ export const ChatServicesMock: IChatService = {
   listHistoryMessages,
   getTools,
   uploadAttachment,
-};
+});
+
+export const ChatServicesMock: IChatService = createChatServicesMock();

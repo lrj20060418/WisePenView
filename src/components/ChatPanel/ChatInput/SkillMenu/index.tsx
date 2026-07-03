@@ -1,21 +1,47 @@
 import { Popover } from '@/components/Overlay';
-import { Button, ListBox, ListBoxItem } from '@heroui/react';
+import { useChatService } from '@/domains';
+import { buildSkillMenuSections } from '@/domains/Chat';
+import { parseErrorMessage } from '@/utils/error';
+import { Button, ListBox, ListBoxItem, toast } from '@heroui/react';
+import { useRequest } from 'ahooks';
 import { Check, Settings, Sparkles, Wrench } from 'lucide-react';
+import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useChatInputStore, useChatInputStoreApi } from '../ChatInputStore';
 import styles from '../style.module.less';
-import type { CapabilityMenuProps } from './index.type';
 
-function CapabilityMenu({
-  open,
-  capabilityCount,
-  sections,
-  selectedSkills,
-  selectedTools,
-  onOpenChange,
-  onToggleSkill,
-  onToggleTool,
-  onRemoveSkill,
-  onSelectOther,
-}: CapabilityMenuProps) {
+function SkillMenu() {
+  const chatService = useChatService();
+  const store = useChatInputStoreApi();
+  const { selectedAgent, selectedSkills, selectedTools, skillMenuOpen } = useChatInputStore(
+    useShallow((state) => ({
+      selectedAgent: state.selectedAgent,
+      selectedSkills: state.selectedSkills,
+      selectedTools: state.selectedTools,
+      skillMenuOpen: state.skillMenuOpen,
+    }))
+  );
+  const { removeSkill, setOtherSkillModalOpen, setSkillMenuOpen, toggleSkill, toggleTool } =
+    store.getState();
+  const { data: skillMenuOptions } = useRequest(
+    () => chatService.getChatInputCapabilityOptions({ agent: selectedAgent }),
+    {
+      refreshDeps: [selectedAgent.agentId],
+      onError: (error) => toast.danger(parseErrorMessage(error)),
+    }
+  );
+  const sections = useMemo(
+    () =>
+      buildSkillMenuSections({
+        primarySkills: skillMenuOptions?.primarySkills ?? [],
+        selectedSkills,
+        selectedTools,
+        toolOptions: skillMenuOptions?.tools ?? [],
+        advancedMode: true,
+        otherSkillGroups: skillMenuOptions?.otherSkillGroups ?? [],
+      }),
+    [selectedSkills, selectedTools, skillMenuOptions]
+  );
   const primarySection = sections.find((section) => section.key === 'primary-skills');
   const externalSection = sections.find((section) => section.key === 'external-skills');
   const toolSection = sections.find((section) => section.key === 'tools');
@@ -23,13 +49,31 @@ function CapabilityMenu({
   const selectedToolIds = selectedTools.map((tool) => tool.toolId);
   const externalItems =
     externalSection?.items.filter((item) => item.kind === 'external-skill') ?? [];
+  const selectedOptionCount = selectedSkills.length + selectedTools.length;
+
+  function handleToggleSkill(skillId: string): void {
+    const skill = skillMenuOptions?.primarySkills.find((item) => item.skillId === skillId);
+    if (!skill) return;
+    toggleSkill(skill, selectedAgent);
+  }
+
+  function handleToggleTool(toolId: string): void {
+    const tool = skillMenuOptions?.tools.find((item) => item.toolId === toolId);
+    if (!tool) return;
+    toggleTool(tool);
+  }
+
+  function handleSelectOther(): void {
+    setSkillMenuOpen(false);
+    setOtherSkillModalOpen(true);
+  }
 
   return (
-    <Popover isOpen={open} onOpenChange={onOpenChange}>
+    <Popover isOpen={skillMenuOpen} onOpenChange={setSkillMenuOpen}>
       <Popover.Trigger title="配置 Agent">
         <span className={styles.toolButtonWrap}>
-          {capabilityCount > 0 ? (
-            <span className={styles.capabilityBadge}>{capabilityCount}</span>
+          {selectedOptionCount > 0 ? (
+            <span className={styles.skillMenuBadge}>{selectedOptionCount}</span>
           ) : null}
           <Button
             variant="ghost"
@@ -46,13 +90,11 @@ function CapabilityMenu({
         <Popover.Dialog>
           <Popover.DeferredContent
             fallback={
-              <div
-                className={`${styles.deferredPopoverPanel} ${styles.deferredCapabilityPanel}`}
-              />
+              <div className={`${styles.deferredPopoverPanel} ${styles.deferredSkillMenuPanel}`} />
             }
           >
             {() => (
-              <div className={styles.capabilityPanel}>
+              <div className={styles.skillMenuPanel}>
                 {primarySection && primarySection.items.length > 0 ? (
                   <>
                     <div className={styles.popoverTitle}>Skill</div>
@@ -67,7 +109,7 @@ function CapabilityMenu({
                           key={item.key}
                           id={item.key}
                           textValue={item.label}
-                          onPress={() => onToggleSkill(item.key)}
+                          onPress={() => handleToggleSkill(item.key)}
                         >
                           <span className={styles.listItemContent}>
                             <Sparkles size={15} />
@@ -96,14 +138,14 @@ function CapabilityMenu({
                           key={item.key}
                           id={item.key}
                           textValue={item.label}
-                          onPress={() => onRemoveSkill(item.key)}
+                          onPress={() => removeSkill(item.key)}
                         >
                           <span className={styles.listItemContent}>
                             <Sparkles size={15} />
                             <span>
                               {item.label}
                               {item.sourceText ? (
-                                <span className={styles.capabilitySourceText}>
+                                <span className={styles.skillMenuSourceText}>
                                   {item.sourceText}
                                 </span>
                               ) : null}
@@ -120,7 +162,7 @@ function CapabilityMenu({
                   variant="ghost"
                   size="sm"
                   className={styles.fullWidthButton}
-                  onPress={onSelectOther}
+                  onPress={handleSelectOther}
                 >
                   选择其他 Skill...
                 </Button>
@@ -139,7 +181,7 @@ function CapabilityMenu({
                           key={item.key}
                           id={item.key}
                           textValue={item.label}
-                          onPress={() => onToggleTool(item.key)}
+                          onPress={() => handleToggleTool(item.key)}
                         >
                           <span className={styles.listItemContent}>
                             <Wrench size={15} />
@@ -162,4 +204,4 @@ function CapabilityMenu({
   );
 }
 
-export default CapabilityMenu;
+export default SkillMenu;

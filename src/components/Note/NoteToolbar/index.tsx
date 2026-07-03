@@ -14,7 +14,6 @@ import {
 import { Button } from '@heroui/react';
 import { Sparkles } from 'lucide-react';
 
-import IconText from '@/components/IconText';
 import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
 import type { NoteToolbarProps } from './index.type';
 import styles from './style.module.less';
@@ -36,9 +35,8 @@ const NoteToolbar = ({ onAskAi }: NoteToolbarProps) => {
             }}
             onPress={onAskAi}
           >
-            <IconText icon={<Sparkles />} iconSize={14}>
-              问AI
-            </IconText>
+            <Sparkles size={14} aria-hidden="true" />
+            问AI
           </Button>
           {!readOnly ? (
             <>

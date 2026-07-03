@@ -4,10 +4,15 @@ export type { ModelProviderId, ModelType } from './enum/model';
 export {
   buildAgentFromResourceItem,
   buildAgentFromSkillTreeGroup,
+  buildChatInputAgentOptions,
   buildDefaultPersonalAgent,
   buildGroupAgent,
+  resolveChatInputSelectedAgent,
 } from './mapper/agent.mapper';
-export { buildCapabilityPickerSections } from './mapper/capabilityPicker.mapper';
+export {
+  buildCapabilityPickerSections,
+  buildCapabilityPickerSections as buildSkillMenuSections,
+} from './mapper/capabilityPicker.mapper';
 export type {
   CapabilityPickerItem,
   CapabilityPickerItemKind,
@@ -15,9 +20,36 @@ export type {
   CapabilitySkillSelection,
   CapabilityToolOption,
 } from './mapper/capabilityPicker.mapper';
-export { buildAdvancedSkillTreeGroups, getPrimarySkillsForAgent } from './mapper/skillScope.mapper';
-export type { SkillScopeTreeGroup } from './mapper/skillScope.mapper';
+export {
+  buildDocumentPickerScopedKey,
+  buildDocumentPickerScopes,
+  buildDocumentPickerTreeNodes,
+  isDocumentPickerScopeRootKey,
+  isExpandableDocumentPickerNode,
+  isSelectableDocumentPickerNode,
+  mapDriveNodeToDocumentPickerNode,
+  mapDocumentPickerNodesToSelectedResources,
+  parseDocumentPickerTreeKey,
+  replaceDocumentPickerTreeNodeChildren,
+} from './mapper/documentPicker.mapper';
 export type {
+  BuildDocumentPickerTreeNodesResult,
+  DocumentPickerTreeKey,
+  DocumentPickerTreeNode,
+} from './mapper/documentPicker.mapper';
+export {
+  buildAdvancedSkillTreeGroups,
+  buildOtherSkillTreeGroups,
+  getPrimarySkillsForAgent,
+} from './mapper/skillScope.mapper';
+export type { OtherSkillTreeGroup, SkillScopeTreeGroup } from './mapper/skillScope.mapper';
+export type {
+  ChatDocumentPickerNode,
+  ChatDocumentPickerNodeType,
+  ChatDocumentPickerScope,
+  ChatDocumentPickerScopeType,
+  ChatDocumentPickerSelectedResource,
+  ChatInputCapabilityOptions,
   ChatModel,
   ChatModelProviderOption,
   ChatModelTag,
@@ -26,7 +58,10 @@ export type {
   ChatWorkspace,
   CreateSessionRequest,
   DeleteSessionRequest,
+  GetChatInputCapabilityOptionsParams,
+  GetChatInputCapabilityOptionsRequest,
   IChatService,
+  ListDocumentPickerChildrenRequest,
   ListHistoryMessagesRequest,
   ListSessionsRequest,
   MessageResponse,

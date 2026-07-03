@@ -4,7 +4,6 @@ import { LogOut, Pencil, Trash2 } from 'lucide-react';
  */
 import TableDrive from '@/components/Drive/TableDrive';
 import { Spin } from '@/components/Feedback';
-import IconText from '@/components/IconText';
 import type { SegmentedTabItem } from '@/components/SegmentedTabs';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import UserCapsule from '@/components/UserCapsule';
@@ -243,21 +242,18 @@ function GroupDetail() {
         {currentUserRole === 'OWNER' ? (
           <div className={layout.actionsRow}>
             <Button onPress={() => setEditGroupModalOpen(true)}>
-              <IconText icon={<Pencil />} iconSize={16}>
-                编辑小组信息
-              </IconText>
+              <Pencil size={16} aria-hidden="true" />
+              编辑小组信息
             </Button>
             <Button variant="danger" onPress={() => setDissolveGroupModalOpen(true)}>
-              <IconText icon={<Trash2 />} iconSize={16}>
-                解散小组
-              </IconText>
+              <Trash2 size={16} aria-hidden="true" />
+              解散小组
             </Button>
           </div>
         ) : (
           <Button variant="danger" onPress={() => setExitGroupModalOpen(true)}>
-            <IconText icon={<LogOut />} iconSize={16}>
-              退出小组
-            </IconText>
+            <LogOut size={16} aria-hidden="true" />
+            退出小组
           </Button>
         )}
       </div>

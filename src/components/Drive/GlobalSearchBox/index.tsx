@@ -1,4 +1,3 @@
-import IconText from '@/components/IconText';
 import { Button, Kbd } from '@heroui/react';
 import { useKeyPress } from 'ahooks';
 import { Search } from 'lucide-react';
@@ -25,9 +24,8 @@ function GlobalSearchBox({ className }: GlobalSearchBoxProps) {
   return (
     <>
       <Button variant="secondary" className={className} onPress={() => setOpen(true)}>
-        <IconText icon={<Search />} iconSize={16}>
-          搜索
-        </IconText>
+        <Search size={16} aria-hidden="true" />
+        搜索
         <Kbd>{SHORTCUT_LABEL}</Kbd>
       </Button>
       <SearchModal isOpen={open} onOpenChange={setOpen} />

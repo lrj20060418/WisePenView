@@ -1,16 +1,35 @@
-import type { ChatAgentOption } from '@/store';
 import { Popover } from '@/components/Overlay';
-import { Button, ListBox, ListBoxItem } from '@heroui/react';
+import { useChatService } from '@/domains';
+import { buildChatInputAgentOptions, resolveChatInputSelectedAgent } from '@/domains/Chat';
+import type { ChatAgentOption } from '@/store';
+import { parseErrorMessage } from '@/utils/error';
+import { Button, ListBox, ListBoxItem, toast } from '@heroui/react';
+import { useRequest } from 'ahooks';
 import { Bot, Check } from 'lucide-react';
 import { useState } from 'react';
+import { useChatInputStore, useChatInputStoreApi } from '../ChatInputStore';
 import styles from '../style.module.less';
-import type { AgentPickerProps } from './index.type';
 
-function AgentPicker({ selectedAgent, agents, onChange }: AgentPickerProps) {
+function AgentPicker() {
+  const chatService = useChatService();
+  const store = useChatInputStoreApi();
+  const selectedAgent = useChatInputStore((state) => state.selectedAgent);
+  const { setSelectedAgent } = store.getState();
   const [open, setOpen] = useState(false);
+  const { data: agents = [] } = useRequest(() => chatService.getChatInputAgents(), {
+    onSuccess: (nextAgents) => {
+      const currentAgent = store.getState().selectedAgent;
+      const nextAgent = resolveChatInputSelectedAgent(nextAgents, currentAgent);
+      if (nextAgent.agentId !== currentAgent.agentId) {
+        setSelectedAgent(nextAgent);
+      }
+    },
+    onError: (error) => toast.danger(parseErrorMessage(error)),
+  });
+  const displayAgents = buildChatInputAgentOptions(agents, selectedAgent);
 
   const handleSelect = (agent: ChatAgentOption) => {
-    onChange(agent);
+    setSelectedAgent(agent);
     setOpen(false);
   };
 
@@ -39,7 +58,7 @@ function AgentPicker({ selectedAgent, agents, onChange }: AgentPickerProps) {
                   selectedKeys={[selectedAgent.agentId]}
                   className={styles.listBox}
                 >
-                  {agents.map((agent) => (
+                  {displayAgents.map((agent) => (
                     <ListBoxItem
                       key={agent.agentId}
                       id={agent.agentId}
