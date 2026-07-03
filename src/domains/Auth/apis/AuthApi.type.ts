@@ -1,14 +1,25 @@
-import type {
-  AuthLoginRequest,
-  AuthPwdResetRequest,
-  AuthPwdResetVerifyRequest,
-  AuthRegisterRequest,
-} from '@/_autoGen/api/user/types.gen';
+export interface LoginApiRequest {
+  account: string;
+  password: string;
+  code?: string;
+  uuid?: string;
+}
 
-export type LoginApiRequest = AuthLoginRequest;
-export type RegisterApiRequest = AuthRegisterRequest;
-export type ResetPasswordApiRequest = AuthPwdResetVerifyRequest;
-export type NewPasswordApiRequest = AuthPwdResetRequest;
+export interface RegisterApiRequest {
+  username: string;
+  password: string;
+}
+
+export interface ResetPasswordApiRequest {
+  username: string;
+  code?: string;
+  uuid?: string;
+}
+
+export interface NewPasswordApiRequest {
+  token: string;
+  newPassword: string;
+}
 
 export type LoginApiResponse = string | undefined;
 export type LogoutApiResponse = void;

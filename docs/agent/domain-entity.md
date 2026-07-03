@@ -42,7 +42,7 @@ src/domains/<Domain>/enum/index.ts
 
 ## 三、类型来源边界
 
-- 后端协议类型优先来自 `src/_autoGen/api/**/types.gen.ts`，属于 API 层输入。
+- 后端协议类型手写在同域 `apis/*Api.type.ts`，属于 API 层输入。
 - mapper 输出的稳定展示类型放入 entity。
 - 组件 Props 只描述组件契约，不重复发明领域实体。
 - service 的请求/响应类型放在 `service/index.type.ts`，表达业务能力语义。

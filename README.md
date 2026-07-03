@@ -43,4 +43,3 @@ pnpm mock
 - `pnpm mock`：以 mock 模式启动
 - `pnpm build`：构建产物
 - `pnpm lint`：执行 ESLint
-- `pnpm openapi:sync`：同步并生成 OpenAPI 类型

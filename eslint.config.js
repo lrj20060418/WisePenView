@@ -51,12 +51,6 @@ const serviceFactoryImportPattern = {
     '项目保留命名约定：createXxxServices 是 Service 工厂的专属符号，仅允许在装配入口 src/domains/_registry/registry.impl.ts 中 import；其它位置禁止直接导入或调用，业务代码请通过 useXxxService() 获取实例。',
 };
 
-const autoGenImportPattern = {
-  group: ['@/_autoGen/**', '**/_autoGen/**'],
-  message:
-    '后端生成类型只能在 src/domains/<Domain>/apis 中导入；Service、mapper、组件和页面应依赖领域类型或 API DTO。',
-};
-
 const apiRequestImportPattern = {
   group: ['@/apis/request', '**/apis/request'],
   message:
@@ -71,7 +65,6 @@ const domainApiFunctionImportPattern = {
 
 const buildRestrictedImportsRule = ({
   allowApiRequest = false,
-  allowAutoGen = false,
   allowDirectAxios = false,
   allowDomainApiFunction = false,
   allowReactUseEffect = false,
@@ -86,7 +79,6 @@ const buildRestrictedImportsRule = ({
   const patterns = [
     ...(allowDirectAxios ? [] : [directAxiosImportPattern]),
     ...(allowServiceFactory ? [] : [serviceFactoryImportPattern]),
-    ...(allowAutoGen ? [] : [autoGenImportPattern]),
     ...(allowApiRequest ? [] : [apiRequestImportPattern]),
     ...(allowDomainApiFunction ? [] : [domainApiFunctionImportPattern]),
   ];
@@ -156,12 +148,11 @@ export default defineConfig([
     },
   },
   {
-    // Domain API 层是唯一允许读取 OpenAPI 生成类型、调用 apiGet/apiPost/apiPut/apiDelete 的业务层。
+    // Domain API 层是唯一允许调用 apiGet/apiPost/apiPut/apiDelete 的业务层。
     files: ['src/domains/*/apis/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': buildRestrictedImportsRule({
         allowApiRequest: true,
-        allowAutoGen: true,
       }),
     },
   },
