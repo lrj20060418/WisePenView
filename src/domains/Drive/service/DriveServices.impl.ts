@@ -354,6 +354,42 @@ export const createDriveServices = (
     });
   };
 
+  const resolveGroupResourceUnmountTagIds = (
+    source: Extract<DriveNode, { type: 'resource' | 'link' }>
+  ): string[] => {
+    const sourceItem = resourceItemByNodeId.get(source.id);
+    if (!sourceItem) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_RESOURCE_TAG_INFO_MISSING);
+    }
+
+    if (source.type === 'resource') {
+      // 小组主挂载删除会移除该资源在当前小组下的全部挂载关系。
+      return [];
+    }
+
+    const primaryTagId = source.primaryTagId;
+    if (!primaryTagId) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_RESOURCE_TAG_INFO_MISSING);
+    }
+    const currentTags = sourceItem.currentTags ?? {};
+    const linkTagIds = Object.keys(currentTags).filter(
+      (tagId) => tagId !== primaryTagId && tagId !== source.folderTagId
+    );
+
+    return [primaryTagId, ...linkTagIds];
+  };
+
+  const unmountGroupResourceNode = async (
+    source: Extract<DriveNode, { type: 'resource' | 'link' }>,
+    groupId: string
+  ): Promise<void> => {
+    await resourceService.updateResourceTags({
+      resourceId: source.resourceId,
+      tagIds: resolveGroupResourceUnmountTagIds(source),
+      groupId,
+    });
+  };
+
   const getNodePath: IDriveService['getNodePath'] = async ({ nodeId, groupId }) => {
     const effectiveGroupId = resolveEffectiveGroupId(nodeId, groupId);
     const decoded = decodeNodeId(nodeId);
@@ -409,14 +445,17 @@ export const createDriveServices = (
     const { nodeId } = params;
     const source = getNodeOrThrow(nodeId);
     const groupId = normalizeTagGroupId(params.groupId) ?? getNodeGroupId(nodeId);
-    const trashTagId = await ensureTrashTagId(groupId);
     if (source.type === 'folder') {
+      const trashTagId = await ensureTrashTagId(groupId);
       await tagService.moveTag({
         targetTagId: source.tagId,
         newParentId: trashTagId,
         groupId,
       });
+    } else if (isResourceNode(source) && groupId) {
+      await unmountGroupResourceNode(source, groupId);
     } else if (isResourceNode(source)) {
+      const trashTagId = await ensureTrashTagId();
       await moveResourceNode(source, trashTagId, groupId);
     } else {
       throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_UNSUPPORTED_DELETE);

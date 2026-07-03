@@ -1,6 +1,6 @@
 import type { TagResourceAction } from '@/domains/Tag';
 import { TAG_RESOURCE_ACTION } from '@/domains/Tag';
-import { createEnum, type EnumValue } from '@/utils/enum';
+import { createEnum } from '@/utils/enum';
 
 /** 小组类型 */
 export const GROUP_TYPE = createEnum([
@@ -33,17 +33,6 @@ export const DEFAULT_MEMBER_ACTIONS: TagResourceAction[] = [
   TAG_RESOURCE_ACTION.VIEW,
   TAG_RESOURCE_ACTION.DOWNLOAD_WATERMARK,
 ];
-
-export const FILE_ORG_LOGIC_LABEL: Record<EnumValue<typeof GROUP_FILE_ORG_LOGIC>, string> = {
-  [GROUP_FILE_ORG_LOGIC.FOLDER]: '文件夹',
-  [GROUP_FILE_ORG_LOGIC.TAG]: '标签',
-};
-
-export const FILE_ORG_LOGIC_INTRO: Record<EnumValue<typeof GROUP_FILE_ORG_LOGIC>, string> = {
-  [GROUP_FILE_ORG_LOGIC.FOLDER]:
-    '文件夹模式：用常规文件夹模式组织资源，同一份资源只能上传到一个文件夹下。',
-  [GROUP_FILE_ORG_LOGIC.TAG]: '标签模式：用标签组织资源，同一份资源可以上传到多个标签下。',
-};
 
 /** 身份类型 -> 可创建的小组类型列表 */
 export const ALLOWED_GROUP_TYPES_MAP: Record<number, number[]> = {

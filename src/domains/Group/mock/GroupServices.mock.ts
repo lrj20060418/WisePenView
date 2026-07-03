@@ -36,7 +36,7 @@ const fetchGroupResConfig = async (groupId: string): Promise<GroupResConfig> => 
   await delay(100);
   return {
     groupId,
-    fileOrgLogic: GROUP_FILE_ORG_LOGIC.FOLDER,
+    fileOrgLogic: GROUP_FILE_ORG_LOGIC.TAG,
     defaultMemberActions: [
       TAG_RESOURCE_ACTION.DISCOVER,
       TAG_RESOURCE_ACTION.VIEW,

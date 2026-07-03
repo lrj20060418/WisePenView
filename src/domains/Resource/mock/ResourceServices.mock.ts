@@ -185,6 +185,10 @@ const updateResourceTags = async (): Promise<void> => {
   await delay(150);
 };
 
+const mountResourcesToGroupTag = async (): Promise<void> => {
+  await delay(150);
+};
+
 const interactToggleLike = async (_params: InteractToggleLikeRequest): Promise<void> => {
   await delay(100);
 };
@@ -227,6 +231,7 @@ export const ResourceServicesMock: IResourceService = {
   renameResource,
   removeResources,
   updateResourceTags,
+  mountResourcesToGroupTag,
   updateResourceActionPermission,
   getLikeStatus,
   getRate,

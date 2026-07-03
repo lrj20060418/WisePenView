@@ -1,4 +1,6 @@
 import type { Group, GroupMemberList, GroupResConfig, ROLE } from '@/domains/Group';
+import { DEFAULT_MEMBER_ACTIONS } from '@/domains/Group';
+import { normalizeResourceActions } from '@/domains/Tag';
 import type { EnumKey } from '@/utils/enum';
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 import { GroupApi, GroupMemberApi, GroupResConfigApi } from '../apis/GroupApi';
@@ -60,7 +62,8 @@ const updateGroupResConfig = async (params: UpdateGroupResConfigRequest) => {
 };
 
 const createGroup = async (params: CreateGroupRequest): Promise<string> => {
-  const payload = await GroupApi.addGroup(params);
+  const { defaultMemberActions, ...groupParams } = params;
+  const payload = await GroupApi.addGroup(groupParams);
   if (payload == null) {
     throw createClientError(FRONTEND_CLIENT_ERROR.GROUP_CREATE_FAILED);
   }
@@ -68,6 +71,10 @@ const createGroup = async (params: CreateGroupRequest): Promise<string> => {
   if (!groupId) {
     throw createClientError(FRONTEND_CLIENT_ERROR.GROUP_CREATE_FAILED);
   }
+  await updateGroupResConfig({
+    groupId,
+    defaultMemberActions: normalizeResourceActions(defaultMemberActions ?? DEFAULT_MEMBER_ACTIONS),
+  });
   return groupId;
 };
 

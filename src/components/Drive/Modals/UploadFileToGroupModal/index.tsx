@@ -42,12 +42,12 @@ function UploadFileToGroupModal({
   };
 
   const { loading: submitting, run: runUploadToGroup } = useRequest(
-    async ({ resourceIds, tagIds }: { resourceIds: string[]; tagIds: string[] }) => {
-      await Promise.all(
-        resourceIds.map((resourceId) =>
-          resourceService.updateResourceTags({ resourceId, tagIds, groupId })
-        )
-      );
+    async ({ resourceIds, tagId }: { resourceIds: string[]; tagId: string }) => {
+      await resourceService.mountResourcesToGroupTag({
+        resourceIds,
+        groupId,
+        tagId,
+      });
       return resourceIds.length;
     },
     {
@@ -65,7 +65,7 @@ function UploadFileToGroupModal({
 
   const handleSubmit = () => {
     if (selectedFileIds.length === 0 || !selectedTargetTagId) return;
-    runUploadToGroup({ resourceIds: selectedFileIds, tagIds: [selectedTargetTagId] });
+    runUploadToGroup({ resourceIds: selectedFileIds, tagId: selectedTargetTagId });
   };
 
   const canNext = selectedFileIds.length > 0;

@@ -29,6 +29,7 @@ export interface ChangeResourceTagsApiRequest {
   resourceId: string;
   tagIds: string[];
   groupId?: string;
+  primaryTagId?: string;
 }
 
 export interface ChangeResourceActionPermissionApiRequest {
