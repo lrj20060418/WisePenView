@@ -1,8 +1,9 @@
-import { ListBox, ListBoxItem, Popover } from '@heroui/react';
+import { Popover } from '@/components/Overlay';
+import { ListBox, ListBoxItem } from '@heroui/react';
 import { Check, ChevronDown, LoaderCircle } from 'lucide-react';
-import ProviderLogo from '../ProviderLogo';
-import type { ModelPickerProps } from './index.type';
+import ProviderLogo from '../../ProviderLogo';
 import styles from '../style.module.less';
+import type { ModelPickerProps } from './index.type';
 
 function ModelPicker({
   open,
@@ -12,6 +13,13 @@ function ModelPicker({
   onOpenChange,
   onChange,
 }: ModelPickerProps) {
+  const renderProviderText = (model: ModelPickerProps['models'][number]): string => {
+    if (model.providerName && model.providerModelName) {
+      return `${model.providerName} · ${model.providerModelName}`;
+    }
+    return model.providerModelName || model.providerName || model.provider;
+  };
+
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
       <Popover.Trigger>
@@ -27,39 +35,47 @@ function ModelPicker({
       </Popover.Trigger>
       <Popover.Content className={styles.toolbarPopover} placement="top">
         <Popover.Dialog>
-          <div className={styles.modelMenu}>
-            <div className={styles.popoverTitle}>模型</div>
-            {models.length === 0 ? (
-              <div className={styles.emptyText}>暂无模型</div>
-            ) : (
-              <ListBox
-                aria-label="选择模型"
-                selectionMode="single"
-                selectedKeys={selectedModel ? [selectedModel.id] : []}
-                className={styles.listBox}
-              >
-                {models.map((model) => (
-                  <ListBoxItem
-                    key={model.id}
-                    id={model.id}
-                    textValue={model.name}
-                    onPress={() => onChange(model)}
+          <Popover.DeferredContent
+            fallback={
+              <div className={`${styles.deferredPopoverPanel} ${styles.deferredModelMenu}`} />
+            }
+          >
+            {() => (
+              <div className={styles.modelMenu}>
+                <div className={styles.popoverTitle}>模型</div>
+                {models.length === 0 ? (
+                  <div className={styles.emptyText}>暂无模型</div>
+                ) : (
+                  <ListBox
+                    aria-label="选择模型"
+                    selectionMode="single"
+                    selectedKeys={selectedModel ? [selectedModel.id] : []}
+                    className={styles.listBox}
                   >
-                    <span className={styles.modelItem}>
-                      <ProviderLogo provider={model.provider} size={18} />
-                      <span className={styles.modelInfo}>
-                        <span className={styles.modelName}>{model.name}</span>
-                        <span className={styles.modelMeta}>{model.provider}</span>
-                      </span>
-                      {selectedModel?.id === model.id ? (
-                        <Check size={14} className={styles.checkIcon} />
-                      ) : null}
-                    </span>
-                  </ListBoxItem>
-                ))}
-              </ListBox>
+                    {models.map((model) => (
+                      <ListBoxItem
+                        key={model.id}
+                        id={model.id}
+                        textValue={model.name}
+                        onPress={() => onChange(model)}
+                      >
+                        <span className={styles.modelItem}>
+                          <ProviderLogo provider={model.provider} size={18} />
+                          <span className={styles.modelInfo}>
+                            <span className={styles.modelName}>{model.name}</span>
+                            <span className={styles.modelMeta}>{renderProviderText(model)}</span>
+                          </span>
+                          {selectedModel?.id === model.id ? (
+                            <Check size={14} className={styles.checkIcon} />
+                          ) : null}
+                        </span>
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                )}
+              </div>
             )}
-          </div>
+          </Popover.DeferredContent>
         </Popover.Dialog>
       </Popover.Content>
     </Popover>

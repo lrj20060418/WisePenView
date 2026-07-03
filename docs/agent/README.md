@@ -9,9 +9,9 @@
 
 ## 二、Domain 任务
 
-处理 `src/domains/**`、`src/apis/**`、`src/_autoGen/**` 或请求链路时阅读：
+处理 `src/domains/**`、`src/apis/**` 或请求链路时阅读：
 
-- `domain-api.md`：API 薄层、autoGen 类型、请求协议边界。
+- `domain-api.md`：API 薄层、手写 DTO、请求协议边界。
 - `domain-mapper.md`：字段转换、fallback、旧接口兼容、归一化。
 - `domain-service.md`：业务编排、依赖注入、错误处理。
 - `domain-entity.md`：展示实体、枚举、常量和类型边界。

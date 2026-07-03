@@ -1,6 +1,7 @@
 import { useDriveService } from '@/domains';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { DeleteNodeModalProps } from './index.type';
 
@@ -12,6 +13,8 @@ function getNodeName(node: DeleteNodeModalProps['node']): string {
 
 function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: DeleteNodeModalProps) {
   const driveService = useDriveService();
+  const isGroupResource = Boolean(groupId && node && node.type !== 'folder');
+
   const { loading, run: runDeleteNode } = useRequest(
     async () => {
       if (!node) return;
@@ -20,7 +23,7 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
     {
       manual: true,
       onSuccess: () => {
-        toast.success('已移入最近删除');
+        toast.success(isGroupResource ? '已从小组移除' : '已移入最近删除');
         onSuccess?.();
         onOpenChange(false);
       },
@@ -36,10 +39,22 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
   };
 
   const isFolder = node?.type === 'folder';
-  const title = isFolder ? '移入最近删除' : '移入最近删除';
-  const description = isFolder
-    ? `确定将「${getNodeName(node)}」及其下属内容移入最近删除吗？`
-    : `确定将「${getNodeName(node)}」移入最近删除吗？`;
+  const isPrimaryGroupMount = Boolean(groupId && node?.type === 'resource');
+  const nodeName = getNodeName(node);
+  const title = isGroupResource ? '从小组移除' : '移入最近删除';
+  const description = (() => {
+    if (isPrimaryGroupMount) {
+      return `「${nodeName}」是当前小组的主挂载文件，移除后会同时解除它在当前小组下的全部挂载关系。确定继续吗？`;
+    }
+    if (isGroupResource) {
+      return `确定从当前小组文件夹移除「${nodeName}」的挂载吗？`;
+    }
+    if (isFolder) {
+      return `确定将「${nodeName}」及其下属内容移入最近删除吗？`;
+    }
+    return `确定将「${nodeName}」移入最近删除吗？`;
+  })();
+  const confirmText = isGroupResource ? '移除' : '移入最近删除';
 
   return (
     <Modal isOpen={isOpen && !!node} onOpenChange={onOpenChange}>
@@ -59,7 +74,7 @@ function DeleteNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Del
                 取消
               </Button>
               <Button variant="danger" isDisabled={loading} onPress={() => void handleConfirm()}>
-                移入最近删除
+                {confirmText}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>

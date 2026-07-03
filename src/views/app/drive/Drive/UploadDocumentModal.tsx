@@ -6,7 +6,8 @@ import { useDocumentService } from '@/domains';
 import { useDriveUploadQueueStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
 import { parseExtension } from '@/utils/parser/extensionParser';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { CloudUpload, X } from 'lucide-react';
 
 import styles from './UploadDocumentModal.module.less';

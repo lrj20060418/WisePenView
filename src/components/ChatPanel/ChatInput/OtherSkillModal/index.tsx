@@ -3,7 +3,8 @@ import Tree from '@/components/Tree';
 import { buildAgentFromSkillTreeGroup } from '@/domains/Chat/mapper/agent.mapper';
 import type { SkillSummary } from '@/domains/Resource';
 import type { ChatAgentOption } from '@/store';
-import { Button, Modal } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button } from '@heroui/react';
 import { ChevronDown, Folder } from 'lucide-react';
 import type { Key } from 'react';
 import { useMemo, useState } from 'react';
@@ -71,27 +72,40 @@ function OtherSkillModal({
             <Modal.Header>
               <Modal.Heading>选择其他 Skill</Modal.Heading>
             </Modal.Header>
-            <Modal.Body>
-              <div className={styles.wrapper}>
-                <div className={styles.hint}>选择要添加的 Skill（可多选）</div>
-                <div className={styles.treeNav}>
-                  <Tree
-                    treeData={treeData}
-                    className={styles.tree}
-                    multiple
-                    selectedKeys={selectedKeys}
-                    defaultExpandAll
-                    blockNode
-                    switcherIcon={
-                      <span>
-                        <ChevronDown size={14} />
-                      </span>
-                    }
-                    onSelect={(keys: Key[]) => setSelectedKeys(keys)}
-                  />
-                </div>
-              </div>
-            </Modal.Body>
+            <Modal.DeferredContent
+              fallback={
+                <Modal.Body>
+                  <div className={styles.wrapper}>
+                    <div className={styles.hint}>选择要添加的 Skill（可多选）</div>
+                    <div className={styles.treeNav} />
+                  </div>
+                </Modal.Body>
+              }
+            >
+              {() => (
+                <Modal.Body>
+                  <div className={styles.wrapper}>
+                    <div className={styles.hint}>选择要添加的 Skill（可多选）</div>
+                    <div className={styles.treeNav}>
+                      <Tree
+                        treeData={treeData}
+                        className={styles.tree}
+                        multiple
+                        selectedKeys={selectedKeys}
+                        defaultExpandAll
+                        blockNode
+                        switcherIcon={
+                          <span>
+                            <ChevronDown size={14} />
+                          </span>
+                        }
+                        onSelect={(keys: Key[]) => setSelectedKeys(keys)}
+                      />
+                    </div>
+                  </div>
+                </Modal.Body>
+              )}
+            </Modal.DeferredContent>
             <Modal.Footer>
               <Button variant="secondary" onPress={onClose}>
                 取消

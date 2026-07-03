@@ -31,6 +31,7 @@ export interface IResourceService {
   renameResource(params: RenameResourceRequest): Promise<void>;
   removeResources(params: RemoveResourcesRequest): Promise<void>;
   updateResourceTags(params: UpdateResourceTagsRequest): Promise<void>;
+  mountResourcesToGroupTag(params: MountResourcesToGroupTagRequest): Promise<void>;
   updateResourceActionPermission(params: UpdateResourceActionPermissionRequest): Promise<void>;
   /** 获取当前用户点赞状态，供点赞组件薄层调用 */
   getLikeStatus(resourceId: string): Promise<{ liked: boolean }>;
@@ -86,11 +87,20 @@ export interface RemoveResourcesRequest {
   resourceIds: string[];
 }
 
-/** 更新资源用户标签（对齐 OpenAPI ResourceUpdateTagsRequest，POST /resource/item/updateTags） */
+/** 更新资源标签（对齐 OpenAPI ResourceUpdateTagsRequest，POST /resource/item/changeResourceTags） */
 export interface UpdateResourceTagsRequest {
   resourceId: string;
   tagIds: string[];
   groupId?: string;
+  /** 该资源在当前空间没有主挂载时，用目标标签初始化主挂载 */
+  primaryTagId?: string;
+}
+
+/** 上传/挂载资源到小组标签：已有主挂载则只追加 tags，没有主挂载则同时初始化 primaryTagId */
+export interface MountResourcesToGroupTagRequest {
+  resourceIds: string[];
+  groupId: string;
+  tagId: string;
 }
 
 /** 更新单个资源的动作权限配置 */

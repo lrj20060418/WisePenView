@@ -1,4 +1,5 @@
 import type { ResourceItem } from '@/domains/Resource';
+import type { Config } from '@onlyoffice/doceditor-types';
 
 /** 小写扩展名，不含点 */
 export const DOCUMENT_ALLOWED_EXTENSIONS = [
@@ -63,6 +64,14 @@ export interface DocDisplayInfoResponse {
   resourceInfo: ResourceItem;
 }
 
+export type OnlyOfficeEditorConfig = Config;
+
+export interface OnlyOfficeEditorConfigResponse {
+  sessionId?: string;
+  config?: OnlyOfficeEditorConfig | null;
+  documentServerPublicUrl?: string | null;
+}
+
 /** DocumentService：文档上传、重试转换、删除（路径与当前后端 DocumentController 一致） */
 export interface IDocumentService {
   /** 计算 MD5 → 初始化上传 → 非秒传时 PUT 至 OSS，返回 documentId（即 resourceId） */
@@ -81,6 +90,8 @@ export interface IDocumentService {
   cancelPendingDoc(documentId: string): Promise<void>;
   /** 获取文档详情信息（用于预览页展示） */
   getDocInfo(resourceId: string): Promise<DocDisplayInfoResponse>;
+  /** 获取 ONLYOFFICE 编辑器初始化配置 */
+  getOnlyOfficeEditorConfig(resourceId: string): Promise<OnlyOfficeEditorConfigResponse>;
 }
 
 export interface UploadDocumentParams {

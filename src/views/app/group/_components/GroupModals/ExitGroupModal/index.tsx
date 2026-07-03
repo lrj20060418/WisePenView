@@ -1,7 +1,8 @@
 import { useGroupService } from '@/domains';
 import type { QuitGroupRequest } from '@/domains/Group';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useNavigate } from 'react-router-dom';
 import type { ExitGroupModalProps } from './index.type';

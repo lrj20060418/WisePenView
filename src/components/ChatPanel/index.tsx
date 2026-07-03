@@ -2,7 +2,6 @@ import type { ChatPanelProps, Message, Model } from '@/components/ChatPanel/inde
 import { useChatService } from '@/domains';
 import { useChatSession } from '@/domains/Chat/session/useChatSession';
 import {
-  clearChatPageStore,
   clearNewChatSessionStore,
   useChatPanelStore,
   useCurrentChatSessionStore,
@@ -13,14 +12,14 @@ import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
 import { useMount, useRequest, useUpdateEffect } from 'ahooks';
 import { IndentIncrease } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChatInput from './ChatInput';
 import type { SendOptions } from './ChatInput/index.type';
 import {
   HISTORY_PAGE_SIZE,
   buildPanelMessages,
-  collectMessagesPlainText,
+  hasMessagesPlainText,
   isSessionInvalidMessage,
   mapHistoryMessage,
   type ModelMeta,
@@ -29,7 +28,7 @@ import MessageList from './MessageList';
 import NewChatButton from './NewChatButton';
 import styles from './style.module.less';
 
-function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) {
+function ChatPanel({ collapsed, fullWidth = false, onNewChat, workspaceContext }: ChatPanelProps) {
   const navigate = useNavigate();
   const chatService = useChatService();
   const setChatPanelCollapsed = useChatPanelStore((state) => state.setChatPanelCollapsed);
@@ -60,7 +59,7 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
     sendSessionMessage,
   } = useChatSession({
     sessionId: currentSessionId ?? '',
-    model: currentModel?.id,
+    model: currentModel?.modelId,
   });
 
   const { runAsync: runLoadSessionHistory } = useRequest(
@@ -76,6 +75,9 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   const modelMetaMap = useMemo<Record<string, ModelMeta>>(() => {
     return models.reduce<Record<string, ModelMeta>>((acc, model) => {
       acc[model.id] = { provider: model.provider, name: model.name };
+      if (!acc[model.modelId]) {
+        acc[model.modelId] = { provider: model.provider, name: model.name };
+      }
       return acc;
     }, {});
   }, [models]);
@@ -103,8 +105,11 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
     );
   }, [modelMetaMap]);
 
-  const messages = buildPanelMessages(historyMessages, liveMessages, currentModel, status);
-  const hasRenderableChatContent = collectMessagesPlainText(messages).trim().length > 0;
+  const messages = useMemo(
+    () => buildPanelMessages(historyMessages, liveMessages, currentModel, status),
+    [currentModel, historyMessages, liveMessages, status]
+  );
+  const hasRenderableChatContent = useMemo(() => hasMessagesPlainText(messages), [messages]);
 
   useUpdateEffect(() => {
     if (currentSessionId == null || currentSessionId === '') return;
@@ -190,12 +195,16 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
     }
 
     const sendPromise = sendSessionMessage(text, {
-      model: targetModel.id,
+      model: targetModel.modelId,
+      providerId: targetModel.providerId,
       enableSelected: hasSelectedContext,
+      selectedText: selectedContextText,
       sessionId: targetSessionId,
-      activeDocRefs: opts?.activeDocRefs,
-      activeAttachments: opts?.activeAttachments,
-      pendingImages: opts?.pendingImages,
+      workspaceContext,
+      selectedResources: opts?.activeDocRefs,
+      uploadedAttachments: opts?.activeAttachments,
+      onDemandSkillIds: opts?.selectedSkills?.map((skill) => skill.skillId),
+      allowToolNames: opts?.selectedTools?.map((tool) => tool.toolId),
     });
 
     if (hasSelectedContext) {
@@ -226,7 +235,6 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   });
 
   useUpdateEffect(() => {
-    clearChatPageStore();
     if (!currentSessionId) {
       setHistoryMessages([]);
       setHistoryPage(1);
@@ -305,4 +313,4 @@ function ChatPanel({ collapsed, fullWidth = false, onNewChat }: ChatPanelProps) 
   );
 }
 
-export default ChatPanel;
+export default memo(ChatPanel);

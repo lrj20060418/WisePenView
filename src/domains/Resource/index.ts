@@ -1,4 +1,4 @@
-export type { ResourceIconType, ResourceItem } from './entity/resource';
+export type { ResourceIconType, ResourceItem, ResourceTagBind } from './entity/resource';
 export type { SkillScopeType, SkillSummary } from './entity/skill';
 export {
   NOTE_CONFIGURABLE_RESOURCE_ACTION_OPTIONS,
@@ -33,13 +33,13 @@ export type {
 } from './enum';
 export { groupSearchHits } from './service/groupSearchHits';
 export type { SearchHitGroup } from './service/groupSearchHits';
-export { resolveResourceIconType } from './utils/resolveResourceIconType';
 export type {
   GetGroupResourceRequest,
   GetUserResourcesRequest,
   IResourceService,
   InteractRateRequest,
   InteractToggleLikeRequest,
+  MountResourcesToGroupTagRequest,
   RemoveResourcesRequest,
   RenameResourceRequest,
   ResourceListPage,
@@ -49,3 +49,4 @@ export type {
   UpdateResourceActionPermissionRequest,
   UpdateResourceTagsRequest,
 } from './service/index.type';
+export { resolveResourceIconType } from './utils/resolveResourceIconType';

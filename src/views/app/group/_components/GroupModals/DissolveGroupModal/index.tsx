@@ -1,7 +1,8 @@
 import { useGroupService } from '@/domains';
 import type { DeleteGroupRequest } from '@/domains/Group';
 import { parseErrorMessage } from '@/utils/error';
-import { Alert, Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Alert, Button, Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

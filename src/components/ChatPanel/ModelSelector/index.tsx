@@ -1,48 +1,31 @@
-import { Chip, Dropdown, Popover, Spinner } from '@heroui/react';
+import { Popover } from '@/components/Overlay';
+import { Chip, Dropdown, Spinner } from '@heroui/react';
 import { useRequest, useUpdateEffect } from 'ahooks';
 import clsx from 'clsx';
 import { ArrowUpAZ, ChartBar, Check, ChevronDown, ChevronUp, LayoutGrid } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { Claude, DeepSeek, Doubao, Gemini, Grok, Meta, Mistral, OpenAI } from '@lobehub/icons';
-
 import { EmptyState } from '@/components/Feedback';
 import IconText from '@/components/IconText';
 import { useChatService } from '@/domains';
 import { useChatModelPreferenceStore } from '@/store/useChatModelPreferenceStore';
+import ProviderLogo from '../ProviderLogo';
 import type { Model } from '../index.type';
 
 import styles from './style.module.less';
-
-export const LogoFactory = ({ provider, size = 20 }: { provider: string; size?: number }) => {
-  const props = { size };
-  switch (provider) {
-    case 'openai':
-      return <OpenAI.Avatar {...props} />;
-    case 'anthropic':
-      return <Claude.Avatar {...props} />;
-    case 'google':
-      return <Gemini.Avatar {...props} />;
-    case 'meta':
-      return <Meta.Avatar {...props} />;
-    case 'grok':
-      return <Grok.Avatar {...props} />;
-    case 'deepseek':
-      return <DeepSeek.Avatar {...props} />;
-    case 'doubao':
-      return <Doubao.Avatar {...props} />;
-    case 'mistral':
-      return <Mistral.Avatar {...props} />;
-    default:
-      return <OpenAI.Avatar {...props} />;
-  }
-};
 
 const SORT_OPTIONS = [
   { label: '按费率', value: 'ratio', icon: ChartBar },
   { label: '按名字', value: 'name', icon: ArrowUpAZ },
   { label: '深度思考模型', value: 'thinking', icon: LayoutGrid },
 ];
+
+const renderProviderText = (model: Model): string => {
+  if (model.providerName && model.providerModelName) {
+    return `${model.providerName} · ${model.providerModelName}`;
+  }
+  return model.providerModelName || model.providerName || model.provider;
+};
 
 interface ModelSelectorProps {
   value: string;
@@ -114,7 +97,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
     }
   }, [currentSort, models, sortOrder]);
 
-  const content = (
+  const renderContent = () => (
     <div className={styles.selectorPanel}>
       <div className={styles.panelHeader}>
         <span className={styles.headerTitle}>{listTitle}</span>
@@ -193,7 +176,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
                 <IconText
                   className={styles.modelTitle}
                   textClassName={styles.modelName}
-                  icon={<LogoFactory provider={model.provider} size={20} />}
+                  icon={<ProviderLogo provider={model.provider} size={20} />}
                   iconSize={20}
                   gap="var(--space-xs)"
                   ellipsis
@@ -210,6 +193,9 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
                 )} */}
 
                 <div className={styles.tagsRow}>
+                  <Chip size="sm" variant="soft" className={styles.miniTag}>
+                    <Chip.Label>{renderProviderText(model)}</Chip.Label>
+                  </Chip>
                   {model.tags.map((tag, idx) => (
                     <Chip key={idx} size="sm" variant="soft" className={styles.miniTag}>
                       <Chip.Label>{tag.text}</Chip.Label>
@@ -243,7 +229,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
               loading ? (
                 <Spinner size="sm" />
               ) : (
-                <LogoFactory provider={currentModel?.provider ?? 'openai'} size={16} />
+                <ProviderLogo provider={currentModel?.provider ?? 'openai'} size={16} />
               )
             }
             iconSize={16}
@@ -256,7 +242,11 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
         </button>
       </Popover.Trigger>
       <Popover.Content className={styles.popoverBody} placement="bottom">
-        <Popover.Dialog>{content}</Popover.Dialog>
+        <Popover.Dialog>
+          <Popover.DeferredContent fallback={<div className={styles.selectorPanelDeferred} />}>
+            {renderContent}
+          </Popover.DeferredContent>
+        </Popover.Dialog>
       </Popover.Content>
     </Popover>
   );

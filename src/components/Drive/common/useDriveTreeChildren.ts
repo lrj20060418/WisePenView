@@ -1,12 +1,13 @@
 import { useDriveService } from '@/domains';
-import type { DriveNode } from '@/domains/Drive';
+import type { DriveNode, DriveNodeScope } from '@/domains/Drive';
 import { buildLoadingNode } from '@/domains/Drive/mapper/DriveServices.map';
 import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface UseDriveTreeChildrenParams {
   groupId?: string;
+  scope?: DriveNodeScope;
 }
 
 interface UseDriveTreeChildrenReturn {
@@ -17,34 +18,38 @@ interface UseDriveTreeChildrenReturn {
 
 export function useDriveTreeChildren({
   groupId,
+  scope,
 }: UseDriveTreeChildrenParams): UseDriveTreeChildrenReturn {
   const driveService = useDriveService();
   const [childrenMap, setChildrenMap] = useState<Map<string, DriveNode[]>>(new Map());
 
-  const setNodeChildren = (nodeId: string, children: DriveNode[]) => {
+  const setNodeChildren = useCallback((nodeId: string, children: DriveNode[]) => {
     setChildrenMap((prev) => {
       const next = new Map(prev);
       next.set(nodeId, children);
       return next;
     });
-  };
+  }, []);
 
-  const loadChildren = async (nodeId: string): Promise<DriveNode[]> => {
-    setNodeChildren(nodeId, [buildLoadingNode(nodeId, '正在加载...')]);
-    try {
-      const children = await driveService.listNodeChildren({ nodeId, groupId });
-      setNodeChildren(nodeId, children);
-      return children;
-    } catch (err) {
-      toast.danger(parseErrorMessage(err));
-      setNodeChildren(nodeId, []);
-      return [];
-    }
-  };
+  const loadChildren = useCallback(
+    async (nodeId: string): Promise<DriveNode[]> => {
+      setNodeChildren(nodeId, [buildLoadingNode(nodeId, '正在加载...', scope)]);
+      try {
+        const children = await driveService.listNodeChildren({ nodeId, groupId });
+        setNodeChildren(nodeId, children);
+        return children;
+      } catch (err) {
+        toast.danger(parseErrorMessage(err));
+        setNodeChildren(nodeId, []);
+        return [];
+      }
+    },
+    [driveService, groupId, scope, setNodeChildren]
+  );
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setChildrenMap(new Map());
-  };
+  }, []);
 
   return {
     childrenMap,

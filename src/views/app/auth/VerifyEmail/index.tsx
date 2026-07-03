@@ -1,7 +1,8 @@
 import { useUserService } from '@/domains';
 import type { ConfirmEmailVerifyRequest } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

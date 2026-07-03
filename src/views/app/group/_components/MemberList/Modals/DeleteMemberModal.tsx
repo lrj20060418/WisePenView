@@ -1,7 +1,8 @@
 import SelectedMemberList from '@/components/SelectedMemberList';
 import { useGroupService } from '@/domains';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { DeleteMemberModalProps } from './index.type';
 import { useMemberEditGuard } from './useMemberEditGuard';

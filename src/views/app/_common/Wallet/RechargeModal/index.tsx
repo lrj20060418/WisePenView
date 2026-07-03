@@ -7,7 +7,8 @@
  * - 提交：剔除横杠与空格，仅传 16 位纯字符。
  * - 防重复提交：进行中按钮文案为「充值中...」并禁用。
  */
-import { Button, InputOTP, Modal, REGEXP_ONLY_DIGITS_AND_CHARS } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, InputOTP, REGEXP_ONLY_DIGITS_AND_CHARS } from '@heroui/react';
 import { useRequest, useUpdateEffect } from 'ahooks';
 import React, { useRef, useState } from 'react';
 import type { RechargeModalProps } from './index.type';

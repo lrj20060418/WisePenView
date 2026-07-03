@@ -1,5 +1,6 @@
 import IconText from '@/components/IconText';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { Copy } from 'lucide-react';
 import { useState } from 'react';
 import type { InviteUserModalProps } from './index.type';

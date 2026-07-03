@@ -21,12 +21,12 @@ API 层禁止：
 - 直接处理 React 生命周期或组件状态。
 - 直接 import service、mapper、view、component。
 
-## 二、autoGen 类型优先
+## 二、手写 DTO
 
-- 新增或改造 API 类型时，优先从 `src/_autoGen/api/**/types.gen.ts` 引用后端生成类型。
-- autoGen 类型只作为后端协议来源，不允许泄漏到组件展示层。
-- 如果 autoGen 暂时缺少接口或字段，先向用户确认接口文档，要求用户运行脚本更新 autoGen 类型，不要盲猜。
-- 若必须临时补充 DTO，放在同域 `apis/*Api.type.ts`，并用清晰命名标识请求/响应语义。
+- 新增或改造 API 类型时，在同域 `apis/*Api.type.ts` 手写 request/response DTO。
+- DTO 字段必须与后端接口文档对齐，不做字段重命名或展示语义加工。
+- 如果接口字段、枚举或响应结构不确定，先向用户确认接口文档，不要盲猜。
+- API DTO 只作为后端协议类型，不允许泄漏到组件展示层。
 
 命名建议：
 
@@ -70,7 +70,7 @@ api -> views/components
 ## 五、检查清单
 
 - [ ] API 文件只做请求薄封装。
-- [ ] 类型优先来自 `src/_autoGen/api/**/types.gen.ts`。
+- [ ] API DTO 手写在同域 `apis/*Api.type.ts`，字段与后端接口文档对齐。
 - [ ] API DTO 未泄漏到组件展示层。
 - [ ] 未新增 `any`。
 - [ ] 未在 API 层做 fallback、字段映射、UI 提示或缓存。

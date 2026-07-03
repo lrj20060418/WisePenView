@@ -1,4 +1,4 @@
-import type { Group, GroupFileOrgLogic, GroupMemberList, GroupResConfig } from '@/domains/Group';
+import type { Group, GroupMemberList, GroupResConfig } from '@/domains/Group';
 import { GROUP_FILE_ORG_LOGIC, ROLE } from '@/domains/Group';
 import {
   normalizeResourceActions,
@@ -34,21 +34,6 @@ const mapGroupFromApi = (raw: GroupRaw): Group =>
     groupId: normalizeId(raw.groupId),
     createTime: formatTimestampToDate(raw.createTime),
   }) as Group;
-
-const isGroupFileOrgLogic = (value: unknown): value is GroupFileOrgLogic =>
-  typeof value === 'string' && GROUP_FILE_ORG_LOGIC.getKey(value) != null;
-
-const mapGroupFileOrgLogicFromApi = (value: unknown): GroupFileOrgLogic | undefined => {
-  if (isGroupFileOrgLogic(value)) return value;
-  const text = String(value ?? '').trim();
-  if (!text) return undefined;
-  // fallback：兼容旧接口用 1 表示 FOLDER
-  if (text === '1') return GROUP_FILE_ORG_LOGIC.FOLDER;
-  // fallback：兼容旧接口用 2 表示 TAG
-  if (text === '2') return GROUP_FILE_ORG_LOGIC.TAG;
-  const upperText = text.toUpperCase();
-  return isGroupFileOrgLogic(upperText) ? upperText : undefined;
-};
 
 const mapTagResourceActionFromApi = (value: unknown): TagResourceAction | undefined => {
   if (typeof value === 'number' && TAG_RESOURCE_ACTION.getKey(value) != null) {
@@ -105,12 +90,10 @@ const mapFetchGroupResConfigFromApi = (
   data: GetGroupConfigApiResponse,
   fallbackGroupId: string
 ): GroupResConfig | null => {
-  const fileOrgLogic = mapGroupFileOrgLogicFromApi(data.fileOrgLogic);
-  if (!fileOrgLogic) return null;
   return {
     // fallback：配置接口可能省略 groupId，此时使用请求入参
     groupId: normalizeId(data.groupId ?? fallbackGroupId),
-    fileOrgLogic,
+    fileOrgLogic: GROUP_FILE_ORG_LOGIC.TAG,
     defaultMemberActions: mapDefaultMemberActionsFromApi(data.defaultMemberActions),
   };
 };
@@ -123,7 +106,7 @@ const mapUpdateGroupResConfigRequest = (
   params: UpdateGroupResConfigRequest
 ): ChangeGroupConfigApiRequest => ({
   groupId: params.groupId,
-  fileOrgLogic: params.fileOrgLogic,
+  fileOrgLogic: GROUP_FILE_ORG_LOGIC.TAG,
   defaultMemberActions: resourceActionsToApiKeys(params.defaultMemberActions),
 });
 

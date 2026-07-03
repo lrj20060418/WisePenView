@@ -1,7 +1,7 @@
 import UploadZone from '@/components/UploadZone';
 import { useGroupService, useImageService } from '@/domains';
-import type { EditGroupRequest, GroupFileOrgLogic, GroupResConfig } from '@/domains/Group';
-import { GROUP_FILE_ORG_LOGIC, GROUP_TYPE } from '@/domains/Group';
+import type { EditGroupRequest, GroupResConfig } from '@/domains/Group';
+import { DEFAULT_MEMBER_ACTIONS, GROUP_TYPE } from '@/domains/Group';
 import {
   actionsToPermissionCode,
   getResourceActionImpliedActions,
@@ -17,19 +17,16 @@ import {
   assertImageProxyUploadLimit,
   IMAGE_UPLOAD_MAX_SIZE_LABEL,
 } from '@/utils/image/uploadLimit';
+import { Modal } from '@/components/Overlay';
 import {
   Button,
   Checkbox,
   Form,
   Input,
   Label,
-  Modal,
-  Radio,
-  RadioGroup,
   TextArea,
   TextField,
   toast,
-  Tooltip,
 } from '@heroui/react';
 import { useMount, useRequest, useUpdateEffect } from 'ahooks';
 import { useState } from 'react';
@@ -40,31 +37,12 @@ import styles from './index.module.less';
 /** 编辑小组表单值（含封面上传） */
 type EditGroupFormValues = Pick<EditGroupRequest, 'groupName' | 'groupDesc'> & {
   cover?: File | null;
-  fileOrgLogic?: GroupFileOrgLogic;
   defaultMemberActions?: TagResourceAction[];
-};
-
-const DEFAULT_MEMBER_ACTIONS: TagResourceAction[] = [
-  TAG_RESOURCE_ACTION.DISCOVER,
-  TAG_RESOURCE_ACTION.VIEW,
-  TAG_RESOURCE_ACTION.DOWNLOAD_WATERMARK,
-];
-
-const FILE_ORG_LOGIC_LABEL: Record<GroupFileOrgLogic, string> = {
-  [GROUP_FILE_ORG_LOGIC.FOLDER]: '文件夹',
-  [GROUP_FILE_ORG_LOGIC.TAG]: '标签',
-};
-
-const FILE_ORG_LOGIC_INTRO: Record<GroupFileOrgLogic, string> = {
-  [GROUP_FILE_ORG_LOGIC.FOLDER]:
-    '文件夹模式：用常规文件夹模式组织资源，同一份资源只能上传到一个文件夹下。',
-  [GROUP_FILE_ORG_LOGIC.TAG]: '标签模式：用标签组织资源，同一份资源可以上传到多个标签下。',
 };
 
 const buildInitialConfig = (
   config?: GroupResConfig
-): Pick<EditGroupFormValues, 'fileOrgLogic' | 'defaultMemberActions'> => ({
-  fileOrgLogic: config?.fileOrgLogic ?? GROUP_FILE_ORG_LOGIC.FOLDER,
+): Pick<EditGroupFormValues, 'defaultMemberActions'> => ({
   defaultMemberActions: config
     ? normalizeResourceActions(config.defaultMemberActions)
     : DEFAULT_MEMBER_ACTIONS,
@@ -131,8 +109,6 @@ function EditGroupInfoModal({
     }
   );
 
-  const isTagModeLocked = groupResConfig?.fileOrgLogic === GROUP_FILE_ORG_LOGIC.TAG;
-
   const { loading, run: runEditGroup } = useRequest(
     async (formValues: EditGroupFormValues) => {
       if (!groupId) {
@@ -157,11 +133,6 @@ function EditGroupInfoModal({
       await groupService.editGroup(params);
       await groupService.updateGroupResConfig({
         groupId,
-        fileOrgLogic: isTagModeLocked
-          ? GROUP_FILE_ORG_LOGIC.TAG
-          : (formValues.fileOrgLogic ??
-            groupResConfig?.fileOrgLogic ??
-            GROUP_FILE_ORG_LOGIC.FOLDER),
         defaultMemberActions: normalizeResourceActions(
           formValues.defaultMemberActions ?? DEFAULT_MEMBER_ACTIONS
         ),
@@ -319,39 +290,6 @@ function EditGroupInfoModal({
                     description={`仅可选择单张图片，大小不超过 ${IMAGE_UPLOAD_MAX_SIZE_LABEL}`}
                     onFileChange={handleCoverChange}
                   />
-                </div>
-                <div className={styles.sectionCard}>
-                  <div className={styles.sectionTitle}>资源管理模式</div>
-                  <RadioGroup
-                    aria-label="资源管理模式"
-                    value={formValues.fileOrgLogic ?? GROUP_FILE_ORG_LOGIC.FOLDER}
-                    onChange={(value) =>
-                      updateFormValue('fileOrgLogic', value as GroupFileOrgLogic)
-                    }
-                    isDisabled={isTagModeLocked}
-                    className={
-                      isTagModeLocked ? `${styles.modeRow} ${styles.modeDisabled}` : styles.modeRow
-                    }
-                    variant="secondary"
-                    orientation="horizontal"
-                  >
-                    {GROUP_FILE_ORG_LOGIC.options.map((item) => (
-                      <Radio key={item.key} value={item.value}>
-                        <Radio.Control>
-                          <Radio.Indicator />
-                        </Radio.Control>
-                        <Radio.Content>
-                          <Tooltip>
-                            <Tooltip.Trigger>
-                              <span>{FILE_ORG_LOGIC_LABEL[item.value]}</span>
-                            </Tooltip.Trigger>
-                            <Tooltip.Content>{FILE_ORG_LOGIC_INTRO[item.value]}</Tooltip.Content>
-                          </Tooltip>
-                        </Radio.Content>
-                      </Radio>
-                    ))}
-                  </RadioGroup>
-                  <div className={styles.modeHint}>只能从文件夹模式切换至标签模式</div>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.sectionTitle}>小组成员默认权限</div>

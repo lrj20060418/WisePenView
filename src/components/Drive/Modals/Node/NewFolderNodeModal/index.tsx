@@ -1,7 +1,8 @@
 import { useDriveService } from '@/domains';
 import { parseErrorMessage } from '@/utils/error';
 import { validateReservedName } from '@/utils/tag/validateReservedName';
-import { Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import type { NewFolderNodeModalProps } from './index.type';

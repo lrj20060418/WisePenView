@@ -1,4 +1,4 @@
-import type { Group, GroupFileOrgLogic, GroupMemberList, GroupResConfig } from '@/domains/Group';
+import type { Group, GroupMemberList, GroupResConfig } from '@/domains/Group';
 import type { TagResourceAction } from '@/domains/Tag';
 
 /** GroupService 接口：供依赖注入使用 */
@@ -6,7 +6,7 @@ export interface IGroupService {
   fetchGroupList(params: FetchGroupListRequest): Promise<{ groups: Group[]; total: number }>;
   fetchGroupInfo(groupId: string): Promise<Group>;
   getGroupWalletInfo(params: GetGroupWalletInfoRequest): Promise<number>;
-  /** GET /resource/groupConfig/getConfig；查不到时后端默认 FOLDER */
+  /** GET /resource/groupConfig/getConfig；fileOrgLogic 由 mapper 统一收敛为 TAG */
   fetchGroupResConfig(groupId: string): Promise<GroupResConfig>;
   /** POST /resource/groupConfig/changeConfig；仅 OWNER/ADMIN */
   updateGroupResConfig(params: UpdateGroupResConfigRequest): Promise<void>;
@@ -65,12 +65,14 @@ export interface FetchGroupListRequest {
   size: number;
 }
 
-/** 创建小组请求参数（与 OpenAPI addGroup 对齐） */
+/** 创建小组请求参数；基础字段与 OpenAPI addGroup 对齐 */
 export interface CreateGroupRequest {
   groupName: string;
   groupType: number;
   groupDesc: string;
   groupCoverUrl?: string;
+  /** 创建后初始化小组资源配置；fileOrgLogic 不暴露给调用方，由 mapper 固定为 TAG */
+  defaultMemberActions?: TagResourceAction[];
 }
 
 /** 编辑小组请求参数（与 OpenAPI changeGroup 对齐）；groupId 用 string 避免大数精度丢失 */
@@ -113,6 +115,5 @@ export interface KickMembersRequest {
 /** 设置小组资源配置（与 OpenAPI GroupResConfigUpdateRequest 对齐） */
 export interface UpdateGroupResConfigRequest {
   groupId: string;
-  fileOrgLogic: GroupFileOrgLogic;
   defaultMemberActions?: TagResourceAction[];
 }

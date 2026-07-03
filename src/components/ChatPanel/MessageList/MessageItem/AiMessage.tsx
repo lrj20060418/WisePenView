@@ -5,7 +5,7 @@ import { Button, toast } from '@heroui/react';
 import { useInterval } from 'ahooks';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
-import { LogoFactory } from '../../ModelSelector';
+import ProviderLogo from '../../ProviderLogo';
 import styles from './AiMessage.module.less';
 import MessageContent from './MessageContent';
 import ThinkingBlock from './ThinkingBlock';
@@ -44,7 +44,7 @@ function AiMessage({ message }: { message: Message }) {
     <div className={styles.aiRow}>
       {/* 头像 */}
       <div className={styles.avatarCol}>
-        <LogoFactory provider={displayProvider} size={28} />
+        <ProviderLogo provider={displayProvider} size={28} />
       </div>
 
       {/* 内容 */}

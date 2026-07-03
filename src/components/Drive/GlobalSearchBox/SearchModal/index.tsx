@@ -1,4 +1,5 @@
-import { InputGroup, Kbd, Modal, TextField } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { InputGroup, Kbd, TextField } from '@heroui/react';
 import { useDebounce, useKeyPress } from 'ahooks';
 import { Search, X } from 'lucide-react';
 import { useState } from 'react';
@@ -72,7 +73,9 @@ function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
                 <Kbd onClick={handleClose}>Esc</Kbd>
               </div>
 
-              <SearchResultList keyword={debouncedKeyword} onClose={handleClose} />
+              <Modal.DeferredContent fallback={<div className={styles.resultPlaceholder} />}>
+                {() => <SearchResultList keyword={debouncedKeyword} onClose={handleClose} />}
+              </Modal.DeferredContent>
             </Modal.Body>
           </Modal.Dialog>
         </Modal.Container>
