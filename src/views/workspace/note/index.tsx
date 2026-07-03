@@ -5,8 +5,7 @@ import { ChevronsLeft, Menu } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import EntryIcon from '@/components/EntryIcon';
-import IconText from '@/components/IconText';
+import EntryIcon from '@/components/Icons/EntryIcon';
 import CustomBlockNote from '@/components/Note/CustomBlockNote';
 import type { NoteBodyEditorHandle } from '@/components/Note/CustomBlockNote/index.type';
 import NoteOutline from '@/components/Note/NoteOutline';
@@ -67,15 +66,12 @@ function NoteToolbarTitle({ resourceId, fallbackTitle }: NoteToolbarTitleProps) 
   const title = useResourceDisplayName(resourceId, fallbackTitle, '未命名笔记');
 
   return (
-    <IconText
-      className={styles.toolbarTitleText}
-      icon={<EntryIcon entryType="resource" resourceType={RESOURCE_TYPE.NOTE} />}
-      iconSize={18}
-      gap="var(--space-sm)"
-      ellipsis
-    >
-      {title}
-    </IconText>
+    <span className={styles.toolbarTitleText}>
+      <span className={styles.toolbarTitleIcon} aria-hidden="true">
+        <EntryIcon entryType="resource" resourceType={RESOURCE_TYPE.NOTE} />
+      </span>
+      <span className={styles.toolbarTitleLabel}>{title}</span>
+    </span>
   );
 }
 

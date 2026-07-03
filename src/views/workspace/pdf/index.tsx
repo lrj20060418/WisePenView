@@ -1,6 +1,5 @@
-import EntryIcon from '@/components/EntryIcon';
 import { ResultState, Spin } from '@/components/Feedback';
-import IconText from '@/components/IconText';
+import EntryIcon from '@/components/Icons/EntryIcon';
 import PdfViewer from '@/components/PdfViewer/index';
 import { useDocumentService, useResourceService } from '@/domains';
 import { RESOURCE_TYPE } from '@/domains/Resource';
@@ -19,15 +18,12 @@ interface PdfToolbarTitleProps {
 
 function PdfToolbarTitle({ resourceName, resourceType }: PdfToolbarTitleProps) {
   return (
-    <IconText
-      className={styles.toolbarTitleText}
-      icon={<EntryIcon entryType="resource" resourceType={resourceType ?? RESOURCE_TYPE.FILE} />}
-      iconSize={18}
-      gap="var(--space-sm)"
-      ellipsis
-    >
-      {resourceName}
-    </IconText>
+    <span className={styles.toolbarTitleText}>
+      <span className={styles.toolbarTitleIcon} aria-hidden="true">
+        <EntryIcon entryType="resource" resourceType={resourceType ?? RESOURCE_TYPE.FILE} />
+      </span>
+      <span className={styles.toolbarTitleLabel}>{resourceName}</span>
+    </span>
   );
 }
 

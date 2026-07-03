@@ -1,4 +1,3 @@
-import IconText from '@/components/IconText';
 import { useUserService } from '@/domains';
 import type { UpdateUserInfoRequest } from '@/domains/User';
 import { DEGREE, SEX } from '@/domains/User';
@@ -148,9 +147,8 @@ function AccountForm({
         <h3 className={styles.sectionTitle}>基本档案</h3>
         {!editMode ? (
           <Button variant="primary" onPress={handleStartEdit}>
-            <IconText icon={<Pencil />} iconSize={16}>
-              编辑资料
-            </IconText>
+            <Pencil size={16} aria-hidden="true" />
+            编辑资料
           </Button>
         ) : null}
       </div>

@@ -1,6 +1,5 @@
 import { ROOT_DISPLAY } from '@/components/Drive/common/constants';
-import EntryIcon from '@/components/EntryIcon';
-import IconText from '@/components/IconText';
+import EntryIcon from '@/components/Icons/EntryIcon';
 import type { DriveNode } from '@/domains/Drive';
 import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
 import styles from './style.module.less';
@@ -29,22 +28,17 @@ function DriveTreeNodeTitle({ node }: DriveTreeNodeTitleProps) {
     node.type === 'resource' || node.type === 'link' ? node.resourceIconType : undefined;
 
   return (
-    <IconText
-      className={styles.nodeTitle}
-      icon={
+    <span className={styles.nodeTitle}>
+      <span className={styles.nodeIcon} aria-hidden="true">
         <EntryIcon
           entryType={node.type}
           resourceType={resourceType}
           resourceIconType={resourceIconType}
           size={14}
         />
-      }
-      iconSize={14}
-      gap="4px"
-      ellipsis
-    >
-      {getNodeDisplayName(node, resourceName)}
-    </IconText>
+      </span>
+      <span className={styles.nodeLabel}>{getNodeDisplayName(node, resourceName)}</span>
+    </span>
   );
 }
 

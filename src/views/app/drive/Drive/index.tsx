@@ -1,6 +1,5 @@
 import GlobalSearchBox from '@/components/Drive/GlobalSearchBox';
 import TableDrive from '@/components/Drive/TableDrive';
-import IconText from '@/components/IconText';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useDrivePreferencesStore, type DriveViewMode } from '@/store';
 import { Button } from '@heroui/react';
@@ -40,9 +39,8 @@ function Drive() {
         <div className={styles.actionsRow}>
           <GlobalSearchBox />
           <Button variant="primary" onPress={() => setUploadModalOpen(true)}>
-            <IconText icon={<CloudUpload />} iconSize={16}>
-              上传文件
-            </IconText>
+            <CloudUpload size={16} aria-hidden="true" />
+            上传文件
           </Button>
         </div>
       </div>

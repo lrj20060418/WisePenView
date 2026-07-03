@@ -1,4 +1,3 @@
-import IconText from '@/components/IconText';
 import { Modal } from '@/components/Overlay';
 import { Button, toast } from '@heroui/react';
 import { Copy } from 'lucide-react';
@@ -47,9 +46,8 @@ function InviteUserModal({ isOpen, onOpenChange, inviteCode }: InviteUserModalPr
                 关闭
               </Button>
               <Button variant="primary" onPress={handleCopy} isDisabled={!inviteCode}>
-                <IconText icon={<Copy />} iconSize={16}>
-                  {copied ? '已复制' : '复制'}
-                </IconText>
+                <Copy size={16} aria-hidden="true" />
+                {copied ? '已复制' : '复制'}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>
