@@ -1,4 +1,5 @@
-import { Button, Modal } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button } from '@heroui/react';
 import type { ContractModalProps } from './index.type';
 import styles from './style.module.less';
 

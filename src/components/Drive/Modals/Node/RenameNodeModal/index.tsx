@@ -1,6 +1,7 @@
 import { useDriveService } from '@/domains';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import type { DriveActionTarget } from '../../../common/driveComponentModel';

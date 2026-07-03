@@ -1,4 +1,5 @@
-import { Chip, Dropdown, Popover, Spinner } from '@heroui/react';
+import { Popover } from '@/components/Overlay';
+import { Chip, Dropdown, Spinner } from '@heroui/react';
 import { useRequest, useUpdateEffect } from 'ahooks';
 import clsx from 'clsx';
 import { ArrowUpAZ, ChartBar, Check, ChevronDown, ChevronUp, LayoutGrid } from 'lucide-react';
@@ -96,7 +97,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
     }
   }, [currentSort, models, sortOrder]);
 
-  const content = (
+  const renderContent = () => (
     <div className={styles.selectorPanel}>
       <div className={styles.panelHeader}>
         <span className={styles.headerTitle}>{listTitle}</span>
@@ -241,7 +242,11 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
         </button>
       </Popover.Trigger>
       <Popover.Content className={styles.popoverBody} placement="bottom">
-        <Popover.Dialog>{content}</Popover.Dialog>
+        <Popover.Dialog>
+          <Popover.DeferredContent fallback={<div className={styles.selectorPanelDeferred} />}>
+            {renderContent}
+          </Popover.DeferredContent>
+        </Popover.Dialog>
       </Popover.Content>
     </Popover>
   );

@@ -2,6 +2,7 @@ import { useUserService } from '@/domains';
 import type { InitiateUISVerifyRequest, SendEmailVerifyRequest } from '@/domains/User';
 import { USER_STATUS } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
+import { Modal } from '@/components/Overlay';
 import {
   Alert,
   Button,
@@ -10,7 +11,6 @@ import {
   Input,
   InputGroup,
   Label,
-  Modal,
   Tabs,
   TextField,
   toast,

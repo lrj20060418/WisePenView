@@ -1,5 +1,6 @@
 import type { ChatAgentOption } from '@/store';
-import { Button, ListBox, ListBoxItem, Popover } from '@heroui/react';
+import { Popover } from '@/components/Overlay';
+import { Button, ListBox, ListBoxItem } from '@heroui/react';
 import { Bot, Check } from 'lucide-react';
 import { useState } from 'react';
 import styles from '../style.module.less';
@@ -28,37 +29,41 @@ function AgentPicker({ selectedAgent, agents, onChange }: AgentPickerProps) {
       </Popover.Trigger>
       <Popover.Content className={styles.toolbarPopover} placement="top">
         <Popover.Dialog>
-          <div className={styles.popoverPanel}>
-            <div className={styles.popoverTitle}>Agent</div>
-            <ListBox
-              aria-label="选择 Agent"
-              selectionMode="single"
-              selectedKeys={[selectedAgent.agentId]}
-              className={styles.listBox}
-            >
-              {agents.map((agent) => (
-                <ListBoxItem
-                  key={agent.agentId}
-                  id={agent.agentId}
-                  textValue={agent.label}
-                  onPress={() => handleSelect(agent)}
+          <Popover.DeferredContent fallback={<div className={styles.deferredPopoverPanel} />}>
+            {() => (
+              <div className={styles.popoverPanel}>
+                <div className={styles.popoverTitle}>Agent</div>
+                <ListBox
+                  aria-label="选择 Agent"
+                  selectionMode="single"
+                  selectedKeys={[selectedAgent.agentId]}
+                  className={styles.listBox}
                 >
-                  <span className={styles.agentItem}>
-                    <span className={styles.agentMain}>
-                      <Bot size={14} />
-                      <span>{agent.label}</span>
-                    </span>
-                    {agent.agentType === 'GROUP' && agent.groupName ? (
-                      <span className={styles.agentMeta}>{agent.groupName}</span>
-                    ) : null}
-                    {selectedAgent.agentId === agent.agentId ? (
-                      <Check size={14} className={styles.checkIcon} />
-                    ) : null}
-                  </span>
-                </ListBoxItem>
-              ))}
-            </ListBox>
-          </div>
+                  {agents.map((agent) => (
+                    <ListBoxItem
+                      key={agent.agentId}
+                      id={agent.agentId}
+                      textValue={agent.label}
+                      onPress={() => handleSelect(agent)}
+                    >
+                      <span className={styles.agentItem}>
+                        <span className={styles.agentMain}>
+                          <Bot size={14} />
+                          <span>{agent.label}</span>
+                        </span>
+                        {agent.agentType === 'GROUP' && agent.groupName ? (
+                          <span className={styles.agentMeta}>{agent.groupName}</span>
+                        ) : null}
+                        {selectedAgent.agentId === agent.agentId ? (
+                          <Check size={14} className={styles.checkIcon} />
+                        ) : null}
+                      </span>
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </div>
+            )}
+          </Popover.DeferredContent>
         </Popover.Dialog>
       </Popover.Content>
     </Popover>

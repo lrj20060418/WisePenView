@@ -17,13 +17,13 @@ import {
   assertImageProxyUploadLimit,
   IMAGE_UPLOAD_MAX_SIZE_LABEL,
 } from '@/utils/image/uploadLimit';
+import { Modal } from '@/components/Overlay';
 import {
   Button,
   Checkbox,
   Form,
   Input,
   Label,
-  Modal,
   TextArea,
   TextField,
   toast,

@@ -11,7 +11,8 @@ import {
   buildWorkspaceResourcePath,
   RESOURCE_EDITOR_TYPE,
 } from '@/utils/navigation/workspaceRoute';
-import { Button, Input, ListBox, ListBoxItem, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Input, ListBox, ListBoxItem, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import clsx from 'clsx';
 import { Bot, CirclePlus, FileText, PenTool, Users, Workflow } from 'lucide-react';

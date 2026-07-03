@@ -1,6 +1,7 @@
 import { useChatService } from '@/domains';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import clsx from 'clsx';
 import { Pencil, Trash2 } from 'lucide-react';

@@ -8,7 +8,8 @@ import {
   type ResourceAction,
 } from '@/domains/Resource';
 import { parseErrorMessage } from '@/utils/error';
-import { Alert, Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Alert, Button, Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useMemo, useState } from 'react';
 import type { NotePermissionModalProps } from './index.type';

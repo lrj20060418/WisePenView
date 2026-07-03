@@ -1,7 +1,8 @@
 import { useGroupService } from '@/domains';
 import type { JoinGroupRequest } from '@/domains/Group';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Form, InputOTP, Modal, REGEXP_ONLY_DIGITS_AND_CHARS, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Form, InputOTP, REGEXP_ONLY_DIGITS_AND_CHARS, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import React, { useState, type FormEvent } from 'react';
 import type { JoinGroupModalProps } from './index.type';

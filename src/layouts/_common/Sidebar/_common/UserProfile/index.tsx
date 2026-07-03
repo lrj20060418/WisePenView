@@ -1,7 +1,8 @@
 import { useUserService } from '@/domains';
 import type { User } from '@/domains/User';
 import { IDENTITY } from '@/domains/User';
-import { Avatar, Button, Dropdown, Modal } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Avatar, Button, Dropdown } from '@heroui/react';
 import { useMount } from 'ahooks';
 import clsx from 'clsx';
 import {
@@ -189,28 +190,38 @@ function UserProfile({ collapsed, menuMode = 'app' }: UserProfileProps) {
               <Modal.Header>
                 <Modal.Heading>问题反馈</Modal.Heading>
               </Modal.Header>
-              <Modal.Body>
-                <div className={styles.feedbackIframeWrap}>
-                  <iframe
-                    className={styles.feedbackIframe}
-                    title="问卷星问题反馈"
-                    src={FEEDBACK_SURVEY_URL}
-                    allowFullScreen
-                  />
-                </div>
-                <p className={styles.feedbackFallback}>
-                  若页面无法显示，请
-                  <a
-                    className={styles.feedbackFallbackLink}
-                    href={FEEDBACK_SURVEY_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    在新窗口打开问卷
-                  </a>
-                  。
-                </p>
-              </Modal.Body>
+              <Modal.DeferredContent
+                fallback={
+                  <Modal.Body>
+                    <div className={styles.feedbackIframeWrap} />
+                  </Modal.Body>
+                }
+              >
+                {() => (
+                  <Modal.Body>
+                    <div className={styles.feedbackIframeWrap}>
+                      <iframe
+                        className={styles.feedbackIframe}
+                        title="问卷星问题反馈"
+                        src={FEEDBACK_SURVEY_URL}
+                        allowFullScreen
+                      />
+                    </div>
+                    <p className={styles.feedbackFallback}>
+                      若页面无法显示，请
+                      <a
+                        className={styles.feedbackFallbackLink}
+                        href={FEEDBACK_SURVEY_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        在新窗口打开问卷
+                      </a>
+                      。
+                    </p>
+                  </Modal.Body>
+                )}
+              </Modal.DeferredContent>
               <Modal.Footer>
                 <Button variant="primary" onPress={handleCloseFeedback}>
                   关闭

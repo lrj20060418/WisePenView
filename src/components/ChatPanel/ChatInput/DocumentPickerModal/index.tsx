@@ -10,7 +10,8 @@ import Tree from '@/components/Tree';
 import { useDriveService, useGroupService } from '@/domains';
 import type { DriveNode } from '@/domains/Drive';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { Folder, Users } from 'lucide-react';
 import type { Key } from 'react';
@@ -88,7 +89,10 @@ function isSelectableNode(node: DriveNode | undefined): boolean {
   return node?.type === 'resource' || node?.type === 'link';
 }
 
-function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalProps) {
+function DocumentPickerContent({
+  onClose,
+  onConfirm,
+}: Pick<DocumentPickerModalProps, 'onClose' | 'onConfirm'>) {
   const driveService = useDriveService();
   const groupService = useGroupService();
   const [treeData, setTreeData] = useState<DataNode[]>([]);
@@ -205,8 +209,7 @@ function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalPr
       }
 
       setTreeData(nodes);
-    },
-    { ready: open, refreshDeps: [open] }
+    }
   );
 
   async function handleLoadData(treeNode: DataNode): Promise<void> {
@@ -256,11 +259,6 @@ function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalPr
     onClose();
   }
 
-  function handleOpenChange(visible: boolean): void {
-    if (visible) return;
-    handleClose();
-  }
-
   function handleConfirm(): void {
     const resources = checkedKeys
       .map((key) => scopedDriveNodeMapRef.current.get(key))
@@ -279,6 +277,59 @@ function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalPr
   }
 
   return (
+    <>
+      <Modal.Body>
+        <div className={styles.wrapper}>
+          <div className={styles.treeSection}>
+            <div className={styles.hint}>选择要引用的文档（可多选）</div>
+            <div className={styles.navTree}>
+              {loadingScopes && treeData.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <LoadingState />
+                </div>
+              ) : treeData.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <EmptyState title="暂无可选文档" />
+                </div>
+              ) : (
+                <Tree
+                  className={styles.tree}
+                  treeData={treeData}
+                  blockNode
+                  checkable
+                  checkStrictly
+                  selectable
+                  multiple
+                  selectedKeys={[]}
+                  checkedKeys={checkedKeys}
+                  onSelect={handleSelect}
+                  onCheck={handleCheck}
+                  loadData={handleLoadData}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onPress={handleClose}>
+          取消
+        </Button>
+        <Button variant="primary" onPress={handleConfirm} isDisabled={checkedKeys.length === 0}>
+          确定
+        </Button>
+      </Modal.Footer>
+    </>
+  );
+}
+
+function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalProps) {
+  function handleOpenChange(visible: boolean): void {
+    if (visible) return;
+    onClose();
+  }
+
+  return (
     <Modal isOpen={open} onOpenChange={handleOpenChange}>
       <Modal.Backdrop isDismissable>
         <Modal.Container size="md" placement="center">
@@ -286,51 +337,30 @@ function DocumentPickerModal({ open, onClose, onConfirm }: DocumentPickerModalPr
             <Modal.Header>
               <Modal.Heading>从云盘选取</Modal.Heading>
             </Modal.Header>
-            <Modal.Body>
-              <div className={styles.wrapper}>
-                <div className={styles.treeSection}>
-                  <div className={styles.hint}>选择要引用的文档（可多选）</div>
-                  <div className={styles.navTree}>
-                    {loadingScopes && treeData.length === 0 ? (
-                      <div className={styles.emptyState}>
-                        <LoadingState />
+            <Modal.DeferredContent
+              fallback={
+                <>
+                  <Modal.Body>
+                    <div className={styles.wrapper}>
+                      <div className={styles.treeSection}>
+                        <div className={styles.hint}>选择要引用的文档（可多选）</div>
+                        <div className={styles.navTree} />
                       </div>
-                    ) : treeData.length === 0 ? (
-                      <div className={styles.emptyState}>
-                        <EmptyState title="暂无可选文档" />
-                      </div>
-                    ) : (
-                      <Tree
-                        className={styles.tree}
-                        treeData={treeData}
-                        blockNode
-                        checkable
-                        checkStrictly
-                        selectable
-                        multiple
-                        selectedKeys={[]}
-                        checkedKeys={checkedKeys}
-                        onSelect={handleSelect}
-                        onCheck={handleCheck}
-                        loadData={handleLoadData}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onPress={handleClose}>
-                取消
-              </Button>
-              <Button
-                variant="primary"
-                onPress={handleConfirm}
-                isDisabled={checkedKeys.length === 0}
-              >
-                确定
-              </Button>
-            </Modal.Footer>
+                    </div>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="secondary" onPress={onClose}>
+                      取消
+                    </Button>
+                    <Button variant="primary" isDisabled>
+                      确定
+                    </Button>
+                  </Modal.Footer>
+                </>
+              }
+            >
+              {() => <DocumentPickerContent onClose={onClose} onConfirm={onConfirm} />}
+            </Modal.DeferredContent>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

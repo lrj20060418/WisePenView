@@ -1,7 +1,8 @@
 import { useAuthService } from '@/domains';
 import type { NewPasswordRequest } from '@/domains/Auth';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Form, Input, Label, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Form, Input, Label, TextField, toast } from '@heroui/react';
 import { useMount, useRequest } from 'ahooks';
 import { Lock } from 'lucide-react';
 import { useState, type FormEvent } from 'react';

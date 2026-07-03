@@ -20,7 +20,8 @@ import {
 } from '@/domains/Tag';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
-import { Button, Checkbox, Modal, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Checkbox, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import {

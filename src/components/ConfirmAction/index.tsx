@@ -1,4 +1,5 @@
-import { Button, Popover } from '@heroui/react';
+import { Popover } from '@/components/Overlay';
+import { Button } from '@heroui/react';
 import type { ReactElement } from 'react';
 import { cloneElement, useState } from 'react';
 import type { ConfirmActionProps } from './index.type';

@@ -12,7 +12,8 @@ import {
   buildWorkspaceResourcePath,
   RESOURCE_EDITOR_TYPE,
 } from '@/utils/navigation/workspaceRoute';
-import { Button, Input, Modal, TextField, toast } from '@heroui/react';
+import { Modal } from '@/components/Overlay';
+import { Button, Input, TextField, toast } from '@heroui/react';
 import { useEventListener, useRequest, useUnmount, useUpdateEffect } from 'ahooks';
 import { Copy, History, Save } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
