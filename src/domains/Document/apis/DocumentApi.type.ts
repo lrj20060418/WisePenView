@@ -1,5 +1,6 @@
 import type { DocumentResourceType } from '@/domains/Document';
 import type { ResourceItem } from '@/domains/Resource';
+import type { Config } from '@onlyoffice/doceditor-types';
 
 export interface UploadDocApiRequest {
   filename: string;
@@ -22,6 +23,18 @@ export interface DocumentIdApiRequest {
 
 export interface GetDocInfoApiRequest {
   resourceId: string;
+}
+
+export interface GetOnlyOfficeEditorConfigApiRequest {
+  resourceId: string;
+}
+
+export type OnlyOfficeEditorConfig = Config;
+
+export interface OnlyOfficeEditorConfigApiResponse {
+  sessionId?: string;
+  config?: OnlyOfficeEditorConfig | null;
+  documentServerPublicUrl?: string | null;
 }
 
 export interface DocumentUploadMeta {

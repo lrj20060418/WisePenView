@@ -5,7 +5,8 @@ import {
 } from '@/layouts/Workspace/WorkspaceOutletContext';
 import {
   RESOURCE_EDITOR_TYPE,
-  isDocumentEditorType,
+  isOfficeEditorType,
+  isPdfEditorType,
   normalizeResourceEditorType,
 } from '@/utils/navigation/workspaceRoute';
 import { Button } from '@heroui/react';
@@ -13,6 +14,7 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import DrawioView from './drawio';
 import NoteView from './note';
+import OfficeView from './office';
 import DocumentPreview from './pdf';
 import styles from './WorkspaceResourceView.module.less';
 
@@ -61,8 +63,12 @@ function WorkspaceResourceView() {
     return <DrawioView resourceId={id} />;
   }
 
-  if (isDocumentEditorType(editorType)) {
+  if (isPdfEditorType(editorType)) {
     return <DocumentPreview resourceId={id} />;
+  }
+
+  if (isOfficeEditorType(editorType)) {
+    return <OfficeView resourceId={id} />;
   }
 
   return <UnsupportedResource editorType={rawEditorType} resourceId={id} />;

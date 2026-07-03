@@ -3,7 +3,9 @@ import type {
   DocumentIdApiRequest,
   GetDocInfoApiRequest,
   GetDocInfoApiResponse,
+  GetOnlyOfficeEditorConfigApiRequest,
   ListPendingDocsApiResponse,
+  OnlyOfficeEditorConfigApiResponse,
   UploadDocApiRequest,
   UploadDocApiResponse,
 } from './DocumentApi.type';
@@ -36,6 +38,12 @@ function getDocInfo(req: GetDocInfoApiRequest): Promise<GetDocInfoApiResponse> {
   return apiGet('/document/getDocInfo', { params: req });
 }
 
+function getOnlyOfficeEditorConfig(
+  req: GetOnlyOfficeEditorConfigApiRequest
+): Promise<OnlyOfficeEditorConfigApiResponse> {
+  return apiGet('/document/onlyoffice/editorConfig', { params: req });
+}
+
 export const DocumentApi = {
   uploadDoc,
   retryDocConvert,
@@ -44,4 +52,5 @@ export const DocumentApi = {
   retryDocProcess,
   cancelDocProcess,
   getDocInfo,
+  getOnlyOfficeEditorConfig,
 };

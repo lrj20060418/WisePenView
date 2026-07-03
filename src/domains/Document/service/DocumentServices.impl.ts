@@ -125,6 +125,10 @@ const getDocInfo = async (resourceId: string): Promise<DocDisplayInfoResponse> =
   return DocumentServicesMap.mapGetDocInfoFromApi(data);
 };
 
+const getOnlyOfficeEditorConfig = async (resourceId: string) => {
+  return await DocumentApi.getOnlyOfficeEditorConfig({ resourceId });
+};
+
 export const createDocumentServices = (deps: DocumentServicesDeps): IDocumentService => {
   const { resourceService } = deps;
 
@@ -141,5 +145,6 @@ export const createDocumentServices = (deps: DocumentServicesDeps): IDocumentSer
     retryPendingDoc,
     cancelPendingDoc,
     getDocInfo,
+    getOnlyOfficeEditorConfig,
   };
 };

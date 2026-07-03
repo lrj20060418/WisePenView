@@ -4,51 +4,14 @@ import clsx from 'clsx';
 import { ArrowUpAZ, ChartBar, Check, ChevronDown, ChevronUp, LayoutGrid } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import {
-  Claude,
-  DeepSeek,
-  Doubao,
-  Gemini,
-  Grok,
-  Meta,
-  Mistral,
-  OpenAI,
-  Qwen,
-} from '@lobehub/icons';
-
 import { EmptyState } from '@/components/Feedback';
 import IconText from '@/components/IconText';
 import { useChatService } from '@/domains';
 import { useChatModelPreferenceStore } from '@/store/useChatModelPreferenceStore';
+import ProviderLogo from '../ProviderLogo';
 import type { Model } from '../index.type';
 
 import styles from './style.module.less';
-
-export const LogoFactory = ({ provider, size = 20 }: { provider: string; size?: number }) => {
-  const props = { size };
-  switch (provider) {
-    case 'openai':
-      return <OpenAI.Avatar {...props} />;
-    case 'anthropic':
-      return <Claude.Avatar {...props} />;
-    case 'google':
-      return <Gemini.Avatar {...props} />;
-    case 'meta':
-      return <Meta.Avatar {...props} />;
-    case 'grok':
-      return <Grok.Avatar {...props} />;
-    case 'deepseek':
-      return <DeepSeek.Avatar {...props} />;
-    case 'doubao':
-      return <Doubao.Avatar {...props} />;
-    case 'mistral':
-      return <Mistral.Avatar {...props} />;
-    case 'qwen':
-      return <Qwen.Avatar {...props} />;
-    default:
-      return <OpenAI.Avatar {...props} />;
-  }
-};
 
 const SORT_OPTIONS = [
   { label: '按费率', value: 'ratio', icon: ChartBar },
@@ -212,7 +175,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
                 <IconText
                   className={styles.modelTitle}
                   textClassName={styles.modelName}
-                  icon={<LogoFactory provider={model.provider} size={20} />}
+                  icon={<ProviderLogo provider={model.provider} size={20} />}
                   iconSize={20}
                   gap="var(--space-xs)"
                   ellipsis
@@ -265,7 +228,7 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
               loading ? (
                 <Spinner size="sm" />
               ) : (
-                <LogoFactory provider={currentModel?.provider ?? 'openai'} size={16} />
+                <ProviderLogo provider={currentModel?.provider ?? 'openai'} size={16} />
               )
             }
             iconSize={16}

@@ -30,6 +30,17 @@ const DOCUMENT_EDITOR_TYPES = new Set<ResourceEditorType>([
   RESOURCE_EDITOR_TYPE.XLSX,
 ]);
 
+const PDF_EDITOR_TYPES = new Set<ResourceEditorType>([RESOURCE_EDITOR_TYPE.PDF]);
+
+const OFFICE_EDITOR_TYPES = new Set<ResourceEditorType>([
+  RESOURCE_EDITOR_TYPE.DOC,
+  RESOURCE_EDITOR_TYPE.DOCX,
+  RESOURCE_EDITOR_TYPE.PPT,
+  RESOURCE_EDITOR_TYPE.PPTX,
+  RESOURCE_EDITOR_TYPE.XLS,
+  RESOURCE_EDITOR_TYPE.XLSX,
+]);
+
 const EDITOR_TYPE_VALUES = new Set<string>(RESOURCE_EDITOR_TYPE.options.map((item) => item.value));
 
 const normalizeResourceTypeToken = (value?: string): string | undefined => {
@@ -61,6 +72,16 @@ export const normalizeResourceEditorType = (
 export const isDocumentEditorType = (editorType?: string): boolean => {
   const normalized = normalizeResourceEditorType(editorType);
   return normalized != null && DOCUMENT_EDITOR_TYPES.has(normalized);
+};
+
+export const isPdfEditorType = (editorType?: string): boolean => {
+  const normalized = normalizeResourceEditorType(editorType);
+  return normalized != null && PDF_EDITOR_TYPES.has(normalized);
+};
+
+export const isOfficeEditorType = (editorType?: string): boolean => {
+  const normalized = normalizeResourceEditorType(editorType);
+  return normalized != null && OFFICE_EDITOR_TYPES.has(normalized);
 };
 
 export const resolveResourceEditorType = (params: {

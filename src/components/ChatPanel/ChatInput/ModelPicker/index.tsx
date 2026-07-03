@@ -1,6 +1,6 @@
 import { ListBox, ListBoxItem, Popover } from '@heroui/react';
 import { Check, ChevronDown, LoaderCircle } from 'lucide-react';
-import ProviderLogo from '../ProviderLogo';
+import ProviderLogo from '../../ProviderLogo';
 import styles from '../style.module.less';
 import type { ModelPickerProps } from './index.type';
 

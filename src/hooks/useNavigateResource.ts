@@ -1,7 +1,7 @@
 import { useActiveDriveScopeStore, usePdfPreviewProgressStore } from '@/store';
 import {
   buildWorkspaceResourcePath,
-  isDocumentEditorType,
+  isPdfEditorType,
   resolveResourceEditorType,
 } from '@/utils/navigation/workspaceRoute';
 import { useNavigate } from 'react-router-dom';
@@ -34,7 +34,7 @@ export const useNavigateResource = (groupId?: string): NavigateResourceFn => {
     });
     const basePath = buildWorkspaceResourcePath(editorType, resourceId);
 
-    if (!isDocumentEditorType(editorType)) {
+    if (!isPdfEditorType(editorType)) {
       navigate(basePath);
       return;
     }

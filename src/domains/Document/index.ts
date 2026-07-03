@@ -16,6 +16,8 @@ export type {
   DocumentUploadInitRequestBody,
   DocumentUploadInitResponse,
   IDocumentService,
+  OnlyOfficeEditorConfig,
+  OnlyOfficeEditorConfigResponse,
   PendingDocItem,
   UploadDocumentInitializedPayload,
   UploadDocumentParams,
