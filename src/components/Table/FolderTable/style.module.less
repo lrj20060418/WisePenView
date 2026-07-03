@@ -4,11 +4,12 @@
 
 .shell {
   .tableShellTypography();
+  .tableShellBorder();
+  .tableShellStretch();
   width: 100%;
   overflow: hidden;
-  border-radius: var(--radius-xl, calc(var(--radius) * 1.5));
+  .tableShellRadius();
   background: var(--surface);
-  box-shadow: var(--card-shadow);
 }
 
 .headerBar {
@@ -46,6 +47,8 @@
   padding-top: @table-gap-compact;
   background: var(--surface);
   .tableRootFlatHeader();
+  .tableRootNoShadow();
+  .tableRootStretch();
 
   :global(.table__scroll-container) {
     width: 100%;
@@ -58,12 +61,6 @@
 
   :global(.table__column::after) {
     content: none !important;
-  }
-
-  :global(.table__row:focus-visible > .table__cell),
-  :global(.table__row[data-focus-visible='true'] > .table__cell) {
-    box-shadow: none !important;
-    outline: none;
   }
 
   :global(.table__header) {

@@ -4,7 +4,7 @@ import { ROLE } from '@/domains/Group';
 import type { EnumKey } from '@/utils/enum';
 import { parseErrorMessage } from '@/utils/error';
 import { normalizeId } from '@/utils/normalize/normalizeId';
-import { Button, toast, type Selection } from '@heroui/react';
+import { Button, toast, type Selection, type SortDescriptor } from '@heroui/react';
 import { usePagination } from 'ahooks';
 import { useMemo, useRef, useState } from 'react';
 import type { MemberListProps } from './index.type';
@@ -37,6 +37,8 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
   const [activeModal, setActiveModal] = useState<
     'invite' | 'editPermission' | 'deleteMember' | 'assignQuota' | null
   >(null);
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor | undefined>();
 
   const defaultPageSize = pagination?.defaultPageSize ?? 5;
   const {
@@ -72,6 +74,16 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
     selectedMembersMapRef.current.clear();
   };
 
+  const exitBatchEditMode = () => {
+    setBatchEditMode(false);
+    clearSelectedMembers();
+  };
+
+  const enterBatchEditMode = () => {
+    clearInlineEdit();
+    setBatchEditMode(true);
+  };
+
   const clearInlineEdit = () => {
     setEditingRowId(null);
     setEditingKind(null);
@@ -91,6 +103,7 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
     setSingleDeleteMember(null);
     clearSelectedMembers();
     clearInlineEdit();
+    setBatchEditMode(false);
     void refresh();
   };
 
@@ -225,20 +238,16 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
   }, [members, selectedRowKeys]);
 
   const showBatchActions = groupDisplayConfig.canEnterEditMode;
-  const toolbar = useMemo(() => {
-    const hasBatchActions =
-      showBatchActions &&
-      (groupDisplayConfig.canModifyPermission ||
-        groupDisplayConfig.canAssignQuota ||
-        groupDisplayConfig.canRemoveMember);
+  const hasBatchActions =
+    showBatchActions &&
+    (groupDisplayConfig.canModifyPermission ||
+      groupDisplayConfig.canAssignQuota ||
+      groupDisplayConfig.canRemoveMember);
 
-    if (!hasBatchActions && !groupDisplayConfig.canInviteMember) {
-      return null;
-    }
-
-    return (
+  const toolbar =
+    !hasBatchActions && !groupDisplayConfig.canInviteMember ? null : (
       <div className={styles.toolbarActions}>
-        {showBatchActions && groupDisplayConfig.canModifyPermission ? (
+        {batchEditMode && showBatchActions && groupDisplayConfig.canModifyPermission ? (
           <Button
             onPress={() => handleEdit('editPermission')}
             isDisabled={selectedRowKeys.length === 0}
@@ -246,7 +255,7 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
             修改权限
           </Button>
         ) : null}
-        {showBatchActions && groupDisplayConfig.canAssignQuota ? (
+        {batchEditMode && showBatchActions && groupDisplayConfig.canAssignQuota ? (
           <Button
             onPress={() => handleEdit('assignQuota')}
             isDisabled={selectedRowKeys.length === 0}
@@ -254,7 +263,7 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
             分配配额
           </Button>
         ) : null}
-        {showBatchActions && groupDisplayConfig.canRemoveMember ? (
+        {batchEditMode && showBatchActions && groupDisplayConfig.canRemoveMember ? (
           <Button
             variant="danger"
             onPress={() => handleEdit('deleteMember')}
@@ -263,6 +272,14 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
             删除成员
           </Button>
         ) : null}
+        {batchEditMode && hasBatchActions ? (
+          <Button variant="ghost" onPress={exitBatchEditMode}>
+            取消
+          </Button>
+        ) : null}
+        {!batchEditMode && hasBatchActions ? (
+          <Button onPress={enterBatchEditMode}>批量编辑</Button>
+        ) : null}
         {groupDisplayConfig.canInviteMember ? (
           <Button variant="primary" onPress={() => setActiveModal('invite')}>
             邀请用户
@@ -270,7 +287,6 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
         ) : null}
       </div>
     );
-  }, [groupDisplayConfig, selectedRowKeys.length, showBatchActions]);
 
   return (
     <div>
@@ -301,6 +317,9 @@ function MemberList({ groupDisplayConfig, pagination, groupId, inviteCode }: Mem
         }}
         onDeleteMember={handleDeleteSingleMember}
         toolbar={toolbar}
+        batchEditMode={batchEditMode}
+        sortDescriptor={sortDescriptor}
+        onSortChange={setSortDescriptor}
       />
 
       <InviteUserModal

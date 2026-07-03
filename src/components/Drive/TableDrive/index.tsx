@@ -5,7 +5,7 @@ import {
 } from '@/components/Table';
 import type { DriveNode } from '@/domains/Drive';
 import { findTreeNodeById } from '@/utils/tree/findTreeNodeById';
-import { Button } from '@heroui/react';
+import { Button, type SortDescriptor } from '@heroui/react';
 import { useUnmount } from 'ahooks';
 import { CloudUpload } from 'lucide-react';
 import { startTransition, useCallback, useMemo, useRef, useState } from 'react';
@@ -24,6 +24,9 @@ const DRIVE_TABLE_COLUMNS: FolderTableColumn<DriveTableRow>[] = [
     align: 'start',
     isRowHeader: true,
     isNameColumn: true,
+    allowsSorting: true,
+    sortFolderGroup: true,
+    getSortValue: (row) => row.name,
   },
   {
     id: 'size',
@@ -35,6 +38,8 @@ const DRIVE_TABLE_COLUMNS: FolderTableColumn<DriveTableRow>[] = [
     id: 'type',
     label: '类型',
     width: 'folderType',
+    allowsSorting: true,
+    getSortValue: (row) => row.typeLabel,
     renderCell: (row) => (row.entryType === 'loading' ? '' : row.typeLabel),
   },
 ];
@@ -118,6 +123,7 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
     refresh,
   } = useTableDrive({ rootId: finalRootId, groupId: finalGroupId, scope: resolvedScope.scope });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor | undefined>();
   const selectedNodeIdRef = useRef<string | null>(null);
   const selectedCommitFrameRef = useRef<number | null>(null);
   const selectedCommitTimerRef = useRef<number | null>(null);
@@ -283,6 +289,8 @@ function TableDrive({ groupId, rootId, scope, actions }: TableDriveProps) {
           totalCount={currentDirectoryItemCount}
           summary={`当前目录共 ${currentDirectoryItemCount} 项`}
           className={styles.table}
+          sortDescriptor={sortDescriptor}
+          onSortChange={setSortDescriptor}
         />
         <aside className={styles.selectionPanel} aria-label="选中节点操作区域">
           <div className={styles.selectionPanelTitle}>选中节点</div>

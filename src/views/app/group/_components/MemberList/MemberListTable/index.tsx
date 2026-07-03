@@ -208,6 +208,8 @@ function buildReadonlyColumns(props: MemberListTableProps): ReadonlyColumn[] {
       width: 'lg',
       align: 'start',
       isRowHeader: true,
+      allowsSorting: true,
+      getSortValue: (member) => getDisplayName(member),
       renderCell: (member) => (
         <DataTable.MemberCell
           name={getDisplayName(member)}
@@ -231,6 +233,8 @@ function buildReadonlyColumns(props: MemberListTableProps): ReadonlyColumn[] {
       label: '加入时间',
       width: 'md',
       align: 'start',
+      allowsSorting: true,
+      getSortValue: (member) => member.joinTime ?? 0,
       renderCell: (member) => (
         <DataTable.TextCell>
           {formatTimestampToDate(member.joinTime) || EMPTY_TEXT}
@@ -322,6 +326,9 @@ function MemberListTable(props: MemberListTableProps) {
     onDismissInlineError,
     onDeleteMember,
     toolbar,
+    batchEditMode = false,
+    sortDescriptor,
+    onSortChange,
   } = props;
 
   const paginationConfig: Required<MemberListPaginationConfig> = {
@@ -356,6 +363,8 @@ function MemberListTable(props: MemberListTableProps) {
         loading={loading}
         emptyText="暂无成员"
         toolbar={toolbar}
+        sortDescriptor={sortDescriptor}
+        onSortChange={onSortChange}
         pagination={{
           total,
           current: currentPage,
@@ -377,11 +386,17 @@ function MemberListTable(props: MemberListTableProps) {
       loading={loading}
       emptyText="暂无成员"
       toolbar={toolbar}
-      batchSelection={{
-        selectedKeys,
-        disabledKeys: disabledSelectionKeys,
-        onSelectionChange: (keys) => onSelectionChange(keys, dataSource),
-      }}
+      sortDescriptor={sortDescriptor}
+      onSortChange={onSortChange}
+      batchSelection={
+        batchEditMode
+          ? {
+              selectedKeys,
+              disabledKeys: disabledSelectionKeys,
+              onSelectionChange: (keys) => onSelectionChange(keys, dataSource),
+            }
+          : undefined
+      }
       inlineEdit={{
         editingRowId,
         savingRowId,

@@ -10,9 +10,11 @@ import {
   isFolderEqLayout,
   resolveFolderColumnWidthClassForColumn,
 } from '../shared/TableBase/columnWidth';
+import { sortFolderTreeRows } from '../shared/TableBase/tableSort';
 import TableBodyState from '../shared/TableBodyState';
 import TableRowActions from '../shared/TableRowActions';
 import type { TableRowActionItem } from '../shared/TableRowActions/index.type';
+import { renderSortableColumnLabel } from '../shared/TableSortHeader/renderSortableColumnLabel';
 import { TableLoadMoreRow } from '../shared/TableStatusRows';
 import TableSummaryFooter from '../shared/TableSummaryFooter';
 import { createDefaultFolderColumns } from './defaultColumns';
@@ -279,6 +281,8 @@ function FolderTable<T extends FolderTableRow>({
   emptyIcon,
   skeletonRowCount = 4,
   className,
+  sortDescriptor,
+  onSortChange,
 }: FolderTableProps<T>) {
   const { t } = useTranslation('table');
   const resolvedEmptyText = emptyText ?? t('empty.folderEmpty');
@@ -295,9 +299,21 @@ function FolderTable<T extends FolderTableRow>({
 
   const expandedKeySet = useMemo(() => new Set(expandedRowKeys), [expandedRowKeys]);
 
+  const sortedItems = useMemo(
+    () =>
+      sortFolderTreeRows(
+        items,
+        columns,
+        sortDescriptor,
+        (row) => ({ row, rowId: row.id, depth: 0 }),
+        { isPinnedLast: (row) => row.entryType === 'loading' }
+      ),
+    [columns, items, sortDescriptor]
+  );
+
   const visibleRows = useMemo(
-    () => flattenFolderRows(items, expandedKeySet),
-    [items, expandedKeySet]
+    () => flattenFolderRows(sortedItems, expandedKeySet),
+    [sortedItems, expandedKeySet]
   );
   const visibleRowMap = useMemo(() => {
     const map = new Map<string, FolderTableVisibleRow & T>();
@@ -548,16 +564,26 @@ function FolderTable<T extends FolderTableRow>({
             aria-label={ariaLabel}
             className={styles.tableContent}
             data-eq-count={eqColumnCount}
+            sortDescriptor={sortDescriptor}
+            onSortChange={onSortChange}
           >
             <Table.Header>
               {columns.map((column) => (
                 <Table.Column
                   key={column.id}
                   id={column.id}
+                  allowsSorting={column.allowsSorting}
                   isRowHeader={column.isRowHeader ?? column.isNameColumn}
                   className={resolveColumnHeaderClass(column)}
                 >
-                  <TableCellAlign align={resolveHeaderAlign(column)}>{column.label}</TableCellAlign>
+                  <TableCellAlign align={resolveHeaderAlign(column)}>
+                    {renderSortableColumnLabel(
+                      column.label,
+                      column.id,
+                      sortDescriptor,
+                      column.allowsSorting
+                    )}
+                  </TableCellAlign>
                 </Table.Column>
               ))}
             </Table.Header>

@@ -1,10 +1,11 @@
 /* WisePen Table 共享 token
  * 链路：wisepen.css (--table-*) → 本文件 @table-* → 各 variant / cell less
+ * 圆角：--table-shell/control/overlay-radius 统一外框与行内控件；--table-inner-radius 用于 Chip / 小按钮 / 骨架屏
  */
 
 /* 行高 / 帧宽 */
 @table-row-height: var(--table-row-height, 60px);
-@table-header-row-height: var(--table-header-row-height, 42px);
+@table-header-row-height: var(--table-header-row-height, var(--table-row-height));
 @table-frame-width: var(--table-frame-width, 900px);
 
 @row-content-height: @table-row-height;
@@ -14,6 +15,9 @@
 @action-column-width: var(--table-action-column-width, 88px);
 @checkbox-column-width: var(--table-checkbox-column-width, 44px);
 @action-icon-size: var(--table-action-icon-size, 32px);
+@table-row-expand-icon-size: var(--table-row-expand-icon-size, 16px);
+@table-row-entry-icon-size: var(--table-row-entry-icon-size, 22px);
+@table-row-avatar-size: var(--table-row-avatar-size, 36px);
 @row-cell-padding-block: var(--table-cell-padding-block, 0);
 @row-cell-padding-inline: var(--table-cell-padding-inline, var(--space-sm));
 @header-cell-padding-inline: @row-cell-padding-inline;
@@ -26,6 +30,12 @@
 @table-shell-padding-block: var(--table-shell-padding-block, var(--space-sm));
 @table-shell-padding-inline: var(--table-shell-padding-inline, 14px);
 @table-toolbar-padding-block: var(--table-toolbar-padding-block, 10px);
+
+/* 圆角：wisepen.css --table-*-radius → 本文件 @table-*-radius → shell / 控件 / 浮层 */
+@table-shell-radius: var(--table-shell-radius, var(--radius-xl));
+@table-control-radius: var(--table-control-radius, @table-shell-radius);
+@table-overlay-radius: var(--table-overlay-radius, @table-shell-radius);
+@table-inner-radius: var(--table-inner-radius, var(--radius-lg));
 
 /* 排版 token */
 @table-font-family: var(--app-font-family);
@@ -97,11 +107,22 @@
   --radius-2xl: 0;
 }
 
-.tableColFixedWidth(@cssVarName) {
-  @width: ~'var(@{cssVarName})';
-  width: @width;
-  min-width: @width;
-  max-width: @width;
+.tableRootNoShadow() {
+  :global(.table__column:focus-visible),
+  :global(.table__column[data-focus-visible='true']),
+  :global(.table__cell:focus-visible),
+  :global(.table__cell[data-focus-visible='true']) {
+    box-shadow: none;
+    outline: none;
+  }
+
+  :global(.table__row:is(:focus-visible, [data-focus-visible='true']) :is(.table__cell, .table__column)),
+  :global(
+      .table__row:is(:focus-visible, [data-focus-visible='true']) > * :is(.table__cell, .table__column)
+    ) {
+    box-shadow: none;
+    outline: none;
+  }
 }
 
 .tableShellTypography() {
@@ -132,6 +153,51 @@
     font-size: inherit;
     line-height: inherit;
   }
+
+  /* 覆盖 HeroUI Button rounded-3xl，与 shell 外框圆角一致 */
+  :global(.button),
+  :global([data-slot='button']),
+  :global(.select__trigger) {
+    border-radius: @table-control-radius;
+  }
+}
+
+.tableShellBorder() {
+  border: 1px solid var(--border-light);
+}
+
+.tableShellRadius() {
+  border-radius: @table-shell-radius;
+}
+
+.tableShellStretch() {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tableRootStretch() {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  > :global(.table__scroll-container) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  > :not(:global(.table__scroll-container)) {
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+}
+
+.tableColFixedWidth(@cssVarName) {
+  @width: ~'var(@{cssVarName})';
+  width: @width;
+  min-width: @width;
+  max-width: @width;
 }
 
 /* 列宽 */
@@ -304,12 +370,12 @@
 }
 
 .selectPopover:global(.select__popover) {
-  border-radius: var(--radius-field, var(--field-radius, calc(var(--radius) * 1.5))) !important;
+  border-radius: @table-overlay-radius !important;
   overflow: clip;
 }
 
 .dropdownPopover:global(.dropdown__popover) {
-  border-radius: var(--radius-field, var(--field-radius, calc(var(--radius) * 1.5))) !important;
+  border-radius: @table-overlay-radius !important;
   overflow: clip;
 }
 

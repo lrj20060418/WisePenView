@@ -1,4 +1,5 @@
 import type { ResourceIconType } from '@/domains/Resource';
+import type { SortDescriptor } from '@heroui/react';
 import type { ReactNode } from 'react';
 import type { FolderColumnWidth } from '../shared/TableBase/columnWidth';
 import type { TableColumnBase, TableLoadMore } from '../shared/TableBase/index.type';
@@ -86,6 +87,8 @@ export interface FolderTableProps<T extends FolderTableRow> {
   loadingText?: string;
   skeletonRowCount?: number;
   className?: string;
+  sortDescriptor?: SortDescriptor;
+  onSortChange?: (descriptor: SortDescriptor) => void;
 }
 
 export type {

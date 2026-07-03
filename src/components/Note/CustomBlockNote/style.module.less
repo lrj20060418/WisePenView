@@ -13,6 +13,48 @@
     font-family: var(--app-font-family);
   }
 
+  /* 修改侧边栏把手居中对齐 */
+  :global(.bn-container .bn-side-menu) {
+    height: auto !important;
+    align-items: center;
+  }
+
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='1']) {
+    min-height: calc(26px * 1.8 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='2']) {
+    min-height: calc(22px * 1.4 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='3']) {
+    min-height: calc(20px * 1.4 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='4']) {
+    min-height: calc(18px * 1.4 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='5']),
+  :global(.bn-container .bn-side-menu[data-block-type='heading'][data-level='6']) {
+    min-height: calc(16px * 1.4 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='paragraph']){
+    min-height: calc(16px * 1.8 + 6px);
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='math']) {
+    min-height: 48px;
+  }
+  /* 其他块微调 */
+  :global(.bn-container .bn-side-menu[data-block-type='file']) {
+    min-height: 38px;
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='audio']) {
+    min-height: 60px;
+  }
+  :global(.bn-container .bn-side-menu[data-block-type='quote']) {
+    min-height: calc(20px * 1.4 + 6px);
+  }
+  :global(.bn-container .bn-side-menu) {
+    min-height: calc(16px * 1.4 + 6px);
+  }
+
   /* 贴近飞书文档的正文与标题字阶（仅作用正文编辑区） */
   :global(.bn-editor) {
     font-size: 16px;

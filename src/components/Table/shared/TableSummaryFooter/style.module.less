@@ -1,7 +1,8 @@
 @import '../styles/table.module.less';
 
 .footer {
-  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  padding: var(--table-footer-padding-block, var(--space-2xs)) var(--space-md);
+  min-height: var(--table-footer-row-height, var(--line-height-xs));
   border-top: 0;
   background: var(--surface);
 }
