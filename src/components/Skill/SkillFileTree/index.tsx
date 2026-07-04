@@ -1,4 +1,3 @@
-import IconText from '@/components/IconText';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import type { SkillFileNode } from '@/domains/Skill';
@@ -23,23 +22,18 @@ function buildTreeData(nodes: SkillFileNode[], opts: BuildTreeOptions): DataNode
       key: node.id,
       title: (
         <span className={styles.nodeRow}>
-          <IconText
-            className={styles.nodeTitle}
-            icon={
-              isFolder ? (
+          <span className={styles.nodeTitle}>
+            <span className={styles.nodeIcon} aria-hidden="true">
+              {isFolder ? (
                 <Folder size={14} color="var(--warning)" />
               ) : node.language === 'python' ? (
                 <FileCode2 size={14} color="var(--muted)" />
               ) : (
                 <FileText size={14} color="var(--muted)" />
-              )
-            }
-            iconSize={14}
-            gap="var(--space-xs)"
-            ellipsis
-          >
-            {node.name}
-          </IconText>
+              )}
+            </span>
+            <span className={styles.nodeLabel}>{node.name}</span>
+          </span>
           {opts.isOwner ? (
             <button
               type="button"

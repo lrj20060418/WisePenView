@@ -1,6 +1,5 @@
-import EntryIcon from '@/components/EntryIcon';
 import { Empty, ResultState, Spin } from '@/components/Feedback';
-import IconText from '@/components/IconText';
+import EntryIcon from '@/components/Icons/EntryIcon';
 import SkillEditor from '@/components/Skill/SkillEditor';
 import SkillFileTree from '@/components/Skill/SkillFileTree';
 import type { SkillPendingCreate } from '@/components/Skill/SkillFileTree/index.type';
@@ -192,13 +191,10 @@ function SkillToolbarTitle({ title, saveStatus }: SkillToolbarTitleProps) {
   const saveStatusText = formatSaveStatus(saveStatus);
 
   return (
-    <IconText
-      className={styles.toolbarTitleText}
-      icon={<EntryIcon entryType="resource" resourceIconType="skill" />}
-      iconSize={18}
-      gap="var(--space-sm)"
-      ellipsis
-    >
+    <span className={styles.toolbarTitleText}>
+      <span className={styles.toolbarTitleIcon} aria-hidden="true">
+        <EntryIcon entryType="resource" resourceIconType="skill" size={18} />
+      </span>
       <span className={styles.toolbarTitleContent}>
         <span className={styles.toolbarTitleName}>{title || '未命名 Skill'}</span>
         {saveStatusText ? (
@@ -211,7 +207,7 @@ function SkillToolbarTitle({ title, saveStatus }: SkillToolbarTitleProps) {
           </span>
         ) : null}
       </span>
-    </IconText>
+    </span>
   );
 }
 

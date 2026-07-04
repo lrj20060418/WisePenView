@@ -1,3 +1,4 @@
+import { apiPost } from '@/apis/request';
 import type {
   CreateSkillData,
   DeleteSkillAssetsData,
@@ -11,8 +12,7 @@ import type {
   RString,
   RVoid,
   UpdateSkillInfoData,
-} from '@/_autoGen/api/ai-asset/types.gen';
-import { apiPost } from '@/apis/request';
+} from './SkillApi.type';
 
 function createSkill(body: CreateSkillData['body']): Promise<RString['data']> {
   return apiPost('/skill/createSkill', body);

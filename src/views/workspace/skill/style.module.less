@@ -5,7 +5,18 @@
 .toolbarTitleText {
   max-width: min(40vw, 420px);
   min-width: 0;
+  display: inline-flex;
   align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.toolbarTitleIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
 }
 
 .toolbarTitleContent {
