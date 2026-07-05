@@ -12,6 +12,9 @@ export function createDefaultFolderColumns<T extends FolderTableRow = FolderTabl
       align: 'start',
       isRowHeader: true,
       isNameColumn: true,
+      allowsSorting: true,
+      sortFolderGroup: true,
+      getSortValue: (row) => row.name,
     },
     {
       id: 'size',
@@ -24,6 +27,8 @@ export function createDefaultFolderColumns<T extends FolderTableRow = FolderTabl
       id: 'type',
       label: t('column.type'),
       width: 'folderType',
+      allowsSorting: true,
+      getSortValue: (row) => row.typeLabel,
       renderCell: (row) => (row.entryType === 'loading' ? '' : row.typeLabel),
     },
     {

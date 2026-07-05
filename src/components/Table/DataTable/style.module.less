@@ -2,11 +2,12 @@
 
 .shell {
   .tableShellTypography();
+  .tableShellBorder();
+  .tableShellStretch();
   width: 100%;
   overflow: hidden;
-  border-radius: var(--radius-xl, calc(var(--radius) * 1.5));
+  .tableShellRadius();
   background: var(--surface);
-  box-shadow: var(--card-shadow);
 }
 
 .headerBar {
@@ -61,6 +62,8 @@
   width: 100%;
   background: var(--surface);
   .tableRootFlatHeader();
+  .tableRootNoShadow();
+  .tableRootStretch();
 
   :global(.table__scroll-container) {
     width: 100%;
@@ -75,16 +78,7 @@
     content: none !important;
   }
 
-  :global(.table__row:focus-visible > .table__cell),
-  :global(.table__row[data-focus-visible='true'] > .table__cell) {
-    box-shadow: none !important;
-    outline: none;
-  }
-
   :global(.table__header) {
-    position: sticky;
-    top: 0;
-    z-index: 2;
     border-bottom: 0;
     background: transparent;
   }
@@ -151,7 +145,7 @@
 
 .scrollContainer {
   width: 100%;
-  overflow: auto;
+  .tableSplitBodyScroll();
 }
 
 .generateReadonlyEqColumnCounts(@max, @i: 1) when (@i =< @max) {

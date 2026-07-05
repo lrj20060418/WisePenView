@@ -1,5 +1,5 @@
 import type { GroupMember } from '@/domains/Group';
-import type { Selection } from '@heroui/react';
+import type { Selection, SortDescriptor } from '@heroui/react';
 import type { ReactNode } from 'react';
 import type { GroupDisplayConfig } from '../../GroupDisplayConfig';
 
@@ -41,4 +41,7 @@ export interface MemberListTableProps {
   onDismissInlineError?: () => void;
   onDeleteMember: (member: GroupMember) => void;
   toolbar?: ReactNode;
+  batchEditMode?: boolean;
+  sortDescriptor?: SortDescriptor;
+  onSortChange?: (descriptor: SortDescriptor) => void;
 }

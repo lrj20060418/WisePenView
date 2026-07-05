@@ -4,10 +4,13 @@ import {
   shouldStretchTableCellContent,
 } from '../shared/TableBase/cellAlign';
 import { resolveManageColumnWidthClass } from '../shared/TableBase/columnWidth';
+import { resolveSelectedCount } from '../shared/TableBase/tableSelection';
+import { sortTableRows } from '../shared/TableBase/tableSort';
 import TableBodyState from '../shared/TableBodyState';
 import TablePaginationFooter from '../shared/TablePaginationFooter';
 import TableRowActions from '../shared/TableRowActions';
 import type { TableRowActionItem } from '../shared/TableRowActions/index.type';
+import { renderSortableColumnLabel } from '../shared/TableSortHeader/renderSortableColumnLabel';
 import TableCellAlign from '../shared/cells/CellAlign';
 import { tableCellStyles, tableStyles } from '../shared/styles';
 import type {
@@ -26,16 +29,6 @@ import { Button, Spinner, Table, type Selection } from '@heroui/react';
 import { Check, X } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-function resolveSelectedCount(keys: Selection | undefined, total: number): number {
-  if (!keys) {
-    return 0;
-  }
-  if (keys === 'all') {
-    return total;
-  }
-  return keys.size;
-}
 
 function evaluateRowPredicate<T>(
   predicate: boolean | ((row: T) => boolean) | undefined,
@@ -206,6 +199,29 @@ function ManageTable<T extends object>({
   const showBatchFooter = Boolean(batchSelection && batchFooter);
   const selectedCount = resolveSelectedCount(batchSelection?.selectedKeys, items.length);
 
+  const sortedItems = useMemo(
+    () =>
+      sortTableRows(items, columns, sortDescriptor, (row) => {
+        const rowId = String(row[rowKey]);
+        return { row, rowId, state: resolveRowState(rowId, inlineEdit) };
+      }),
+    [columns, inlineEdit, items, rowKey, sortDescriptor]
+  );
+
+  const handleBatchSelectionChange = useCallback(
+    (keys: Selection) => {
+      if (!batchSelection) {
+        return;
+      }
+      if (keys === 'all') {
+        batchSelection.onSelectionChange('all');
+        return;
+      }
+      batchSelection.onSelectionChange(keys);
+    },
+    [batchSelection]
+  );
+
   return (
     <div className={joinClassNames(styles.shell, className)}>
       {showEditErrorToast ? (
@@ -240,11 +256,7 @@ function ManageTable<T extends object>({
             data-has-selection={batchSelection ? 'true' : undefined}
             selectionMode={batchSelection ? 'multiple' : undefined}
             selectedKeys={batchSelection?.selectedKeys}
-            onSelectionChange={
-              batchSelection
-                ? (keys: Selection) => batchSelection.onSelectionChange(keys)
-                : undefined
-            }
+            onSelectionChange={batchSelection ? handleBatchSelectionChange : undefined}
             disabledKeys={disabledKeys}
             sortDescriptor={sortDescriptor}
             onSortChange={onSortChange}
@@ -284,7 +296,14 @@ function ManageTable<T extends object>({
                       column.className
                     )}
                   >
-                    <TableCellAlign align={columnAlign}>{column.label}</TableCellAlign>
+                    <TableCellAlign align={columnAlign}>
+                      {renderSortableColumnLabel(
+                        column.label,
+                        column.id,
+                        sortDescriptor,
+                        column.allowsSorting
+                      )}
+                    </TableCellAlign>
                   </Table.Column>
                 );
               })}
@@ -315,7 +334,7 @@ function ManageTable<T extends object>({
                 )
               }
             >
-              {items.map((row) => {
+              {sortedItems.map((row) => {
                 const rowId = String(row[rowKey]);
                 const state = resolveRowState(rowId, inlineEdit);
                 const ctx: ManageTableRowContext<T> = { row, rowId, state };

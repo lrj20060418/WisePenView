@@ -1,3 +1,4 @@
+import type { SortDescriptor } from '@heroui/react';
 import type { ReactNode } from 'react';
 import type {
   TableColumnBase,
@@ -50,6 +51,8 @@ export interface DataTableProps<T extends object> {
   pagination?: DataTablePagination;
   summary?: ReactNode;
   getRowClassName?: (row: T, ctx: DataTableRowContext<T>) => string | undefined;
+  sortDescriptor?: SortDescriptor;
+  onSortChange?: (descriptor: SortDescriptor) => void;
 }
 
 export type { DataTableTab, DataTableTabsProps } from './parts/UnderlineTabs/index.type';

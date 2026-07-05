@@ -598,13 +598,15 @@
     --radius-md: var(--radius);
     --radius-lg: 8px;
     --radius-field: var(--field-radius);
-    --table-row-height: 60px;
+    --table-row-height: 52px;
     --row-height-comfortable: var(--table-row-height);
     --row-height-compact: var(--table-row-height);
     --radius-xl: 12px;
 
     /* Table 布局 / 列宽（Less @table-* 经 table.module.less 引用） */
-    --table-header-row-height: 42px;
+    --table-header-row-height: var(--table-row-height);
+    --table-footer-row-height: var(--line-height-xs);
+    --table-footer-padding-block: var(--space-2xs);
     --table-frame-width: 900px;
     --table-toolbar-height: 57px;
     --table-cell-padding-inline: var(--space-sm);
@@ -621,6 +623,9 @@
     --table-action-column-width: 88px;
     --table-checkbox-column-width: 44px;
     --table-action-icon-size: 32px;
+    --table-row-expand-icon-size: 16px;
+    --table-row-entry-icon-size: 22px;
+    --table-row-avatar-size: 36px;
     --table-col-fill-min-width: 180px;
     --table-col-sm: 90px;
     --table-col-md: 110px;
@@ -635,6 +640,13 @@
     --table-chip-min-height: 28px;
     --table-chip-padding-block: 4px;
     --table-chip-padding-inline: 14px;
+    /* Table 圆角：shell / 行内按钮 / 下拉层统一；小控件（展开钮、Chip）用 inner */
+    --table-shell-radius: var(--radius-xl);
+    --table-control-radius: var(--table-shell-radius);
+    --table-overlay-radius: var(--table-shell-radius);
+    --table-inner-radius: var(--radius-lg);
+    --table-drive-detail-panel-width: 280px;
+    --table-drive-detail-layout-max-height: calc(100dvh - 240px);
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
     --shadow-md: var(--card-shadow);
     --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);

@@ -14,7 +14,6 @@ function FolderTableNameCell<T extends FolderTableRow>({
   onToggleExpand,
 }: FolderTableNameCellProps<T>) {
   const { t } = useTranslation('table');
-  const iconSize = row.entryType === 'folder' ? 16 : 16;
 
   return (
     <div className={styles.nameCell} data-depth={depth}>
@@ -29,17 +28,18 @@ function FolderTableNameCell<T extends FolderTableRow>({
             onToggleExpand?.();
           }}
         >
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {expanded ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
         </button>
       ) : (
         <span className={styles.expandPlaceholder} aria-hidden />
       )}
-      <EntryIcon
-        entryType={row.entryType}
-        resourceType={row.resourceType}
-        resourceIconType={row.resourceIconType}
-        size={iconSize}
-      />
+      <span className={styles.entryIcon}>
+        <EntryIcon
+          entryType={row.entryType}
+          resourceType={row.resourceType}
+          resourceIconType={row.resourceIconType}
+        />
+      </span>
       <TableTextCell emphasis className={styles.nameText}>
         {row.name}
       </TableTextCell>

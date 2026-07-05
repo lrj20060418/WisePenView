@@ -18,6 +18,10 @@ export interface TableColumnBase<T extends object, TContext = unknown> {
   /** 列对齐默认 center */
   align?: 'start' | 'center' | 'end';
   allowsSorting?: boolean;
+  /** 客户端排序取值 */
+  getSortValue?: (row: T, ctx: TContext) => string | number | null | undefined;
+  /** 名称 / 日期类排序：文件夹与文件分组 */
+  sortFolderGroup?: boolean;
   isRowHeader?: boolean;
   className?: string;
   renderCell: (row: T, ctx: TContext) => ReactNode;

@@ -28,16 +28,32 @@
   height: 20px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: @table-inner-radius;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+
+  :global(svg) {
+    width: @table-row-expand-icon-size;
+    height: @table-row-expand-icon-size;
+  }
 
   @media (hover: hover) {
     &:hover {
       background: var(--surface-tertiary);
       color: var(--foreground);
     }
+  }
+}
+
+.entryIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+
+  :global(svg) {
+    width: @table-row-entry-icon-size;
+    height: @table-row-entry-icon-size;
   }
 }
 
