@@ -26,10 +26,11 @@ ComponentName/
 
 ## 三、Modal 约定
 
-新增业务弹窗按语义选择封装：只需要用户在“继续/取消”之间做明确决策的 yes/no 弹窗使用 `src/components/AppAlertDialog`，主体可以包含补充说明或只读列表；带输入、选择、上传、编辑或延迟内容的任务型弹窗使用 `src/components/AppModal`。`AppModal` 负责统一 header/body/footer 间距、confirm/danger/warning 语义、危险操作提示 banner 和 `DeferredContent` 延迟渲染能力；业务代码不要直接使用裸 `@/components/Overlay` Modal、`@heroui/react` Modal 或 `@heroui/react` AlertDialog，除非弹窗是高度定制的 command palette、无标准 header/footer 的轻浮层，且在代码旁说明原因。
+新增业务弹窗按语义选择封装：只需要用户在“继续/取消”之间做明确决策的 yes/no 弹窗使用 `src/components/AppAlertDialog`，主体可以包含补充说明或只读列表；只有 `Input` 或 `InputOTP` 的输入型弹窗使用 `src/components/AppFormDialog`，结构遵循 HeroUI 的 Modal with form 写法，由 `Modal.Dialog` 内的 `Form` 统一处理提交；带选择、上传、勾选、文本域、复杂编辑或延迟内容的任务型弹窗使用 `src/components/AppModal`。`AppModal` 负责统一 header/body/footer 间距、confirm/danger/warning 语义、危险操作提示 banner 和 `DeferredContent` 延迟渲染能力；业务代码不要直接使用裸 `@/components/Overlay` Modal、`@heroui/react` Modal 或 `@heroui/react` AlertDialog，除非弹窗是高度定制的 command palette、无标准 header/footer 的轻浮层，且在代码旁说明原因。
 
 - 受控属性使用 `isOpen` 和 `onOpenChange`。
 - 关闭弹窗调用 `onOpenChange(false)`。
+- 纯输入弹窗使用 `AppFormDialog`，提交逻辑放在 `onSubmit`，确认按钮由组件渲染为 `type="submit"`。
 - 标准任务型确认弹窗使用 `type="confirm"`，危险任务型弹窗使用 `type="danger"`。
 - yes/no 决策弹窗使用 `AppAlertDialog`，普通确认使用 `type="confirm"`，危险操作使用 `type="danger"`。
 - 业务弹窗不要自行给 modal header/footer 添加 divider、`border-top` 或 `border-bottom`。

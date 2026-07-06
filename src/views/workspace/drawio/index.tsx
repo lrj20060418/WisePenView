@@ -1,3 +1,4 @@
+import AppFormDialog from '@/components/AppFormDialog';
 import AppModal from '@/components/AppModal';
 import { ResultState, Spin } from '@/components/Feedback';
 import { useNoteService, useResourceService, useUserService } from '@/domains';
@@ -255,31 +256,21 @@ function CopyModal({
   onConfirm: () => void;
 }) {
   return (
-    <AppModal
-      type="confirm"
+    <AppFormDialog
       isOpen={open}
       onOpenChange={(visible) => !visible && onClose()}
       title="复制 Draw.io 图"
       confirmText="复制"
       onCancel={onClose}
-      onConfirm={onConfirm}
-      isConfirmLoading={loading}
-      isConfirmDisabled={loading || !name.trim()}
+      onSubmit={onConfirm}
+      isSubmitting={loading}
+      isSubmitDisabled={loading || !name.trim()}
       isDismissable={!loading}
     >
       <TextField aria-label="复制后的名称" value={name} onChange={onNameChange}>
-        <Input
-          placeholder="请输入名称"
-          autoFocus
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              onConfirm();
-            }
-          }}
-        />
+        <Input placeholder="请输入名称" autoFocus />
       </TextField>
-    </AppModal>
+    </AppFormDialog>
   );
 }
 
