@@ -35,6 +35,7 @@ export { groupSearchHits } from './service/groupSearchHits';
 export type { SearchHitGroup } from './service/groupSearchHits';
 export type {
   GetGroupResourceRequest,
+  GetResourcePermissionConfigRequest,
   GetUserResourcesRequest,
   IResourceService,
   InteractRateRequest,
@@ -43,10 +44,18 @@ export type {
   RemoveResourcesRequest,
   RenameResourceRequest,
   ResourceListPage,
+  ResourcePermissionActionOption,
+  ResourcePermissionConfig,
+  ResourcePermissionOverview,
+  ResourcePermissionResourceType,
+  ResourcePermissionSource,
+  ResourcePermissionSubject,
+  ResourcePermissionSubjectKind,
   SearchHitItem,
   SearchQueryRequest,
   SearchResultPage,
   UpdateResourceActionPermissionRequest,
+  UpdateResourcePermissionSubjectsRequest,
   UpdateResourceTagsRequest,
 } from './service/index.type';
 export { resolveResourceIconType } from './utils/resolveResourceIconType';

@@ -1,17 +1,22 @@
 import type {
   GetGroupResourceRequest,
+  GetResourcePermissionConfigRequest,
   GetUserResourcesRequest,
   InteractRateRequest,
   InteractToggleLikeRequest,
   IResourceService,
   RemoveResourcesRequest,
   RenameResourceRequest,
+  ResourceAction,
   ResourceItem,
   ResourceListPage,
+  ResourcePermissionConfig,
+  ResourcePermissionOverview,
   SearchQueryRequest,
   SearchResultPage,
+  UpdateResourcePermissionSubjectsRequest,
 } from '@/domains/Resource';
-import { resolveResourceIconType } from '@/domains/Resource';
+import { resolveResourceIconType, RESOURCE_ACTION } from '@/domains/Resource';
 import {
   useNewNoteStore,
   useNoteSelectionStore,
@@ -22,6 +27,42 @@ import mockdata from './mockdata.json';
 import { simulateGlobalSearch } from './searchMockData';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const NOTE_LIKE_RESOURCE_TYPES = new Set(['note', 'drawio']);
+const AI_ASSET_RESOURCE_TYPES = new Set(['skill', 'agent']);
+const RESOURCE_PERMISSION_ACTION_ORDER = RESOURCE_ACTION.options.map(
+  (item) => item.value as ResourceAction
+);
+
+const getSupportedPermissionActions = (resourceType?: string): ResourceAction[] => {
+  const normalizedType = resourceType?.trim().toLowerCase();
+  const unsupportedActions = new Set<ResourceAction>();
+
+  if (NOTE_LIKE_RESOURCE_TYPES.has(normalizedType ?? '')) {
+    unsupportedActions.add(RESOURCE_ACTION.LOAD);
+    unsupportedActions.add(RESOURCE_ACTION.DOWNLOAD_WATERMARK);
+    unsupportedActions.add(RESOURCE_ACTION.DOWNLOAD_ORIGINAL);
+  }
+
+  if (normalizedType === 'drawio') {
+    unsupportedActions.add(RESOURCE_ACTION.COMMENT);
+    unsupportedActions.add(RESOURCE_ACTION.INLINE_COMMENT);
+  }
+
+  if (!AI_ASSET_RESOURCE_TYPES.has(normalizedType ?? '')) {
+    unsupportedActions.add(RESOURCE_ACTION.LOAD);
+  }
+
+  return RESOURCE_PERMISSION_ACTION_ORDER.filter((action) => !unsupportedActions.has(action));
+};
+
+const filterSupportedActions = (
+  actions: ResourceAction[],
+  supportedActions: ResourceAction[]
+): ResourceAction[] => {
+  const supportedActionSet = new Set(supportedActions);
+  return actions.filter((action) => supportedActionSet.has(action));
+};
+
 const toResourceItem = (
   item: Omit<ResourceItem, 'ownerInfo'> & { ownerInfo?: ResourceItem['ownerInfo'] }
 ): ResourceItem => ({
@@ -201,6 +242,114 @@ const updateResourceActionPermission = async (): Promise<void> => {
   await delay(100);
 };
 
+const updateResourcePermissionSubjects = async (
+  _params: UpdateResourcePermissionSubjectsRequest
+): Promise<void> => {
+  await delay(100);
+};
+
+const getResourcePermissionConfig = async (
+  params: GetResourcePermissionConfigRequest
+): Promise<ResourcePermissionConfig> => {
+  await delay(100);
+  const resource = [...fullMockPersonalResourceList, ...fullMockGroupResourceList].find(
+    (item) => item.resourceId === params.resourceId
+  );
+  return {
+    resourceId: params.resourceId,
+    overrideGrantedActions: resource?.overrideGrantedActions ?? null,
+    specifiedUsersGrantedActions: resource?.specifiedUsersGrantedActions ?? null,
+  };
+};
+
+const getResourcePermissionOverview = async (
+  params: GetResourcePermissionConfigRequest
+): Promise<ResourcePermissionOverview> => {
+  await delay(100);
+  const resource = [...fullMockPersonalResourceList, ...fullMockGroupResourceList].find(
+    (item) => item.resourceId === params.resourceId
+  );
+  const resourceId = params.resourceId;
+  const resourceType = params.resourceType;
+  const supportedActions = getSupportedPermissionActions(resourceType);
+  const tagActions = filterSupportedActions(
+    [RESOURCE_ACTION.DISCOVER, RESOURCE_ACTION.VIEW, RESOURCE_ACTION.EDIT],
+    supportedActions
+  );
+  const overrideActions = filterSupportedActions(
+    [RESOURCE_ACTION.DISCOVER, RESOURCE_ACTION.VIEW],
+    supportedActions
+  );
+  const specifiedUserActions = filterSupportedActions(
+    [
+      RESOURCE_ACTION.DISCOVER,
+      RESOURCE_ACTION.VIEW,
+      RESOURCE_ACTION.EDIT,
+      RESOURCE_ACTION.DOWNLOAD_WATERMARK,
+      RESOURCE_ACTION.DOWNLOAD_ORIGINAL,
+      RESOURCE_ACTION.FORK,
+    ],
+    supportedActions
+  );
+  return {
+    resourceId,
+    resourceType,
+    owner: {
+      id: 'owner:1',
+      kind: 'owner' as const,
+      source: 'owner' as const,
+      name: '李若瑾',
+      description: '所有者',
+      userId: '1',
+      effectiveActions: supportedActions,
+      editableActions: supportedActions,
+      readonly: true,
+    },
+    subjects: [
+      {
+        id: 'group:wise-pen-dev:tag',
+        kind: 'group' as const,
+        source: 'tag' as const,
+        name: 'WisePen 研发文档库可编辑成员',
+        description: '继承自资源所在标签的权限',
+        groupId: 'wise-pen-dev',
+        primaryTagId: 'tag-work',
+        effectiveActions: tagActions,
+        editableActions: tagActions,
+        inheritedActions: tagActions,
+      },
+      {
+        id: 'group:agentic-sig:override',
+        kind: 'group' as const,
+        source: 'resourceOverride' as const,
+        name: 'Agentic SIG 成员',
+        description: '已覆盖标签策略，仅对此资源生效',
+        groupId: 'agentic-sig',
+        primaryTagId: 'tag-work',
+        effectiveActions: overrideActions,
+        editableActions: overrideActions,
+      },
+      {
+        id: 'user:10086:specified',
+        kind: 'user' as const,
+        source: 'specifiedUser' as const,
+        name: '小明',
+        description: '由您邀请而获得的权限',
+        userId: '10086',
+        effectiveActions: specifiedUserActions,
+        editableActions: specifiedUserActions,
+      },
+    ],
+    supportedActions,
+    actionOptions: supportedActions.map((action) => ({
+      action,
+      key: RESOURCE_ACTION.getKey(action) ?? String(action),
+      label: RESOURCE_ACTION.labels[action] ?? String(action),
+      supported: true,
+    })),
+  };
+};
+
 const getLikeStatus = async (_resourceId: string): Promise<{ liked: boolean }> => {
   await delay(50);
   return { liked: false };
@@ -233,6 +382,9 @@ export const ResourceServicesMock: IResourceService = {
   updateResourceTags,
   mountResourcesToGroupTag,
   updateResourceActionPermission,
+  updateResourcePermissionSubjects,
+  getResourcePermissionConfig,
+  getResourcePermissionOverview,
   getLikeStatus,
   getRate,
   interactToggleLike,

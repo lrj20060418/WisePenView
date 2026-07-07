@@ -1,18 +1,25 @@
 import type { ResourceItem, ResourceTagBind } from '@/domains/Resource';
+import type { UserDisplayBase } from '@/domains/User';
 import { normalizeUserDisplayBaseFromApi } from '@/domains/User/mapper/userEnum.mapper';
+import { normalizeId } from '@/utils/normalize/normalizeId';
 import type { GetUserInteractionRecordApiResponse } from '../apis/InteractApi.type';
 import type {
   ChangeResourceActionPermissionApiRequest,
   GlobalSearchApiResponse,
   ListResourceItemsApiRequest,
   ResourceActionApiList,
+  ResourceGroupDisplayBaseApiResponse,
+  ResourceGroupGrantedActionsApiResponse,
   ResourceInteractionInfoApiResponse,
   ResourceItemApiResponse,
   ResourceListPageApiResponse,
+  ResourceSpecifiedUserGrantedActionsApiResponse,
 } from '../apis/ResourceApi.type';
 import {
   coerceResourceActions,
+  normalizeResourceActions,
   normalizeSearchResourceType,
+  RESOURCE_ACTION,
   resourceActionsToApiKeys,
   TAG_QUERY_LOGIC_MODE,
   type ResourceAction,
@@ -21,29 +28,52 @@ import {
 import type {
   GetUserResourcesRequest,
   ResourceListPage,
+  ResourcePermissionActionOption,
+  ResourcePermissionConfig,
+  ResourcePermissionOverview,
+  ResourcePermissionSubject,
   SearchHitItem,
   SearchResultPage,
   UpdateResourceActionPermissionRequest,
+  UpdateResourcePermissionSubjectsRequest,
 } from '../service/index.type';
 import { resolveResourceIconType } from '../utils/resolveResourceIconType';
 
 const PERSONAL_GROUP_PREFIX = 'p_';
+const NOTE_LIKE_RESOURCE_TYPES = new Set(['note', 'drawio']);
+const AI_ASSET_RESOURCE_TYPES = new Set(['skill', 'agent']);
+const RESOURCE_PERMISSION_ACTION_ORDER = RESOURCE_ACTION.options.map(
+  (item) => item.value as ResourceAction
+);
+const isPersonalGroupId = (groupId?: string): boolean =>
+  groupId?.startsWith(PERSONAL_GROUP_PREFIX) ?? false;
 
 type ResourceItemNumericField = 'size' | 'readCount' | 'likeCount' | 'scoreAvg';
 type ResourceItemApiOwnerInfo = ResourceItemApiResponse['ownerInfo'];
 type ResourceItemRawOwnerInfo = ResourceItem['ownerInfo'] | ResourceItemApiOwnerInfo;
 type ResourceItemRawTagBinds = ResourceItem['tagBinds'] | ResourceItemApiResponse['tagBinds'];
 type ResourceActionsBySubject = Record<string, unknown[] | null | undefined>;
+type LegacyResourceActionsBySubject = Record<
+  string,
+  ResourceAction[] | ResourceActionApiList | null | undefined
+>;
 type ResourceItemRawActionFields = {
   currentActions?: ResourceAction[] | ResourceActionApiList | null;
-  overrideGrantedActions?: Record<
-    string,
-    ResourceAction[] | ResourceActionApiList | null | undefined
-  > | null;
-  specifiedUsersGrantedActions?: Record<
-    string,
-    ResourceAction[] | ResourceActionApiList | null | undefined
-  > | null;
+  overrideGrantedActions?:
+    ResourceGroupGrantedActionsApiResponse[] | LegacyResourceActionsBySubject | null;
+  specifiedUsersGrantedActions?:
+    ResourceSpecifiedUserGrantedActionsApiResponse[] | LegacyResourceActionsBySubject | null;
+};
+type ResourcePermissionActionField =
+  | ResourceGroupGrantedActionsApiResponse[]
+  | ResourceSpecifiedUserGrantedActionsApiResponse[]
+  | ResourceActionsBySubject
+  | null
+  | undefined;
+type NormalizedResourceActionFields = {
+  currentActions?: ResourceAction[] | null;
+  overrideGrantedActions?: Record<string, ResourceAction[]> | null;
+  specifiedUsersGrantedActions?: Record<string, ResourceAction[]> | null;
 };
 
 type NormalizableResourceItem = Omit<
@@ -55,7 +85,15 @@ type NormalizableResourceItem = Omit<
   | 'overrideGrantedActions'
   | 'specifiedUsersGrantedActions'
 > &
-  Omit<Partial<ResourceItemApiResponse>, ResourceItemNumericField | 'ownerInfo' | 'tagBinds'> & {
+  Omit<
+    Partial<ResourceItemApiResponse>,
+    | ResourceItemNumericField
+    | 'ownerInfo'
+    | 'tagBinds'
+    | 'currentActions'
+    | 'overrideGrantedActions'
+    | 'specifiedUsersGrantedActions'
+  > & {
     size?: number;
     readCount?: number | null;
     likeCount?: number | null;
@@ -67,9 +105,10 @@ type NormalizableResourceItem = Omit<
 
 type NormalizedResourceItem<T extends NormalizableResourceItem> = Omit<
   T,
-  ResourceItemNumericField
+  ResourceItemNumericField | keyof ResourceItemRawActionFields
 > &
-  Partial<Pick<ResourceItem, ResourceItemNumericField>>;
+  Partial<Pick<ResourceItem, ResourceItemNumericField>> &
+  NormalizedResourceActionFields;
 
 interface MapResourceItemContext {
   groupId?: string;
@@ -86,8 +125,14 @@ export function normalizeResourceItem(
   raw: NormalizableResourceItem | null | undefined
 ): NormalizedResourceItem<NormalizableResourceItem> | null | undefined {
   if (raw == null) return raw;
+  const {
+    currentActions: rawCurrentActions,
+    overrideGrantedActions: rawOverrideGrantedActions,
+    specifiedUsersGrantedActions: rawSpecifiedUsersGrantedActions,
+    ...rawRest
+  } = raw;
   const next: NormalizedResourceItem<NormalizableResourceItem> = {
-    ...raw,
+    ...rawRest,
     size: raw.size,
     readCount: raw.readCount,
     likeCount: raw.likeCount,
@@ -104,13 +149,9 @@ export function normalizeResourceItem(
     next.scoreAvg = scoreCount > 0 ? scoreTotal / scoreCount : null;
   }
 
-  next.currentActions = coerceResourceActions(raw.currentActions as unknown[] | null | undefined);
-  next.overrideGrantedActions = normalizeResourceActionMap(
-    raw.overrideGrantedActions as ResourceActionsBySubject | null | undefined
-  );
-  next.specifiedUsersGrantedActions = normalizeResourceActionMap(
-    raw.specifiedUsersGrantedActions as ResourceActionsBySubject | null | undefined
-  );
+  next.currentActions = coerceResourceActions(rawCurrentActions as unknown[] | null | undefined);
+  next.overrideGrantedActions = normalizeResourceActionMap(rawOverrideGrantedActions);
+  next.specifiedUsersGrantedActions = normalizeResourceActionMap(rawSpecifiedUsersGrantedActions);
 
   return next;
 }
@@ -159,7 +200,7 @@ const resolveCurrentTagBind = (
   if (context.groupId) {
     return binds.find((bind) => bind.groupId === context.groupId) ?? binds[0];
   }
-  return binds.find((bind) => bind.groupId?.startsWith(PERSONAL_GROUP_PREFIX)) ?? binds[0];
+  return binds.find((bind) => isPersonalGroupId(bind.groupId)) ?? binds[0];
 };
 
 const mapTagsToCurrentTags = (
@@ -171,18 +212,68 @@ const mapTagsToCurrentTags = (
   );
 };
 
-const isResourceItemApiOwnerInfo = (
-  ownerInfo: ResourceItemRawOwnerInfo
-): ownerInfo is ResourceItemApiOwnerInfo => typeof ownerInfo.identityType !== 'number';
-
 const normalizeOwnerInfo = (
   ownerInfo: ResourceItemRawOwnerInfo | undefined
 ): ResourceItem['ownerInfo'] | undefined => {
   if (ownerInfo == null) return undefined;
-  if (isResourceItemApiOwnerInfo(ownerInfo)) {
-    return normalizeUserDisplayBaseFromApi(ownerInfo);
-  }
-  return ownerInfo;
+  return normalizeUserDisplayBaseFromApi(ownerInfo as ResourceItemApiOwnerInfo);
+};
+
+const resolveUserDisplayName = (
+  userInfo: UserDisplayBase | undefined,
+  fallbackId: string
+): string =>
+  userInfo?.realName?.trim() ||
+  userInfo?.nickname?.trim() ||
+  (fallbackId ? `用户 ${fallbackId}` : '用户');
+
+const resolveGroupDisplayName = (
+  groupInfo: ResourceGroupDisplayBaseApiResponse | undefined,
+  fallbackId: string
+): string => groupInfo?.groupName?.trim() || (fallbackId ? `小组 ${fallbackId}` : '小组');
+
+const isGrantedActionListItem = (
+  value: unknown
+): value is
+  ResourceGroupGrantedActionsApiResponse | ResourceSpecifiedUserGrantedActionsApiResponse =>
+  value != null && typeof value === 'object' && 'grantedActions' in value;
+
+const getGrantedActionSubjectId = (
+  item: ResourceGroupGrantedActionsApiResponse | ResourceSpecifiedUserGrantedActionsApiResponse
+): string => {
+  if ('groupId' in item) return normalizeId(item.groupId);
+  return normalizeId(item.userId);
+};
+
+const mapOverrideGroupInfoByIdFromApi = (
+  value: NormalizableResourceItem['overrideGrantedActions']
+): Record<string, ResourceGroupDisplayBaseApiResponse> => {
+  if (!Array.isArray(value)) return {};
+  return Object.fromEntries(
+    value
+      .map((item) => {
+        const groupId = normalizeId(item.groupId);
+        return groupId && item.groupInfo ? ([groupId, item.groupInfo] as const) : null;
+      })
+      .filter((entry): entry is readonly [string, ResourceGroupDisplayBaseApiResponse] =>
+        Boolean(entry)
+      )
+  );
+};
+
+const mapSpecifiedUserInfoByIdFromApi = (
+  value: NormalizableResourceItem['specifiedUsersGrantedActions']
+): Record<string, UserDisplayBase> => {
+  if (!Array.isArray(value)) return {};
+  return Object.fromEntries(
+    value
+      .map((item) => {
+        const userId = normalizeId(item.userId);
+        const userInfo = normalizeUserDisplayBaseFromApi(item.userInfo);
+        return userId && userInfo ? ([userId, userInfo] as const) : null;
+      })
+      .filter((entry): entry is readonly [string, UserDisplayBase] => Boolean(entry))
+  );
 };
 
 /** 单条资源：Java Long 字符串、标签派生字段 */
@@ -275,12 +366,238 @@ const mapChangeResourceActionPermissionRequest = (
   };
 };
 
+const mapChangeResourceActionPermissionRequestFromSubjects = (
+  params: UpdateResourcePermissionSubjectsRequest
+): ChangeResourceActionPermissionApiRequest => {
+  const overrideGrantedActions: Record<string, ResourceAction[] | null> = {};
+  const specifiedUsersGrantedActions: Record<string, ResourceAction[]> = {};
+
+  for (const subject of params.subjects) {
+    if (isPersonalGroupId(subject.groupId)) continue;
+    if (subject.source === 'tag' && subject.groupId) {
+      overrideGrantedActions[subject.groupId] = null;
+      continue;
+    }
+    if (subject.readonly) continue;
+    if (subject.source === 'resourceOverride' && subject.groupId) {
+      overrideGrantedActions[subject.groupId] = normalizeResourceActions(subject.editableActions);
+    }
+    if (subject.source === 'specifiedUser' && subject.userId) {
+      specifiedUsersGrantedActions[subject.userId] = normalizeResourceActions(
+        subject.editableActions
+      );
+    }
+  }
+
+  return mapChangeResourceActionPermissionRequest({
+    resourceId: params.resourceId,
+    overrideGrantedActions:
+      Object.keys(overrideGrantedActions).length > 0 ? overrideGrantedActions : undefined,
+    specifiedUsersGrantedActions:
+      Object.keys(specifiedUsersGrantedActions).length > 0 ? specifiedUsersGrantedActions : null,
+  });
+};
+
+const mapResourcePermissionConfigFromResourceItem = (
+  raw: NormalizableResourceItem,
+  fallbackResourceId: string
+): ResourcePermissionConfig => {
+  const resourceInfo = normalizeResourceItem(raw);
+  return {
+    resourceId: resourceInfo.resourceId || fallbackResourceId,
+    overrideGrantedActions: normalizeResourceActionMap(
+      resourceInfo.overrideGrantedActions as ResourceActionsBySubject | null | undefined
+    ),
+    specifiedUsersGrantedActions: normalizeResourceActionMap(
+      resourceInfo.specifiedUsersGrantedActions as ResourceActionsBySubject | null | undefined
+    ),
+  };
+};
+
+const getSupportedPermissionActions = (resourceType?: string): ResourceAction[] => {
+  const normalizedType = resourceType?.trim().toLowerCase();
+  const unsupportedActions = new Set<ResourceAction>();
+
+  if (NOTE_LIKE_RESOURCE_TYPES.has(normalizedType ?? '')) {
+    unsupportedActions.add(RESOURCE_ACTION.LOAD);
+    unsupportedActions.add(RESOURCE_ACTION.DOWNLOAD_WATERMARK);
+    unsupportedActions.add(RESOURCE_ACTION.DOWNLOAD_ORIGINAL);
+  }
+
+  if (normalizedType === 'drawio') {
+    unsupportedActions.add(RESOURCE_ACTION.COMMENT);
+    unsupportedActions.add(RESOURCE_ACTION.INLINE_COMMENT);
+  }
+
+  if (!AI_ASSET_RESOURCE_TYPES.has(normalizedType ?? '')) {
+    unsupportedActions.add(RESOURCE_ACTION.LOAD);
+  }
+
+  return RESOURCE_PERMISSION_ACTION_ORDER.filter((action) => !unsupportedActions.has(action));
+};
+
+const mapPermissionActionOptions = (
+  supportedActions: ResourceAction[]
+): ResourcePermissionActionOption[] => {
+  return supportedActions.map((action) => ({
+    action,
+    key: RESOURCE_ACTION.getKey(action) ?? String(action),
+    label: RESOURCE_ACTION.labels[action] ?? String(action),
+    supported: true,
+  }));
+};
+
+const filterSupportedActions = (
+  actions: ResourceAction[] | null | undefined,
+  supportedActions: ResourceAction[]
+): ResourceAction[] => {
+  const supportedSet = new Set(supportedActions);
+  return normalizeResourceActions(actions ?? undefined).filter((action) =>
+    supportedSet.has(action)
+  );
+};
+
+const resolveOwnerName = (ownerInfo: UserDisplayBase | undefined, ownerId?: string): string =>
+  ownerInfo?.realName?.trim() || ownerInfo?.nickname?.trim() || ownerId || '所有者';
+
+const mapResourcePermissionOverviewFromResourceItem = (
+  raw: NormalizableResourceItem,
+  fallbackResourceId: string
+): ResourcePermissionOverview => {
+  const overrideGroupInfoById = mapOverrideGroupInfoByIdFromApi(raw.overrideGrantedActions);
+  const specifiedUserInfoById = mapSpecifiedUserInfoByIdFromApi(raw.specifiedUsersGrantedActions);
+  const resourceInfo = normalizeResourceItem(raw);
+  const ownerInfo = normalizeOwnerInfo(resourceInfo.ownerInfo);
+  const resourceId = resourceInfo.resourceId || fallbackResourceId;
+  const supportedActions = getSupportedPermissionActions(resourceInfo.resourceType);
+  const actionOptions = mapPermissionActionOptions(supportedActions);
+  const ownerActions = filterSupportedActions(RESOURCE_PERMISSION_ACTION_ORDER, supportedActions);
+  const subjects: ResourcePermissionSubject[] = [];
+  const owner: ResourcePermissionSubject = {
+    id: `owner:${resourceInfo.ownerId || resourceId}`,
+    kind: 'owner',
+    source: 'owner',
+    name: resolveOwnerName(ownerInfo, resourceInfo.ownerId),
+    description: '所有者',
+    avatar: ownerInfo?.avatar,
+    userId: resourceInfo.ownerId,
+    effectiveActions: ownerActions,
+    editableActions: ownerActions,
+    readonly: true,
+  };
+
+  subjects.push(owner);
+
+  const overrideGrantedActions = normalizeResourceActionMap(
+    resourceInfo.overrideGrantedActions as ResourceActionsBySubject | null | undefined
+  );
+  const specifiedUsersGrantedActions = normalizeResourceActionMap(
+    resourceInfo.specifiedUsersGrantedActions as ResourceActionsBySubject | null | undefined
+  );
+  const visibleOverrideGrantedActions = Object.fromEntries(
+    Object.entries(overrideGrantedActions ?? {}).filter(([groupId]) => !isPersonalGroupId(groupId))
+  );
+  const overrideGroupIds = new Set(Object.keys(visibleOverrideGrantedActions));
+  const primaryTagByGroupId = new Map<string, { tagId?: string; tagName: string }>();
+
+  for (const bind of resourceInfo.tagBinds ?? []) {
+    const groupId = bind.groupId;
+    if (!groupId || isPersonalGroupId(groupId)) continue;
+    const tags = bind.tags;
+    const primaryTagName =
+      (bind.primaryTagId && tags ? resolveTagName(tags[bind.primaryTagId]) : '') ||
+      Object.values(tags ?? {})
+        .map(resolveTagName)
+        .find(Boolean) ||
+      '标签权限';
+    primaryTagByGroupId.set(groupId, {
+      tagId: bind.primaryTagId,
+      tagName: primaryTagName,
+    });
+
+    if (overrideGroupIds.has(groupId)) continue;
+    subjects.push({
+      id: `group:${groupId}:tag`,
+      kind: 'group',
+      source: 'tag',
+      name: `${primaryTagName} 的成员`,
+      description: '继承自资源所在标签的权限',
+      groupId,
+      primaryTagId: bind.primaryTagId,
+      effectiveActions: [],
+      editableActions: [],
+    });
+  }
+
+  for (const [groupId, actions] of Object.entries(visibleOverrideGrantedActions)) {
+    const filteredActions = filterSupportedActions(actions, supportedActions);
+    const primaryTag = primaryTagByGroupId.get(groupId);
+    const groupInfo = overrideGroupInfoById[groupId];
+    subjects.push({
+      id: `group:${groupId}:override`,
+      kind: 'group',
+      source: 'resourceOverride',
+      name: groupInfo
+        ? `${resolveGroupDisplayName(groupInfo, groupId)} 的成员`
+        : primaryTag
+          ? `${primaryTag.tagName} 的成员`
+          : `小组 ${groupId} 的成员`,
+      description: groupInfo?.groupDesc ?? '已覆盖标签策略，仅对此资源生效',
+      avatar: groupInfo?.groupCoverUrl ?? undefined,
+      groupId,
+      primaryTagId: primaryTag?.tagId,
+      effectiveActions: filteredActions,
+      editableActions: filteredActions,
+    });
+  }
+
+  for (const [userId, actions] of Object.entries(specifiedUsersGrantedActions ?? {})) {
+    const filteredActions = filterSupportedActions(actions, supportedActions);
+    const userInfo = specifiedUserInfoById[userId];
+    subjects.push({
+      id: `user:${userId}:specified`,
+      kind: 'user',
+      source: 'specifiedUser',
+      name: resolveUserDisplayName(userInfo, userId),
+      description: '由您邀请而获得的权限',
+      avatar: userInfo?.avatar,
+      userId,
+      effectiveActions: filteredActions,
+      editableActions: filteredActions,
+    });
+  }
+
+  return {
+    resourceId,
+    resourceType: resourceInfo.resourceType,
+    owner,
+    subjects,
+    supportedActions,
+    actionOptions,
+  };
+};
+
 const normalizeResourceActionMap = (
-  value?: ResourceActionsBySubject | null
+  value?: ResourcePermissionActionField
 ): Record<string, ResourceAction[]> | null => {
   if (value == null) {
     return null;
   }
+
+  // 兼容旧版 map 响应；新版后端返回携带 groupInfo/userInfo 的列表。
+  if (Array.isArray(value)) {
+    const entries = value
+      .filter(isGrantedActionListItem)
+      .map((item) => {
+        const subjectId = getGrantedActionSubjectId(item);
+        return subjectId
+          ? ([subjectId, coerceResourceActions(item.grantedActions)] as const)
+          : null;
+      })
+      .filter((entry): entry is readonly [string, ResourceAction[]] => Boolean(entry));
+    return entries.length > 0 ? Object.fromEntries(entries) : null;
+  }
+
   const entries = Object.entries(value).map(([subjectId, actions]) => [
     subjectId,
     coerceResourceActions(actions),
@@ -344,6 +661,9 @@ export const ResourceServicesMap = {
   mapResourceListPageFromApi,
   mapResourceItemFromApi,
   mapChangeResourceActionPermissionRequest,
+  mapChangeResourceActionPermissionRequestFromSubjects,
+  mapResourcePermissionConfigFromResourceItem,
+  mapResourcePermissionOverviewFromResourceItem,
   mapLikeStatusFromApi,
   mapRateFromApi,
   mapInteractStatsFromApi,

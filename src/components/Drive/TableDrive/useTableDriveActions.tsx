@@ -6,16 +6,13 @@ import {
 } from '@/components/Drive/Modals';
 import AppFormDialog from '@/components/Overlay/AppFormDialog';
 import { useDocumentService, useNoteService, useResourceService } from '@/domains';
+import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import { useNewNoteStore } from '@/store';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
-import {
-  buildWorkspaceResourcePath,
-  RESOURCE_EDITOR_TYPE,
-} from '@/utils/navigation/workspaceRoute';
+import { WORKSPACE_RESOURCE_TYPE } from '@/utils/navigation/workspaceRoute';
 import { Input, TextField, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { mountResourceToFolderTag, resolveCurrentFolderTagId } from '../common/driveComponentModel';
 import type { DriveTableRow, TableDriveActionConfig } from './index.type';
 import type { CreateMenuItem } from './parts/CreateMenu/index.type';
@@ -61,7 +58,7 @@ export function useTableDriveActions({
   targetTagId,
   isTrashView = false,
 }: UseTableDriveActionsParams): UseTableDriveActionsReturn {
-  const navigate = useNavigate();
+  const openInWorkspace = useOpenInWorkspace(groupId);
   const noteService = useNoteService();
   const documentService = useDocumentService();
   const resourceService = useResourceService();
@@ -119,7 +116,10 @@ export function useTableDriveActions({
       onSuccess: (resourceId) => {
         useNewNoteStore.getState().setNewNoteResourceId(resourceId);
         refresh();
-        navigate(buildWorkspaceResourcePath(RESOURCE_EDITOR_TYPE.NOTE, resourceId));
+        openInWorkspace({
+          resourceId,
+          resourceType: WORKSPACE_RESOURCE_TYPE.NOTE,
+        });
       },
       onError: (err) => {
         toast.danger(parseErrorMessage(err));
@@ -145,7 +145,10 @@ export function useTableDriveActions({
       onSuccess: (resourceId) => {
         setDrawioModalOpen(false);
         refresh();
-        navigate(buildWorkspaceResourcePath(RESOURCE_EDITOR_TYPE.DRAWIO, resourceId));
+        openInWorkspace({
+          resourceId,
+          resourceType: WORKSPACE_RESOURCE_TYPE.DRAWIO,
+        });
       },
       onError: (err) => {
         toast.danger(parseErrorMessage(err));
@@ -261,11 +264,14 @@ export function useTableDriveActions({
     if (creatingNote) return;
     const pendingNewNoteId = useNewNoteStore.getState().newNoteResourceId;
     if (pendingNewNoteId) {
-      navigate(buildWorkspaceResourcePath(RESOURCE_EDITOR_TYPE.NOTE, pendingNewNoteId));
+      openInWorkspace({
+        resourceId: pendingNewNoteId,
+        resourceType: WORKSPACE_RESOURCE_TYPE.NOTE,
+      });
       return;
     }
     runCreateNote();
-  }, [creatingNote, navigate, runCreateNote]);
+  }, [creatingNote, openInWorkspace, runCreateNote]);
 
   const handleOpenDrawioModal = useCallback(() => {
     if (creatingDrawio) return;

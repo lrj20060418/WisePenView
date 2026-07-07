@@ -1,7 +1,6 @@
 import type { ResourceActionKey, ResourceItem } from '@/domains/Resource';
 import type { AccessControlScope, TagResourceActionKey } from '@/domains/Tag';
-import type { UserDisplayBase } from '@/domains/User';
-import type { UserIdentityTypeApiValue } from '@/domains/User/apis/UserApi.type';
+import type { UserDisplayBaseApiResponse } from '@/domains/User/apis/UserApi.type';
 
 export type ResourceActionApiValue = ResourceActionKey | number | `${number}`;
 export type ResourceActionApiList = ResourceActionApiValue[];
@@ -30,6 +29,27 @@ export interface ResourceTagBindApiResponse {
   tags?: Record<string, ResourceTagInfoApiResponse | null | undefined>;
 }
 
+export type ResourceGroupTypeApiValue = 1 | 2 | 3 | '1' | '2' | '3';
+
+export interface ResourceGroupDisplayBaseApiResponse {
+  groupName?: string | null;
+  groupDesc?: string | null;
+  groupCoverUrl?: string | null;
+  groupType?: ResourceGroupTypeApiValue | null;
+}
+
+export interface ResourceGroupGrantedActionsApiResponse {
+  groupId: string;
+  groupInfo?: ResourceGroupDisplayBaseApiResponse | null;
+  grantedActions?: ResourceActionApiList | null;
+}
+
+export interface ResourceSpecifiedUserGrantedActionsApiResponse {
+  userId: string;
+  userInfo?: UserDisplayBaseApiResponse | null;
+  grantedActions?: ResourceActionApiList | null;
+}
+
 export interface ResourceItemApiResponse extends Omit<
   ResourceItem,
   | 'size'
@@ -47,12 +67,12 @@ export interface ResourceItemApiResponse extends Omit<
   | 'specifiedUsersGrantedActions'
 > {
   size?: number;
-  ownerInfo: Omit<UserDisplayBase, 'identityType'> & { identityType?: UserIdentityTypeApiValue };
+  ownerInfo: UserDisplayBaseApiResponse;
   resourceInteractionInfo?: ResourceInteractionInfoApiResponse;
   tagBinds?: ResourceTagBindApiResponse[];
   currentActions?: ResourceActionApiList | null;
-  overrideGrantedActions?: Record<string, ResourceActionApiList> | null;
-  specifiedUsersGrantedActions?: Record<string, ResourceActionApiList> | null;
+  overrideGrantedActions?: ResourceGroupGrantedActionsApiResponse[] | null;
+  specifiedUsersGrantedActions?: ResourceSpecifiedUserGrantedActionsApiResponse[] | null;
 }
 
 export interface ResourceListPageApiResponse {
