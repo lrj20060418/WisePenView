@@ -220,24 +220,3 @@ export const resourceActionsInclude = (
   actions: unknown[] | ResourceAction[] | null | undefined,
   action: ResourceAction
 ): boolean => coerceResourceActions(actions as unknown[] | null | undefined).includes(action);
-
-/** Note 不参与 AI 装载和下载类权限的配置与展示 */
-const NOTE_NON_CONFIGURABLE_RESOURCE_ACTIONS = new Set<ResourceAction>([
-  RESOURCE_ACTION.LOAD,
-  RESOURCE_ACTION.DOWNLOAD_WATERMARK,
-  RESOURCE_ACTION.DOWNLOAD_ORIGINAL,
-]);
-
-export const isNoteConfigurableResourceAction = (action: ResourceAction): boolean =>
-  !NOTE_NON_CONFIGURABLE_RESOURCE_ACTIONS.has(action);
-
-/** 去掉 Note 不适用动作，用于 Note 权限配置读写 */
-export const maskNoteConfigurableResourceActions = (
-  actions?: ResourceAction[] | null
-): ResourceAction[] =>
-  normalizeResourceActions(actions ?? undefined).filter(isNoteConfigurableResourceAction);
-
-/** Note 权限弹窗可选项（不含 AI 装载和导出/下载） */
-export const NOTE_CONFIGURABLE_RESOURCE_ACTION_OPTIONS = RESOURCE_ACTION.options.filter((item) =>
-  isNoteConfigurableResourceAction(item.value as ResourceAction)
-);

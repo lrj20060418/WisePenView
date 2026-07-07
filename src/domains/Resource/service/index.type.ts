@@ -34,13 +34,9 @@ export interface IResourceService {
   mountResourcesToGroupTag(params: MountResourcesToGroupTagRequest): Promise<void>;
   updateResourceActionPermission(params: UpdateResourceActionPermissionRequest): Promise<void>;
   updateResourcePermissionSubjects(params: UpdateResourcePermissionSubjectsRequest): Promise<void>;
-  /** 获取资源权限配置所需的最小数据 */
-  getResourcePermissionConfig(
-    params: GetResourcePermissionConfigRequest
-  ): Promise<ResourcePermissionConfig>;
   /** 获取 View 直接消费的资源权限概览 */
   getResourcePermissionOverview(
-    params: GetResourcePermissionConfigRequest
+    params: GetResourcePermissionOverviewRequest
   ): Promise<ResourcePermissionOverview>;
   /** 获取当前用户点赞状态，供点赞组件薄层调用 */
   getLikeStatus(resourceId: string): Promise<{ liked: boolean }>;
@@ -126,15 +122,9 @@ export interface UpdateResourcePermissionSubjectsRequest {
 
 export type ResourcePermissionResourceType = 'note' | 'drawio' | 'file' | 'skill' | 'agent';
 
-export interface GetResourcePermissionConfigRequest {
+export interface GetResourcePermissionOverviewRequest {
   resourceId: string;
   resourceType: ResourcePermissionResourceType;
-}
-
-export interface ResourcePermissionConfig {
-  resourceId: string;
-  overrideGrantedActions?: Record<string, ResourceAction[]> | null;
-  specifiedUsersGrantedActions?: Record<string, ResourceAction[]> | null;
 }
 
 export type ResourcePermissionSubjectKind = 'owner' | 'group' | 'user';

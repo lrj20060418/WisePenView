@@ -1,6 +1,6 @@
 import type {
   GetGroupResourceRequest,
-  GetResourcePermissionConfigRequest,
+  GetResourcePermissionOverviewRequest,
   GetUserResourcesRequest,
   InteractRateRequest,
   InteractToggleLikeRequest,
@@ -9,7 +9,6 @@ import type {
   RenameResourceRequest,
   ResourceItem,
   ResourceListPage,
-  ResourcePermissionConfig,
   ResourcePermissionOverview,
   SearchQueryRequest,
   SearchResultPage,
@@ -217,22 +216,8 @@ const updateResourcePermissionSubjects = async (
   await delay(100);
 };
 
-const getResourcePermissionConfig = async (
-  params: GetResourcePermissionConfigRequest
-): Promise<ResourcePermissionConfig> => {
-  await delay(100);
-  const resource = [...fullMockPersonalResourceList, ...fullMockGroupResourceList].find(
-    (item) => item.resourceId === params.resourceId
-  );
-  return {
-    resourceId: params.resourceId,
-    overrideGrantedActions: resource?.overrideGrantedActions ?? null,
-    specifiedUsersGrantedActions: resource?.specifiedUsersGrantedActions ?? null,
-  };
-};
-
 const getResourcePermissionOverview = async (
-  params: GetResourcePermissionConfigRequest
+  params: GetResourcePermissionOverviewRequest
 ): Promise<ResourcePermissionOverview> => {
   await delay(100);
   const resource = [...fullMockPersonalResourceList, ...fullMockGroupResourceList].find(
@@ -352,7 +337,6 @@ export const ResourceServicesMock: IResourceService = {
   mountResourcesToGroupTag,
   updateResourceActionPermission,
   updateResourcePermissionSubjects,
-  getResourcePermissionConfig,
   getResourcePermissionOverview,
   getLikeStatus,
   getRate,

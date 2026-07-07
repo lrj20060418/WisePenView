@@ -3,13 +3,7 @@ import type {
   AddNoteApiRequest,
   SaveDrawIoSnapshotApiRequest,
 } from '@/domains/Note/apis/NoteApi.type';
-import {
-  coerceResourceActions,
-  maskNoteConfigurableResourceActions,
-  RESOURCE_ACTION,
-  resourceActionsInclude,
-  type ResourceAction,
-} from '@/domains/Resource';
+import { RESOURCE_ACTION, resourceActionsInclude } from '@/domains/Resource';
 import { normalizeResourceItem } from '@/domains/Resource/mapper/ResourceServices.map';
 import { normalizeId } from '@/utils/normalize/normalizeId';
 import type {
@@ -19,7 +13,6 @@ import type {
   ForkNoteResponse,
   NoteInfoDisplayAuthor,
   NoteInfoDisplayData,
-  NotePermissionConfig,
   NoteVersionListPage,
   SaveDrawIoSnapshotRequest,
   SyncTitleRequest,
@@ -72,52 +65,6 @@ const mapNoteInfoDisplayFromApi = (data: NoteInfoResponse): NoteInfoDisplayData 
     resourceInfo,
     version: data.version,
     canCollaborativeEdit: resourceActionsInclude(resourceInfo.currentActions, RESOURCE_ACTION.EDIT),
-  };
-};
-
-const mapSpecifiedUsersGrantedActionsFromApi = (
-  raw: Record<string, unknown[] | null | undefined> | null | undefined
-): NotePermissionConfig['specifiedUsersGrantedActions'] => {
-  if (!raw) {
-    return null;
-  }
-  const mapped = Object.fromEntries(
-    Object.entries(raw).map(([userId, actions]) => [
-      userId,
-      maskNoteConfigurableResourceActions(coerceResourceActions(actions)),
-    ])
-  );
-  return Object.keys(mapped).length > 0 ? mapped : null;
-};
-
-const mapOverrideGrantedActionsFromApi = (
-  raw: Record<string, unknown[] | null | undefined> | null | undefined
-): NotePermissionConfig['overrideGrantedActions'] => {
-  if (!raw) {
-    return null;
-  }
-  const mapped = Object.fromEntries(
-    Object.entries(raw).map(([groupId, actions]) => [
-      groupId,
-      maskNoteConfigurableResourceActions(coerceResourceActions(actions)),
-    ])
-  );
-  return Object.keys(mapped).length > 0 ? (mapped as Record<string, ResourceAction[]>) : null;
-};
-
-const mapNotePermissionConfigFromApi = (
-  data: NoteInfoResponse,
-  fallbackResourceId: string
-): NotePermissionConfig => {
-  const resourceInfo = normalizeResourceItem(data.resourceInfo);
-
-  return {
-    // fallback：缺失 resourceId 时使用请求参数
-    resourceId: resourceInfo.resourceId || fallbackResourceId,
-    overrideGrantedActions: mapOverrideGrantedActionsFromApi(resourceInfo.overrideGrantedActions),
-    specifiedUsersGrantedActions: mapSpecifiedUsersGrantedActionsFromApi(
-      resourceInfo.specifiedUsersGrantedActions
-    ),
   };
 };
 
@@ -180,7 +127,6 @@ export const NoteServicesMap = {
   mapCreateNoteFromApi,
   mapForkNoteFromApi,
   mapNoteInfoDisplayFromApi,
-  mapNotePermissionConfigFromApi,
   mapDrawIoLatestSnapshotFromApi,
   mapSaveDrawIoSnapshotRequest,
   mapNoteVersionListPageFromApi,

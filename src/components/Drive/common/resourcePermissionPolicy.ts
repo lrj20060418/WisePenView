@@ -143,6 +143,26 @@ export const buildResourcePermissionActionKeySet = (
   );
 };
 
+export const filterResourcePermissionActionsByOptions = (
+  actions: ResourceAction[] | null | undefined,
+  actionOptions: ResourcePermissionActionOption[]
+): ResourceAction[] =>
+  filterSupportedResourcePermissionActions(
+    actions,
+    actionOptions.filter((option) => option.supported).map((option) => option.action)
+  );
+
+export const areResourcePermissionActionsEqualByOptions = (
+  left: ResourceAction[] | null | undefined,
+  right: ResourceAction[] | null | undefined,
+  actionOptions: ResourcePermissionActionOption[]
+): boolean =>
+  areResourcePermissionActionsEqual(
+    left,
+    right,
+    actionOptions.filter((option) => option.supported).map((option) => option.action)
+  );
+
 export const readResourcePermissionActionsFromKeys = (
   keys: Set<string>,
   actionOptions: ResourcePermissionActionOption[]
@@ -150,10 +170,7 @@ export const readResourcePermissionActionsFromKeys = (
   const selectedActions = actionOptions
     .filter((option) => keys.has(option.key))
     .map((option) => option.action);
-  return filterSupportedResourcePermissionActions(
-    selectedActions,
-    actionOptions.map((option) => option.action)
-  );
+  return filterResourcePermissionActionsByOptions(selectedActions, actionOptions);
 };
 
 export const resolveTagInheritedResourceActions = (

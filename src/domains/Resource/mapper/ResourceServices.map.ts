@@ -32,7 +32,6 @@ import type {
   GetUserResourcesRequest,
   ResourceListPage,
   ResourcePermissionActionOption,
-  ResourcePermissionConfig,
   ResourcePermissionOverview,
   ResourcePermissionSubject,
   SearchHitItem,
@@ -51,16 +50,16 @@ type ResourceItemApiOwnerInfo = ResourceItemApiResponse['ownerInfo'];
 type ResourceItemRawOwnerInfo = ResourceItem['ownerInfo'] | ResourceItemApiOwnerInfo;
 type ResourceItemRawTagBinds = ResourceItem['tagBinds'] | ResourceItemApiResponse['tagBinds'];
 type ResourceActionsBySubject = Record<string, unknown[] | null | undefined>;
-type LegacyResourceActionsBySubject = Record<
+type NormalizedResourceActionsBySubject = Record<
   string,
   ResourceAction[] | ResourceActionApiList | null | undefined
 >;
 type ResourceItemRawActionFields = {
   currentActions?: ResourceAction[] | ResourceActionApiList | null;
   overrideGrantedActions?:
-    ResourceGroupGrantedActionsApiResponse[] | LegacyResourceActionsBySubject | null;
+    ResourceGroupGrantedActionsApiResponse[] | NormalizedResourceActionsBySubject | null;
   specifiedUsersGrantedActions?:
-    ResourceSpecifiedUserGrantedActionsApiResponse[] | LegacyResourceActionsBySubject | null;
+    ResourceSpecifiedUserGrantedActionsApiResponse[] | NormalizedResourceActionsBySubject | null;
 };
 type ResourcePermissionActionField =
   | ResourceGroupGrantedActionsApiResponse[]
@@ -396,22 +395,6 @@ const mapChangeResourceActionPermissionRequestFromSubjects = (
   });
 };
 
-const mapResourcePermissionConfigFromResourceItem = (
-  raw: NormalizableResourceItem,
-  fallbackResourceId: string
-): ResourcePermissionConfig => {
-  const resourceInfo = normalizeResourceItem(raw);
-  return {
-    resourceId: resourceInfo.resourceId || fallbackResourceId,
-    overrideGrantedActions: normalizeResourceActionMap(
-      resourceInfo.overrideGrantedActions as ResourceActionsBySubject | null | undefined
-    ),
-    specifiedUsersGrantedActions: normalizeResourceActionMap(
-      resourceInfo.specifiedUsersGrantedActions as ResourceActionsBySubject | null | undefined
-    ),
-  };
-};
-
 const mapPermissionActionOptions = (
   supportedActions: ResourceAction[]
 ): ResourcePermissionActionOption[] => {
@@ -553,7 +536,7 @@ const normalizeResourceActionMap = (
     return null;
   }
 
-  // 兼容旧版 map 响应；新版后端返回携带 groupInfo/userInfo 的列表。
+  // API 响应是携带 groupInfo/userInfo 的列表；内部 ResourceItem/mock 数据可能已是按 subjectId 归一化的 map。
   if (Array.isArray(value)) {
     const entries = value
       .filter(isGrantedActionListItem)
@@ -631,7 +614,6 @@ export const ResourceServicesMap = {
   mapResourceItemFromApi,
   mapChangeResourceActionPermissionRequest,
   mapChangeResourceActionPermissionRequestFromSubjects,
-  mapResourcePermissionConfigFromResourceItem,
   mapResourcePermissionOverviewFromResourceItem,
   mapLikeStatusFromApi,
   mapRateFromApi,

@@ -16,7 +16,7 @@ import type { ResourceInteractStats } from '../mapper/ResourceServices.map';
 import { ResourceServicesMap } from '../mapper/ResourceServices.map';
 import type {
   GetGroupResourceRequest,
-  GetResourcePermissionConfigRequest,
+  GetResourcePermissionOverviewRequest,
   GetUserResourcesRequest,
   InteractRateRequest,
   InteractToggleLikeRequest,
@@ -160,7 +160,7 @@ const updateResourcePermissionSubjects = async (
   await ResourceItemApi.changeResourceActionPermission(request);
 };
 
-const getPermissionResourceInfo = async (params: GetResourcePermissionConfigRequest) => {
+const getPermissionResourceInfo = async (params: GetResourcePermissionOverviewRequest) => {
   switch (params.resourceType) {
     case 'note':
     case 'drawio': {
@@ -182,15 +182,7 @@ const getPermissionResourceInfo = async (params: GetResourcePermissionConfigRequ
   }
 };
 
-const getResourcePermissionConfig = async (params: GetResourcePermissionConfigRequest) => {
-  const resourceInfo = await getPermissionResourceInfo(params);
-  return ResourceServicesMap.mapResourcePermissionConfigFromResourceItem(
-    resourceInfo,
-    params.resourceId
-  );
-};
-
-const getResourcePermissionOverview = async (params: GetResourcePermissionConfigRequest) => {
+const getResourcePermissionOverview = async (params: GetResourcePermissionOverviewRequest) => {
   const resourceInfo = await getPermissionResourceInfo(params);
   return ResourceServicesMap.mapResourcePermissionOverviewFromResourceItem(
     resourceInfo,
@@ -250,7 +242,6 @@ export const createResourceServices = (): IResourceService => ({
   mountResourcesToGroupTag,
   updateResourceActionPermission,
   updateResourcePermissionSubjects,
-  getResourcePermissionConfig,
   getResourcePermissionOverview,
   getLikeStatus,
   getRate,

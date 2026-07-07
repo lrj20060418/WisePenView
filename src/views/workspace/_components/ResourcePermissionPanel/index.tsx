@@ -1,7 +1,11 @@
+import {
+  areResourcePermissionActionsEqualByOptions,
+  buildResourcePermissionActionKeySet,
+  filterResourcePermissionActionsByOptions,
+} from '@/components/Drive/common/resourcePermissionPolicy';
 import { Popover } from '@/components/Overlay';
 import { useResourceService, useTagService, useUserService } from '@/domains';
 import {
-  normalizeResourceActions,
   type ResourceAction,
   type ResourcePermissionActionOption,
   type ResourcePermissionOverview,
@@ -75,44 +79,6 @@ const getSubjectActionsForDisplay = (subject: ResourcePermissionSubject) => {
   return subject.readonly ? subject.effectiveActions : subject.editableActions;
 };
 
-const buildActionKeySet = (
-  actions: ResourcePermissionActionOption['action'][],
-  options: ResourcePermissionActionOption[]
-): Set<string> => {
-  const actionSet = new Set(actions);
-  return new Set(
-    options.filter((option) => actionSet.has(option.action)).map((option) => option.key)
-  );
-};
-
-const filterSupportedActions = (
-  actions: ResourcePermissionActionOption['action'][],
-  options: ResourcePermissionActionOption[]
-): ResourcePermissionActionOption['action'][] =>
-  options
-    .filter((option) => option.supported && actions.includes(option.action))
-    .map((option) => option.action);
-
-const normalizePanelActions = (
-  actions: ResourceAction[] | null | undefined,
-  options: ResourcePermissionActionOption[]
-): ResourceAction[] =>
-  filterSupportedActions(normalizeResourceActions(actions ?? undefined), options);
-
-const areActionSetsEqual = (
-  left: ResourceAction[] | null | undefined,
-  right: ResourceAction[] | null | undefined,
-  options: ResourcePermissionActionOption[]
-): boolean => {
-  const leftKeys = buildActionKeySet(normalizePanelActions(left, options), options);
-  const rightKeys = buildActionKeySet(normalizePanelActions(right, options), options);
-  if (leftKeys.size !== rightKeys.size) return false;
-  for (const key of leftKeys) {
-    if (!rightKeys.has(key)) return false;
-  }
-  return true;
-};
-
 const canCompareWithInheritedActions = (subject: ResourcePermissionSubject): boolean =>
   Array.isArray(subject.inheritedActions);
 
@@ -130,13 +96,16 @@ const updateSubjectActions = (
 ): ResourcePermissionSubject[] =>
   subjects.map((subject) => {
     if (subject.id !== subjectId || subject.readonly) return subject;
-    const nextActions = filterSupportedActions(actions, options);
+    const nextActions = filterResourcePermissionActionsByOptions(actions, options);
     if (
       subject.source === 'resourceOverride' &&
       canCompareWithInheritedActions(subject) &&
-      areActionSetsEqual(nextActions, subject.inheritedActions, options)
+      areResourcePermissionActionsEqualByOptions(nextActions, subject.inheritedActions, options)
     ) {
-      const inheritedActions = normalizePanelActions(subject.inheritedActions, options);
+      const inheritedActions = filterResourcePermissionActionsByOptions(
+        subject.inheritedActions,
+        options
+      );
       return {
         ...subject,
         id: subject.groupId ? `group:${subject.groupId}:tag` : subject.id,
@@ -185,10 +154,13 @@ const hydrateInheritedTagActions = (
     if (!subject.groupId || !subject.primaryTagId) return subject;
     const inheritedActions = getInheritedActions(subject);
     if (!inheritedActions) return subject;
-    const normalizedInheritedActions = normalizePanelActions(inheritedActions, options);
+    const normalizedInheritedActions = filterResourcePermissionActionsByOptions(
+      inheritedActions,
+      options
+    );
 
     if (subject.source === 'resourceOverride') {
-      const matchesTag = areActionSetsEqual(
+      const matchesTag = areResourcePermissionActionsEqualByOptions(
         subject.editableActions,
         normalizedInheritedActions,
         options
@@ -227,7 +199,10 @@ function SubjectPermissionPopover({
   actionOptions,
   onActionToggle,
 }: SubjectPermissionPopoverProps) {
-  const selectedActionKeys = buildActionKeySet(getSubjectActionsForDisplay(subject), actionOptions);
+  const selectedActionKeys = buildResourcePermissionActionKeySet(
+    getSubjectActionsForDisplay(subject),
+    actionOptions
+  );
   const trigger = (
     <Button
       variant="ghost"
@@ -278,7 +253,11 @@ function SubjectPermissionPopover({
   );
 }
 
-function ResourcePermissionPanel({ resourceId, resourceType }: ResourcePermissionPanelProps) {
+function ResourcePermissionPanel({
+  resourceId,
+  resourceType,
+  onSuccess,
+}: ResourcePermissionPanelProps) {
   const resourceService = useResourceService();
   const tagService = useTagService();
   const userService = useUserService();
@@ -373,6 +352,7 @@ function ResourcePermissionPanel({ resourceId, resourceType }: ResourcePermissio
           resourceId,
           subjects: nextSubjects,
         });
+        onSuccess?.();
       })
       .catch((err) => {
         toast.danger(parseErrorMessage(err));

@@ -1,7 +1,6 @@
 export type { ResourceIconType, ResourceItem, ResourceTagBind } from './entity/resource';
 export type { SkillScopeType, SkillSummary } from './entity/skill';
 export {
-  NOTE_CONFIGURABLE_RESOURCE_ACTION_OPTIONS,
   RESOURCE_ACTION,
   RESOURCE_PERMISSION_ACTION_ORDER,
   RESOURCE_SORT_BY,
@@ -18,8 +17,6 @@ export {
   getResourceActionImpliedMask,
   getSupportedResourcePermissionActions,
   hasResourceAction,
-  isNoteConfigurableResourceAction,
-  maskNoteConfigurableResourceActions,
   normalizeResourceActions,
   normalizeSearchResourceType,
   permissionCodeToActions,
@@ -39,7 +36,7 @@ export { groupSearchHits } from './service/groupSearchHits';
 export type { SearchHitGroup } from './service/groupSearchHits';
 export type {
   GetGroupResourceRequest,
-  GetResourcePermissionConfigRequest,
+  GetResourcePermissionOverviewRequest,
   GetUserResourcesRequest,
   IResourceService,
   InteractRateRequest,
@@ -49,7 +46,6 @@ export type {
   RenameResourceRequest,
   ResourceListPage,
   ResourcePermissionActionOption,
-  ResourcePermissionConfig,
   ResourcePermissionOverview,
   ResourcePermissionResourceType,
   ResourcePermissionSource,
