@@ -35,7 +35,8 @@ export interface UseTableDriveActionsReturn {
   createMenuItems: CreateMenuItem[];
   handleCreateMenuSelect: (id: CreateMenuItem['id']) => void;
   openUploadToGroup: () => void;
-  openTagPermission: () => void;
+  openTagPermission: (tagId?: string) => void;
+  tagPermissionRefreshToken: number;
   ModalHost: ReactElement;
 }
 
@@ -70,6 +71,7 @@ export function useTableDriveActions({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [tagPermissionOpen, setTagPermissionOpen] = useState(false);
   const [tagPermissionTagId, setTagPermissionTagId] = useState<string>();
+  const [tagPermissionRefreshToken, setTagPermissionRefreshToken] = useState(0);
   const [drawioModalOpen, setDrawioModalOpen] = useState(false);
   const [drawioName, setDrawioName] = useState('未命名图表');
 
@@ -200,7 +202,7 @@ export function useTableDriveActions({
                 setTagPermissionTagId(undefined);
               }
             }}
-            onSuccess={refresh}
+            onSuccess={() => setTagPermissionRefreshToken((prev) => prev + 1)}
           />
         ) : null}
         <AppFormDialog
@@ -255,8 +257,8 @@ export function useTableDriveActions({
     setUploadOpen(true);
   }, []);
 
-  const openTagPermission = useCallback(() => {
-    setTagPermissionTagId(undefined);
+  const openTagPermission = useCallback((tagId?: string) => {
+    setTagPermissionTagId(tagId);
     setTagPermissionOpen(true);
   }, []);
 
@@ -347,6 +349,7 @@ export function useTableDriveActions({
     handleCreateMenuSelect,
     openUploadToGroup,
     openTagPermission,
+    tagPermissionRefreshToken,
     ModalHost,
   };
 }

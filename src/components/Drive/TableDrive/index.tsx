@@ -276,6 +276,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     createMenuItems,
     handleCreateMenuSelect,
     openTagPermission,
+    tagPermissionRefreshToken,
     ModalHost,
   } = useTableDriveActions({
     currentNodeId,
@@ -298,7 +299,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
           <CreateMenu items={createMenuItems} onSelect={handleCreateMenuSelect} />
         ) : null}
         {showManagePermission ? (
-          <Button variant="secondary" size="sm" onPress={openTagPermission}>
+          <Button variant="secondary" size="sm" onPress={() => openTagPermission()}>
             标签权限管理
           </Button>
         ) : null}
@@ -417,8 +418,11 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
               batchEditMode={batchEditMode}
               batchSelectedCount={batchSelectedCount}
               groupId={finalGroupId}
+              canManageTagPermission={showManagePermission && !isTrashView}
+              tagPermissionRefreshToken={tagPermissionRefreshToken}
               onEnter={handleEnterFolder}
               onOpen={handleClickNode}
+              onManageTagPermission={openTagPermission}
               onClear={handleClearSelection}
               onRefresh={refresh}
             />
