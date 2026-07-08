@@ -8,6 +8,7 @@ import type {
   InitiateUISVerifyRequest,
   IUserService,
   ListUserSearchSuggestionsRequest,
+  QueryUserSearchCandidatesRequest,
   SearchUsersRequest,
   SendEmailVerifyRequest,
   UpdateUserInfoRequest,
@@ -33,6 +34,23 @@ const listUserSearchSuggestions = async (params: ListUserSearchSuggestionsReques
   if (query.keyword.length < 2) return [];
   const data = await UserApi.listUserSearchSuggestions(query);
   return UserServicesMap.mapSearchUsersFromApi(data);
+};
+
+const queryUserSearchCandidates = async (params: QueryUserSearchCandidatesRequest) => {
+  const keyword = params.keyword.trim();
+  if (!keyword) return [];
+  const size = params.size ?? 10;
+  const [exactUsers, suggestionUsers] = await Promise.all([
+    searchUsers({ keyword }),
+    listUserSearchSuggestions({ keyword, size }),
+  ]);
+  const userMap = new Map<string, (typeof exactUsers)[number]>();
+  [...exactUsers, ...suggestionUsers].forEach((user) => {
+    if (!userMap.has(user.userId)) {
+      userMap.set(user.userId, user);
+    }
+  });
+  return Array.from(userMap.values()).slice(0, size);
 };
 
 const sendEmailVerify = async (params: SendEmailVerifyRequest): Promise<void> => {
@@ -100,6 +118,7 @@ export const createUserServices = (): IUserService => {
     getUserInfo,
     searchUsers,
     listUserSearchSuggestions,
+    queryUserSearchCandidates,
     updateUserInfo,
     sendEmailVerify,
     initiateUISVerify,

@@ -1,4 +1,5 @@
 // src/components/ChatPanel/MessageList/style.module.less
+@import '@/styles/scrollbar.module.less';
 
 .container {
   flex: 1;
@@ -11,14 +12,7 @@
   flex-direction: column;
   padding: 0 var(--space-lg) var(--space-lg);
   scroll-behavior: smooth;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--surface-tertiary);
-    border-radius: 3px;
-  }
+  .appSubtleScrollbar();
 }
 
 .content {

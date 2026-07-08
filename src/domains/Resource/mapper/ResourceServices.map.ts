@@ -229,6 +229,11 @@ const resolveGroupDisplayName = (
   fallbackId: string
 ): string => groupInfo?.groupName?.trim() || (fallbackId ? `小组 ${fallbackId}` : '小组');
 
+const resolveGroupMemberSubjectName = (
+  groupId: string,
+  groupInfo?: ResourceGroupDisplayBaseApiResponse
+): string => `${resolveGroupDisplayName(groupInfo, groupId)} 的成员`;
+
 const isGrantedActionListItem = (
   value: unknown
 ): value is
@@ -450,21 +455,13 @@ const mapResourcePermissionOverviewFromResourceItem = (
     Object.entries(overrideGrantedActions ?? {}).filter(([groupId]) => !isPersonalGroupId(groupId))
   );
   const overrideGroupIds = new Set(Object.keys(visibleOverrideGrantedActions));
-  const primaryTagByGroupId = new Map<string, { tagId?: string; tagName: string }>();
+  const primaryTagByGroupId = new Map<string, { tagId?: string }>();
 
   for (const bind of resourceInfo.tagBinds ?? []) {
     const groupId = bind.groupId;
     if (!groupId || isPersonalGroupId(groupId)) continue;
-    const tags = bind.tags;
-    const primaryTagName =
-      (bind.primaryTagId && tags ? resolveTagName(tags[bind.primaryTagId]) : '') ||
-      Object.values(tags ?? {})
-        .map(resolveTagName)
-        .find(Boolean) ||
-      '标签权限';
     primaryTagByGroupId.set(groupId, {
       tagId: bind.primaryTagId,
-      tagName: primaryTagName,
     });
 
     if (overrideGroupIds.has(groupId)) continue;
@@ -472,7 +469,7 @@ const mapResourcePermissionOverviewFromResourceItem = (
       id: `group:${groupId}:tag`,
       kind: 'group',
       source: 'tag',
-      name: `${primaryTagName} 的成员`,
+      name: resolveGroupMemberSubjectName(groupId),
       description: '继承自资源所在标签的权限',
       groupId,
       primaryTagId: bind.primaryTagId,
@@ -489,11 +486,7 @@ const mapResourcePermissionOverviewFromResourceItem = (
       id: `group:${groupId}:override`,
       kind: 'group',
       source: 'resourceOverride',
-      name: groupInfo
-        ? `${resolveGroupDisplayName(groupInfo, groupId)} 的成员`
-        : primaryTag
-          ? `${primaryTag.tagName} 的成员`
-          : `小组 ${groupId} 的成员`,
+      name: resolveGroupMemberSubjectName(groupId, groupInfo),
       description: groupInfo?.groupDesc ?? '已覆盖标签策略，仅对此资源生效',
       avatar: groupInfo?.groupCoverUrl ?? undefined,
       groupId,

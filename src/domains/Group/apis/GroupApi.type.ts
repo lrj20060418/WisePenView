@@ -38,6 +38,7 @@ export interface GetGroupInfoApiRequest {
 }
 
 export type GetGroupInfoApiResponse = GroupApiResponse;
+export type GetGroupBaseInfoApiRequest = GetGroupInfoApiRequest;
 export type GetGroupBaseInfoApiResponse = GroupApiResponse;
 export type AddGroupApiRequest = {
   groupName: string;

@@ -1,3 +1,5 @@
+@import '@/styles/scrollbar.module.less';
+
 .panel {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 96px);
@@ -56,17 +58,7 @@
   min-height: 0;
   overflow: auto;
   padding: var(--space-xs);
-  scrollbar-color: var(--scrollbar) transparent;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar);
-    border-radius: 999px;
-  }
+  .appSubtleScrollbar();
 }
 
 .subjectItem {
@@ -182,95 +174,8 @@
 
 .addRow {
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   border-top: 1px solid var(--border);
-}
-
-.suggestionList {
-  grid-column: 1 / -1;
-  display: flex;
-  max-height: 168px;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  overflow: auto;
-  padding: var(--space-2xs);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--background);
-  scrollbar-color: var(--scrollbar) transparent;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar);
-    border-radius: 999px;
-  }
-}
-
-.suggestionItem {
-  display: grid;
-  width: 100%;
-  min-height: 44px;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xs);
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-
-  &:hover,
-  &:focus-visible {
-    background: var(--surface-hover);
-    outline: none;
-  }
-}
-
-.suggestionAvatar {
-  width: 32px;
-  height: 32px;
-}
-
-.suggestionMeta {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.suggestionName,
-.suggestionDescription {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.suggestionName {
-  color: var(--foreground);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-.suggestionDescription,
-.suggestionState {
-  color: var(--muted);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-sm);
-}
-
-.suggestionState {
-  padding: var(--space-sm);
-  text-align: center;
 }
 
 .permissionPopover {
@@ -295,6 +200,82 @@
   }
 }
 
+.skeletonShell {
+  display: flex;
+  height: 460px;
+  max-height: calc(100vh - 160px);
+  flex-direction: column;
+}
+
+.skeletonList {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-xs);
+}
+
+.skeletonItem {
+  display: grid;
+  min-height: 56px;
+  grid-template-columns: auto minmax(0, 1fr) 148px;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+
+  & + & {
+    margin-top: var(--space-2xs);
+  }
+}
+
+.skeletonAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.skeletonMeta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.skeletonName {
+  width: min(180px, 58%);
+  height: 16px;
+  border-radius: 999px;
+}
+
+.skeletonDescription {
+  width: min(260px, 72%);
+  height: 12px;
+  border-radius: 999px;
+}
+
+.skeletonAction {
+  width: 148px;
+  height: 32px;
+  border-radius: var(--radius-xl);
+}
+
+.skeletonAddRow {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--border);
+}
+
+.skeletonInput {
+  height: 36px;
+  border-radius: var(--radius-xl);
+}
+
+.skeletonAddButton {
+  height: 36px;
+  border-radius: var(--radius-xl);
+}
+
 .stateText {
   display: flex;
   min-height: 220px;
@@ -314,10 +295,6 @@
     height: min(620px, calc(100vh - 160px));
   }
 
-  .addRow {
-    grid-template-columns: 1fr;
-  }
-
   .subjectContent {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -325,5 +302,18 @@
   .subjectActions {
     grid-column: 2;
     justify-content: flex-start;
+  }
+
+  .skeletonItem {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .skeletonAction {
+    grid-column: 2;
+    width: min(148px, 100%);
+  }
+
+  .skeletonAddRow {
+    grid-template-columns: 1fr;
   }
 }

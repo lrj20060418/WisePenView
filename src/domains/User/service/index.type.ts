@@ -11,6 +11,8 @@ export interface IUserService {
   searchUsers(params: SearchUsersRequest): Promise<UserSearchUser[]>;
   /** 当前用户小组范围内的用户搜索补全 */
   listUserSearchSuggestions(params: ListUserSearchSuggestionsRequest): Promise<UserSearchUser[]>;
+  /** 用户选择框候选查询：合并精确搜索与补全结果 */
+  queryUserSearchCandidates(params: QueryUserSearchCandidatesRequest): Promise<UserSearchUser[]>;
   /** 更新用户信息（内部两次 PUT：userInfo + userProfile）；不拉 GET，需全量时由调用方自行 getFullUserInfo */
   updateUserInfo(params: UpdateUserInfoRequest): Promise<void>;
   sendEmailVerify(params: SendEmailVerifyRequest): Promise<void>;
@@ -38,6 +40,11 @@ export interface SearchUsersRequest {
 }
 
 export interface ListUserSearchSuggestionsRequest {
+  keyword: string;
+  size?: number;
+}
+
+export interface QueryUserSearchCandidatesRequest {
   keyword: string;
   size?: number;
 }

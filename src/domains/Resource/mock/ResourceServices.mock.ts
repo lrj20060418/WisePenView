@@ -264,7 +264,7 @@ const getResourcePermissionOverview = async (
         id: 'group:wise-pen-dev:tag',
         kind: 'group' as const,
         source: 'tag' as const,
-        name: 'WisePen 研发文档库可编辑成员',
+        name: 'WisePen 研发组的成员',
         description: '继承自资源所在标签的权限',
         groupId: 'wise-pen-dev',
         primaryTagId: 'tag-work',
