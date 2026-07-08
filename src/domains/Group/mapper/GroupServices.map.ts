@@ -1,4 +1,4 @@
-import type { Group, GroupMemberList, GroupResConfig } from '@/domains/Group';
+import type { Group, GroupBaseInfo, GroupMemberList, GroupResConfig } from '@/domains/Group';
 import { GROUP_FILE_ORG_LOGIC, ROLE } from '@/domains/Group';
 import {
   coerceResourceActions,
@@ -15,6 +15,8 @@ import type {
   ChangeGroupConfigApiRequest,
   ChangeRoleApiRequest,
   FetchGroupMembersApiResponse,
+  GetGroupBaseInfoApiRequest,
+  GetGroupBaseInfoApiResponse,
   GetGroupConfigApiRequest,
   GetGroupConfigApiResponse,
   GetGroupInfoApiRequest,
@@ -97,6 +99,22 @@ const mapFetchGroupInfoRequest = (groupId: string): GetGroupInfoApiRequest => ({
   groupId,
 });
 
+const mapFetchGroupBaseInfoRequest = (groupId: string): GetGroupBaseInfoApiRequest => ({
+  groupId,
+});
+
+const mapFetchGroupBaseInfoFromApi = (
+  data: GetGroupBaseInfoApiResponse,
+  fallbackGroupId: string
+): GroupBaseInfo => ({
+  // 基础信息接口若省略 groupId，使用请求入参保持调用方按 ID 回填。
+  groupId: normalizeId(data.groupId) || fallbackGroupId,
+  groupName: data.groupName ?? '',
+  groupDesc: data.groupDesc ?? '',
+  groupCoverUrl: data.groupCoverUrl ?? '',
+  groupType: mapGroupTypeFromApi(data.groupType),
+});
+
 const mapGroupWalletInfoFromApi = (data: GroupApiResponse): number =>
   normalizeNumberFromApi(data.tokenBalance);
 
@@ -167,6 +185,8 @@ export const GroupServicesMap = {
   mapFetchGroupListFromApi,
   mapFetchGroupInfoFromApi,
   mapFetchGroupInfoRequest,
+  mapFetchGroupBaseInfoRequest,
+  mapFetchGroupBaseInfoFromApi,
   mapGroupWalletInfoFromApi,
   mapFetchGroupResConfigFromApi,
   mapFetchGroupResConfigRequest,

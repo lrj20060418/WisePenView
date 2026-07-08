@@ -4,7 +4,9 @@ import {
   filterResourcePermissionActionsByOptions,
 } from '@/components/Drive/common/resourcePermissionPolicy';
 import { Popover } from '@/components/Overlay';
-import { useResourceService, useTagService, useUserService } from '@/domains';
+import UserSearchCombobox from '@/components/UserSearchCombobox';
+import { useGroupService, useResourceService, useTagService, useUserService } from '@/domains';
+import type { GroupBaseInfo } from '@/domains/Group';
 import {
   type ResourceAction,
   type ResourcePermissionActionOption,
@@ -14,10 +16,10 @@ import {
 } from '@/domains/Resource';
 import type { UserSearchUser } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
-import { Avatar, Button, Chip, Input, ListBox, TextField, toast } from '@heroui/react';
+import { Avatar, Button, Chip, ListBox, Skeleton, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { ChevronDown, Trash2, UserPlus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ResourcePermissionPanelProps } from './index.type';
 import styles from './style.module.less';
 
@@ -44,14 +46,17 @@ const sourceLabelMap: Record<ResourcePermissionSource, string> = {
 const TAG_INHERITED_DESCRIPTION = '继承自资源所在标签的权限';
 const RESOURCE_OVERRIDE_DESCRIPTION = '已覆盖标签策略，仅对此资源生效';
 const EMPTY_ACTION_OPTIONS: ResourcePermissionActionOption[] = [];
+const PANEL_SKELETON_ROWS = ['owner', 'tag', 'override', 'specifiedUser'] as const;
 
 const getDisplayInitial = (name: string): string => name.trim().charAt(0).toUpperCase() || '?';
 
+const getAvatarSrc = (avatar?: string): string | undefined => {
+  const trimmedAvatar = avatar?.trim();
+  return trimmedAvatar || undefined;
+};
+
 const getUserCandidateDisplayName = (user: SpecifiedUserCandidate): string =>
   user.realName?.trim() || user.nickname?.trim() || user.username.trim() || `用户 ${user.userId}`;
-
-const getUserCandidateDescription = (user: SpecifiedUserCandidate): string =>
-  user.username ? `@${user.username}` : user.userId;
 
 const getActionLabel = (
   action: ResourcePermissionActionOption['action'],
@@ -139,11 +144,76 @@ const createSpecifiedUserSubject = (user: SpecifiedUserCandidate): ResourcePermi
   source: 'specifiedUser',
   name: getUserCandidateDisplayName(user),
   description: '由您邀请而获得的权限',
-  avatar: user.avatar,
+  avatar: getAvatarSrc(user.avatar),
   userId: user.userId,
   effectiveActions: [],
   editableActions: [],
 });
+
+const hydrateUserDisplayInfo = (
+  subjects: ResourcePermissionSubject[],
+  userInfoById: Map<string, SpecifiedUserCandidate>
+): ResourcePermissionSubject[] => {
+  let changed = false;
+  const nextSubjects = subjects.map((subject) => {
+    if (!subject.userId) return subject;
+    const userInfo = userInfoById.get(subject.userId);
+    if (!userInfo) return subject;
+
+    const nextName = getUserCandidateDisplayName(userInfo);
+    const nextAvatar = getAvatarSrc(userInfo.avatar) || getAvatarSrc(subject.avatar);
+    if (subject.name === nextName && subject.avatar === nextAvatar) {
+      return subject;
+    }
+
+    changed = true;
+    return {
+      ...subject,
+      name: nextName,
+      avatar: nextAvatar,
+    };
+  });
+
+  return changed ? nextSubjects : subjects;
+};
+
+const hydrateGroupDisplayInfo = (
+  subjects: ResourcePermissionSubject[],
+  groupInfoById: Map<string, GroupBaseInfo>
+): ResourcePermissionSubject[] => {
+  let changed = false;
+  const nextSubjects = subjects.map((subject) => {
+    if (!subject.groupId) return subject;
+    const groupInfo = groupInfoById.get(subject.groupId);
+    if (!groupInfo) return subject;
+
+    const groupName = groupInfo.groupName.trim();
+    const groupDesc = groupInfo.groupDesc.trim();
+    const groupCoverUrl = groupInfo.groupCoverUrl.trim();
+    const nextName = groupName ? `${groupName} 的成员` : subject.name;
+    const nextDescription =
+      subject.source === 'resourceOverride' && groupDesc ? groupDesc : subject.description;
+    const nextAvatar = groupCoverUrl || getAvatarSrc(subject.avatar);
+
+    if (
+      subject.name === nextName &&
+      subject.description === nextDescription &&
+      subject.avatar === nextAvatar
+    ) {
+      return subject;
+    }
+
+    changed = true;
+    return {
+      ...subject,
+      name: nextName,
+      description: nextDescription,
+      avatar: nextAvatar,
+    };
+  });
+
+  return changed ? nextSubjects : subjects;
+};
 
 const hydrateInheritedTagActions = (
   subjects: ResourcePermissionSubject[],
@@ -253,11 +323,35 @@ function SubjectPermissionPopover({
   );
 }
 
+function PermissionPanelSkeleton() {
+  return (
+    <div className={styles.skeletonShell} aria-label="正在加载权限配置">
+      <div className={styles.skeletonList}>
+        {PANEL_SKELETON_ROWS.map((row) => (
+          <div key={row} className={styles.skeletonItem}>
+            <Skeleton className={styles.skeletonAvatar} />
+            <div className={styles.skeletonMeta}>
+              <Skeleton className={styles.skeletonName} />
+              <Skeleton className={styles.skeletonDescription} />
+            </div>
+            <Skeleton className={styles.skeletonAction} />
+          </div>
+        ))}
+      </div>
+      <div className={styles.skeletonAddRow}>
+        <Skeleton className={styles.skeletonInput} />
+        <Skeleton className={styles.skeletonAddButton} />
+      </div>
+    </div>
+  );
+}
+
 function ResourcePermissionPanel({
   resourceId,
   resourceType,
   onSuccess,
 }: ResourcePermissionPanelProps) {
+  const groupService = useGroupService();
   const resourceService = useResourceService();
   const tagService = useTagService();
   const userService = useUserService();
@@ -266,7 +360,6 @@ function ResourcePermissionPanel({
   const [subjectDrafts, setSubjectDrafts] = useState<ResourcePermissionSubject[] | null>(null);
   const [newUserKeyword, setNewUserKeyword] = useState('');
   const [pendingUpdateCount, setPendingUpdateCount] = useState(0);
-  const inviteKeyword = newUserKeyword.trim();
   const {
     data: permissionOverview,
     loading,
@@ -283,33 +376,119 @@ function ResourcePermissionPanel({
       },
     }
   );
-  const { data: userSuggestions, loading: userSuggestionsLoading } = useRequest(
-    () => userService.listUserSearchSuggestions({ keyword: inviteKeyword, size: 6 }),
-    {
-      ready: inviteKeyword.length >= 2,
-      refreshDeps: [inviteKeyword, userService],
-      debounceWait: 250,
-    }
-  );
-  const { loading: userSearchLoading, runAsync: runSearchUsers } = useRequest(
-    (keyword: string) => userService.searchUsers({ keyword }),
-    { manual: true }
-  );
-
   const subjects = subjectDrafts ?? permissionOverview?.subjects ?? [];
   const actionOptions = permissionOverview?.actionOptions ?? EMPTY_ACTION_OPTIONS;
   const inheritedSubjects = subjects.filter((subject) => subject.source !== 'specifiedUser');
   const specifiedUserSubjects = subjects.filter((subject) => subject.source === 'specifiedUser');
   const existingSpecifiedUserIds = new Set(
-    specifiedUserSubjects.map((subject) => subject.userId).filter(Boolean)
+    specifiedUserSubjects
+      .map((subject) => subject.userId)
+      .filter((userId): userId is string => Boolean(userId))
   );
-  const suggestionUsers =
-    inviteKeyword.length >= 2
-      ? (userSuggestions ?? []).filter((user) => !existingSpecifiedUserIds.has(user.userId))
-      : [];
   const shouldShowInviteDivider = inheritedSubjects.length > 0 && specifiedUserSubjects.length > 0;
 
   const isUpdating = pendingUpdateCount > 0;
+
+  useRequest(
+    async () => {
+      if (!permissionOverview) return;
+      const userSubjects = permissionOverview.subjects.filter(
+        (subject) => subject.userId && subject.kind !== 'group'
+      );
+      if (userSubjects.length === 0) return;
+
+      const userInfoById = new Map<string, SpecifiedUserCandidate>();
+      const ownerIds = new Set(
+        userSubjects
+          .filter((subject) => subject.source === 'owner')
+          .map((subject) => subject.userId)
+          .filter((userId): userId is string => Boolean(userId))
+      );
+
+      if (ownerIds.size > 0) {
+        const currentUser = await userService.getUserInfo().catch(() => undefined);
+        if (currentUser && ownerIds.has(currentUser.id)) {
+          userInfoById.set(currentUser.id, {
+            userId: currentUser.id,
+            username: currentUser.username,
+            nickname: currentUser.nickname,
+            realName: currentUser.realName,
+            avatar: currentUser.avatar,
+          });
+        }
+      }
+
+      await Promise.all(
+        userSubjects
+          .filter((subject) => subject.source !== 'owner' && subject.userId)
+          .map(async (subject) => {
+            const userId = subject.userId;
+            if (!userId || userInfoById.has(userId)) return;
+            const keywords = Array.from(
+              new Set([userId, subject.name].map((keyword) => keyword.trim()).filter(Boolean))
+            );
+            for (const keyword of keywords) {
+              const candidates = await userService
+                .queryUserSearchCandidates({ keyword, size: 6 })
+                .catch(() => []);
+              const matchedUser = candidates.find((user) => user.userId === userId);
+              if (matchedUser) {
+                userInfoById.set(userId, matchedUser);
+                return;
+              }
+            }
+          })
+      );
+
+      if (userInfoById.size === 0) return;
+
+      setSubjectDrafts((currentSubjects) => {
+        const baseSubjects = currentSubjects ?? permissionOverview.subjects;
+        const nextSubjects = hydrateUserDisplayInfo(baseSubjects, userInfoById);
+        latestSubjectsRef.current = nextSubjects;
+        return nextSubjects;
+      });
+    },
+    {
+      ready: Boolean(permissionOverview),
+      refreshDeps: [permissionOverview, userService],
+    }
+  );
+
+  useRequest(
+    async () => {
+      if (!permissionOverview) return;
+      const groupIds = Array.from(
+        new Set(
+          permissionOverview.subjects
+            .map((subject) => subject.groupId)
+            .filter((groupId): groupId is string => Boolean(groupId))
+        )
+      );
+      if (groupIds.length === 0) return;
+
+      const groupInfos = await Promise.all(
+        groupIds.map((groupId) => groupService.fetchGroupBaseInfo(groupId).catch(() => undefined))
+      );
+      const groupInfoById = new Map(
+        groupInfos
+          .filter((groupInfo): groupInfo is GroupBaseInfo => Boolean(groupInfo?.groupId))
+          .map((groupInfo) => [groupInfo.groupId, groupInfo])
+      );
+      if (groupInfoById.size === 0) return;
+
+      setSubjectDrafts((currentSubjects) => {
+        const baseSubjects = currentSubjects ?? permissionOverview.subjects;
+        const nextSubjects = hydrateGroupDisplayInfo(baseSubjects, groupInfoById);
+        latestSubjectsRef.current = nextSubjects;
+        return nextSubjects;
+      });
+    },
+    {
+      ready: Boolean(permissionOverview),
+      refreshDeps: [permissionOverview, groupService],
+    }
+  );
 
   useRequest(
     async () => {
@@ -408,22 +587,13 @@ function ResourcePermissionPanel({
     setNewUserKeyword('');
   };
 
-  const handleAddSpecifiedUser = async () => {
-    if (!inviteKeyword) {
-      toast.warning('请输入完整用户名或邮箱');
-      return;
-    }
-    try {
-      const users = await runSearchUsers(inviteKeyword);
-      const user = users[0];
-      if (!user) {
-        toast.warning('未找到可见用户');
-        return;
-      }
-      addSpecifiedUserCandidate(user);
-    } catch (err) {
-      toast.danger(parseErrorMessage(err));
-    }
+  const handleUserSearchEmpty = () => {
+    const keyword = newUserKeyword.trim();
+    toast.warning(keyword ? '未找到可见用户，请输入完整用户名或邮箱' : '请输入完整用户名或邮箱');
+  };
+
+  const handleUserSearchError = (err: unknown) => {
+    toast.danger(parseErrorMessage(err));
   };
 
   const handleRemoveSpecifiedUser = (subject: ResourcePermissionSubject) => {
@@ -434,67 +604,53 @@ function ResourcePermissionPanel({
     commitSubjectDrafts(nextSubjects);
   };
 
-  const renderSuggestionUser = (user: UserSearchUser) => {
-    const displayName = getUserCandidateDisplayName(user);
-    return (
-      <button
-        key={user.userId}
-        type="button"
-        role="option"
-        aria-selected={false}
-        className={styles.suggestionItem}
-        onClick={() => addSpecifiedUserCandidate(user)}
-      >
-        <Avatar aria-label={displayName} className={styles.suggestionAvatar}>
-          {user.avatar ? <Avatar.Image alt={displayName} src={user.avatar} /> : null}
-          <Avatar.Fallback>{getDisplayInitial(displayName)}</Avatar.Fallback>
-        </Avatar>
-        <span className={styles.suggestionMeta}>
-          <span className={styles.suggestionName}>{displayName}</span>
-          <span className={styles.suggestionDescription}>{getUserCandidateDescription(user)}</span>
-        </span>
-      </button>
-    );
-  };
+  const queryUserCandidates = useCallback(
+    (keyword: string) => userService.queryUserSearchCandidates({ keyword, size: 6 }),
+    [userService]
+  );
 
-  const renderSubjectItem = (subject: ResourcePermissionSubject) => (
-    <div key={getSubjectRenderKey(subject)} role="listitem" className={styles.subjectItem}>
-      <div className={styles.subjectContent}>
-        <Avatar aria-label={subject.name} className={styles.avatar}>
-          {subject.avatar ? <Avatar.Image alt={subject.name} src={subject.avatar} /> : null}
-          <Avatar.Fallback>{getDisplayInitial(subject.name)}</Avatar.Fallback>
-        </Avatar>
-        <div className={styles.subjectMeta}>
-          <div className={styles.subjectNameRow}>
-            <span className={styles.subjectName}>{subject.name}</span>
-            <Chip size="sm" variant="soft" className={styles.sourceChip}>
-              <Chip.Label>{sourceLabelMap[subject.source]}</Chip.Label>
-            </Chip>
+  const renderSubjectItem = (subject: ResourcePermissionSubject) => {
+    const avatarSrc = getAvatarSrc(subject.avatar);
+
+    return (
+      <div key={getSubjectRenderKey(subject)} role="listitem" className={styles.subjectItem}>
+        <div className={styles.subjectContent}>
+          <Avatar aria-label={subject.name} className={styles.avatar}>
+            {avatarSrc ? <Avatar.Image alt={subject.name} src={avatarSrc} /> : null}
+            <Avatar.Fallback>{getDisplayInitial(subject.name)}</Avatar.Fallback>
+          </Avatar>
+          <div className={styles.subjectMeta}>
+            <div className={styles.subjectNameRow}>
+              <span className={styles.subjectName}>{subject.name}</span>
+              <Chip size="sm" variant="soft" className={styles.sourceChip}>
+                <Chip.Label>{sourceLabelMap[subject.source]}</Chip.Label>
+              </Chip>
+            </div>
+            {subject.description ? (
+              <span className={styles.subjectDescription}>{subject.description}</span>
+            ) : null}
           </div>
-          {subject.description ? (
-            <span className={styles.subjectDescription}>{subject.description}</span>
-          ) : null}
-        </div>
-        <div className={styles.subjectActions}>
-          <SubjectPermissionPopover
-            subject={subject}
-            actionOptions={actionOptions}
-            onActionToggle={handleActionToggle}
-          />
-          {subject.source === 'specifiedUser' ? (
-            <Button
-              size="sm"
-              variant="danger"
-              onPress={() => handleRemoveSpecifiedUser(subject)}
-              aria-label="移除协作者"
-            >
-              <Trash2 size={16} aria-hidden />
-            </Button>
-          ) : null}
+          <div className={styles.subjectActions}>
+            <SubjectPermissionPopover
+              subject={subject}
+              actionOptions={actionOptions}
+              onActionToggle={handleActionToggle}
+            />
+            {subject.source === 'specifiedUser' ? (
+              <Button
+                size="sm"
+                variant="danger"
+                onPress={() => handleRemoveSpecifiedUser(subject)}
+                aria-label="移除协作者"
+              >
+                <Trash2 size={16} aria-hidden />
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className={styles.panel} aria-busy={isUpdating || undefined}>
@@ -506,7 +662,7 @@ function ResourcePermissionPanel({
       </div>
       <div className={styles.panelBody}>
         {loading ? (
-          <div className={styles.stateText}>正在加载权限配置...</div>
+          <PermissionPanelSkeleton />
         ) : error ? (
           <div className={styles.stateText}>{parseErrorMessage(error)}</div>
         ) : permissionOverview ? (
@@ -520,40 +676,19 @@ function ResourcePermissionPanel({
                 {specifiedUserSubjects.map(renderSubjectItem)}
               </div>
               <div className={styles.addRow}>
-                <TextField
-                  aria-label="协作者用户名或邮箱"
+                <UserSearchCombobox
                   value={newUserKeyword}
-                  onChange={setNewUserKeyword}
-                >
-                  <Input
-                    placeholder="完整用户名或邮箱"
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        void handleAddSpecifiedUser();
-                      }
-                    }}
-                  />
-                </TextField>
-                <Button
-                  variant="secondary"
-                  isDisabled={userSearchLoading}
-                  onPress={() => void handleAddSpecifiedUser()}
-                >
-                  <UserPlus size={16} aria-hidden />
-                  添加
-                </Button>
-                {inviteKeyword.length >= 2 ? (
-                  <div className={styles.suggestionList} role="listbox" aria-label="用户搜索建议">
-                    {userSuggestionsLoading ? (
-                      <div className={styles.suggestionState}>搜索中...</div>
-                    ) : suggestionUsers.length > 0 ? (
-                      suggestionUsers.map(renderSuggestionUser)
-                    ) : (
-                      <div className={styles.suggestionState}>无匹配用户</div>
-                    )}
-                  </div>
-                ) : null}
+                  onValueChange={setNewUserKeyword}
+                  onSelect={addSpecifiedUserCandidate}
+                  onEmptySubmit={handleUserSearchEmpty}
+                  onError={handleUserSearchError}
+                  queryUsers={queryUserCandidates}
+                  excludedUserIds={existingSpecifiedUserIds}
+                  placeholder="完整用户名或邮箱"
+                  ariaLabel="协作者用户名或邮箱"
+                  submitIcon={<UserPlus size={16} aria-hidden />}
+                  submitLabel="添加"
+                />
               </div>
             </section>
           </div>

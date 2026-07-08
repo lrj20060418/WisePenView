@@ -76,6 +76,25 @@ const listUserSearchSuggestions = async (
     .slice(0, size);
 };
 
+const queryUserSearchCandidates = async (
+  params: Parameters<IUserService['queryUserSearchCandidates']>[0]
+) => {
+  const keyword = params.keyword.trim();
+  if (!keyword) return [];
+  const size = params.size ?? 10;
+  const [exactUsers, suggestionUsers] = await Promise.all([
+    searchUsers({ keyword }),
+    listUserSearchSuggestions({ keyword, size }),
+  ]);
+  const userMap = new Map<string, UserSearchUser>();
+  [...exactUsers, ...suggestionUsers].forEach((user) => {
+    if (!userMap.has(user.userId)) {
+      userMap.set(user.userId, user);
+    }
+  });
+  return Array.from(userMap.values()).slice(0, size);
+};
+
 const sendEmailVerify = async (): Promise<void> => {
   await delay(200);
 };
@@ -167,6 +186,7 @@ export const UserServicesMock: IUserService = {
   getUserInfo,
   searchUsers,
   listUserSearchSuggestions,
+  queryUserSearchCandidates,
   updateUserInfo,
   sendEmailVerify,
   initiateUISVerify,

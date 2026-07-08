@@ -22,6 +22,7 @@ export type {
   IUserService,
   InitiateUISVerifyRequest,
   ListUserSearchSuggestionsRequest,
+  QueryUserSearchCandidatesRequest,
   SearchUsersRequest,
   SendEmailVerifyRequest,
   UpdateUserInfoRequest,
