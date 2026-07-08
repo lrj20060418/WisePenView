@@ -30,7 +30,7 @@ export interface FetchAdminUserListApiRequest {
   identityType?: string;
 }
 
-export interface PageR<T> {
+interface PageR<T> {
   list: T[];
   total: number;
   page: number;

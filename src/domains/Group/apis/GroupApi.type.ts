@@ -2,11 +2,11 @@ import type { TagResourceActionKey } from '@/domains/Tag';
 import type { UserDisplayBase } from '@/domains/User';
 import type { UserIdentityTypeApiValue } from '@/domains/User/apis/UserApi.type';
 
-export type GroupFileOrgLogicApiValue = 'FOLDER' | 'TAG';
-export type GroupTypeApiValue = '1' | '2' | '3';
-export type GroupRoleApiValue = '0' | '1' | '2' | '-1';
-export type GroupResourceActionApiValue = TagResourceActionKey | number | `${number}`;
-export type GroupResourceActionApiList = GroupResourceActionApiValue[];
+type GroupFileOrgLogicApiValue = 'FOLDER' | 'TAG';
+type GroupTypeApiValue = '1' | '2' | '3';
+type GroupRoleApiValue = '0' | '1' | '2' | '-1';
+type GroupResourceActionApiValue = TagResourceActionKey | number | `${number}`;
+type GroupResourceActionApiList = GroupResourceActionApiValue[];
 
 export interface ListGroupApiRequest {
   groupRoleFilter: 'JOINED' | 'MANAGED';
