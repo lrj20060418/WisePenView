@@ -1,9 +1,10 @@
-import type { Group, GroupMemberList, GroupResConfig } from '@/domains/Group';
+import type { Group, GroupBaseInfo, GroupMemberList, GroupResConfig } from '@/domains/Group';
 import type { TagResourceAction } from '@/domains/Tag';
 
 /** GroupService 接口：供依赖注入使用 */
 export interface IGroupService {
   fetchGroupList(params: FetchGroupListRequest): Promise<{ groups: Group[]; total: number }>;
+  fetchGroupBaseInfo(groupId: string): Promise<GroupBaseInfo>;
   fetchGroupInfo(groupId: string): Promise<Group>;
   getGroupWalletInfo(params: GetGroupWalletInfoRequest): Promise<number>;
   /** GET /resource/groupConfig/getConfig；fileOrgLogic 由 mapper 统一收敛为 TAG */

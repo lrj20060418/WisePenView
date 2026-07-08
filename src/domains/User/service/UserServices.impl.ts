@@ -7,6 +7,9 @@ import type {
   FudanUISVerifyStatusData,
   InitiateUISVerifyRequest,
   IUserService,
+  ListUserSearchSuggestionsRequest,
+  QueryUserSearchCandidatesRequest,
+  SearchUsersRequest,
   SendEmailVerifyRequest,
   UpdateUserInfoRequest,
 } from './index.type';
@@ -17,6 +20,37 @@ type CachedUserSafe = Pick<User, 'id' | 'username' | 'nickname' | 'avatar' | 'id
 const getFullUserInfo = async (): Promise<UserAccountProfile> => {
   const data = await UserApi.getUserInfo();
   return UserServicesMap.mapAccountProfileFromApi(data);
+};
+
+const searchUsers = async (params: SearchUsersRequest) => {
+  const query = UserServicesMap.mapSearchUsersRequest(params);
+  if (!query.keyword) return [];
+  const data = await UserApi.searchUser(query);
+  return UserServicesMap.mapSearchUsersFromApi(data);
+};
+
+const listUserSearchSuggestions = async (params: ListUserSearchSuggestionsRequest) => {
+  const query = UserServicesMap.mapListUserSearchSuggestionsRequest(params);
+  if (query.keyword.length < 2) return [];
+  const data = await UserApi.listUserSearchSuggestions(query);
+  return UserServicesMap.mapSearchUsersFromApi(data);
+};
+
+const queryUserSearchCandidates = async (params: QueryUserSearchCandidatesRequest) => {
+  const keyword = params.keyword.trim();
+  if (!keyword) return [];
+  const size = params.size ?? 10;
+  const [exactUsers, suggestionUsers] = await Promise.all([
+    searchUsers({ keyword }),
+    listUserSearchSuggestions({ keyword, size }),
+  ]);
+  const userMap = new Map<string, (typeof exactUsers)[number]>();
+  [...exactUsers, ...suggestionUsers].forEach((user) => {
+    if (!userMap.has(user.userId)) {
+      userMap.set(user.userId, user);
+    }
+  });
+  return Array.from(userMap.values()).slice(0, size);
 };
 
 const sendEmailVerify = async (params: SendEmailVerifyRequest): Promise<void> => {
@@ -82,6 +116,9 @@ export const createUserServices = (): IUserService => {
   return {
     getFullUserInfo,
     getUserInfo,
+    searchUsers,
+    listUserSearchSuggestions,
+    queryUserSearchCandidates,
     updateUserInfo,
     sendEmailVerify,
     initiateUISVerify,

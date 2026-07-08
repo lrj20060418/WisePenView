@@ -1,11 +1,18 @@
 import type { UserVerificationMode } from '@/domains/User';
 
-export type UserIdentityTypeApiValue = '1' | '2' | '3';
+export type UserIdentityTypeApiValue = 1 | 2 | 3 | '1' | '2' | '3';
 export type UserStatusApiValue = 'NORMAL' | 'UNIDENTIFIED' | 'BANNED';
 export type UserSexApiValue = 'MALE' | 'FEMALE' | 'UNKNOWN';
 export type UserDegreeLevelApiValue = 'UNKNOWN' | 'UNDERGRADUATE' | 'MASTER' | 'DOCTOR';
 
-export interface GetUserInfoApiResponseUserInfo {
+export interface UserDisplayBaseApiResponse {
+  nickname?: string | null;
+  realName?: string | null;
+  avatar?: string | null;
+  identityType?: UserIdentityTypeApiValue | null;
+}
+
+interface GetUserInfoApiResponseUserInfo {
   nickname: string | null;
   realName: string | null;
   avatar: string | null;
@@ -18,7 +25,7 @@ export interface GetUserInfoApiResponseUserInfo {
   status: UserStatusApiValue;
 }
 
-export interface GetUserInfoApiResponseUserProfile {
+interface GetUserInfoApiResponseUserProfile {
   sex: UserSexApiValue;
   university: string | null;
   college: string | null;
@@ -34,6 +41,20 @@ export interface GetUserInfoApiResponse {
   userInfo: GetUserInfoApiResponseUserInfo;
   userProfile: GetUserInfoApiResponseUserProfile;
   readonlyFields: string[] | null;
+}
+
+export interface SearchUserApiRequest {
+  keyword: string;
+}
+
+export interface ListUserSearchSuggestionsApiRequest {
+  keyword: string;
+  size?: number;
+}
+
+export interface UserSearchUserApiResponse extends UserDisplayBaseApiResponse {
+  userId: string | number;
+  username: string;
 }
 
 export interface ChangeUserInfoApiRequest {

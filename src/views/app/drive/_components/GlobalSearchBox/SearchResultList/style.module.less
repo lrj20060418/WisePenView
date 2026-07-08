@@ -1,20 +1,12 @@
+@import '@/styles/scrollbar.module.less';
+
 .list {
   max-height: min(60vh, 520px);
   min-height: 180px;
   overflow-y: auto;
   padding: 8px;
   scroll-behavior: smooth;
-  scrollbar-color: var(--scrollbar) transparent;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar);
-    border-radius: 999px;
-  }
+  .appSubtleScrollbar();
 }
 
 .emptyWrapper {

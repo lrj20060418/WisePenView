@@ -15,7 +15,7 @@ const DRIVE_GROUP_ROOT_PREFIX = 'drive-root:group:';
 
 type EncodedNodeKind = 'folder' | 'resource' | 'link' | 'loading';
 
-export type DecodedNodeId =
+type DecodedNodeId =
   | { kind: 'root'; groupId?: string }
   | { kind: 'folder'; tagId: string }
   | { kind: 'resource'; resourceId: string; parentTagId: string }
@@ -92,6 +92,9 @@ export const mapTagToFolderNode = (
     tagId: tag.tagId,
     name: getFolderName(tag.tagName),
     description: tag.tagDesc,
+    taggedResourceAclGrantScope: tag.taggedResourceAclGrantScope,
+    tagMountPermissionScope: tag.tagMountPermissionScope,
+    grantedActions: tag.grantedActions,
     childrenIds: [],
   };
 };

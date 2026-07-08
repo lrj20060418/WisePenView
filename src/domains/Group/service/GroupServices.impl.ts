@@ -1,4 +1,4 @@
-import type { Group, GroupMemberList, GroupResConfig, ROLE } from '@/domains/Group';
+import type { Group, GroupBaseInfo, GroupMemberList, GroupResConfig, ROLE } from '@/domains/Group';
 import { DEFAULT_MEMBER_ACTIONS } from '@/domains/Group';
 import { normalizeResourceActions } from '@/domains/Tag';
 import type { EnumKey } from '@/utils/enum';
@@ -35,6 +35,13 @@ const fetchGroupInfo = async (groupId: string): Promise<Group> => {
     : GroupApi.getGroupDetailInfo(query));
   if (!data) throw createClientError(FRONTEND_CLIENT_ERROR.GROUP_INFO_FETCH_FAILED);
   return GroupServicesMap.mapFetchGroupInfoFromApi(data);
+};
+
+const fetchGroupBaseInfo = async (groupId: string): Promise<GroupBaseInfo> => {
+  const query = GroupServicesMap.mapFetchGroupBaseInfoRequest(groupId);
+  const data = await GroupApi.getGroupBaseInfo(query);
+  if (!data) throw createClientError(FRONTEND_CLIENT_ERROR.GROUP_INFO_FETCH_FAILED);
+  return GroupServicesMap.mapFetchGroupBaseInfoFromApi(data, groupId);
 };
 
 const getGroupWalletInfo = async (params: GetGroupWalletInfoRequest): Promise<number> => {
@@ -123,6 +130,7 @@ const kickMembers = async (params: KickMembersRequest) => {
 
 export const createGroupServices = (): IGroupService => ({
   fetchGroupList,
+  fetchGroupBaseInfo,
   fetchGroupInfo,
   getGroupWalletInfo,
   fetchGroupResConfig,

@@ -1,17 +1,20 @@
+import {
+  buildDriveTreeData,
+  replaceTreeNodeChildren,
+} from '@/components/Drive/DriveNav/buildTreeData';
+import { resolveDriveScope } from '@/components/Drive/common/driveComponentModel';
+import { useDriveTreeChildren } from '@/components/Drive/common/useDriveTreeChildren';
 import { Empty, Spin } from '@/components/Feedback';
 import type { DataNode } from '@/components/Tree';
 import Tree from '@/components/Tree';
 import { useDriveService } from '@/domains';
 import type { DriveNode } from '@/domains/Drive';
-import { useNavigateResource } from '@/hooks/useNavigateResource';
+import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import { useActiveDriveScopeStore } from '@/store';
 import { useRequest } from 'ahooks';
 import { ChevronDown } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
-import { resolveDriveScope } from '../common/driveComponentModel';
-import { useDriveTreeChildren } from '../common/useDriveTreeChildren';
-import { buildDriveTreeData, replaceTreeNodeChildren } from '../DriveNav/buildTreeData';
 import styles from './style.module.less';
 
 const RENDERABLE_TYPES = new Set<'root' | 'folder' | 'resource' | 'link'>([
@@ -30,7 +33,7 @@ function SidebarDrive() {
     () => resolveDriveScope(groupId ? { type: 'group', groupId } : undefined),
     [groupId]
   );
-  const navigateResource = useNavigateResource(groupId);
+  const openInWorkspace = useOpenInWorkspace(groupId);
 
   const { loadChildren, reset } = useDriveTreeChildren({
     groupId: resolvedScope.groupId,
@@ -89,7 +92,8 @@ function SidebarDrive() {
     if (!node || (node.type !== 'resource' && node.type !== 'link')) return;
     setSelectedKeys([key]);
     if (!node.resourceId) return;
-    navigateResource(node.resourceId, {
+    openInWorkspace({
+      resourceId: node.resourceId,
       resourceType: node.resourceType,
       resourceName: node.title,
     });

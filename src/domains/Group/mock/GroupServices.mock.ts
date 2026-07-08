@@ -1,6 +1,7 @@
 import type {
   GetGroupWalletInfoRequest,
   Group,
+  GroupBaseInfo,
   GroupMember,
   GroupMemberList,
   GroupResConfig,
@@ -17,9 +18,25 @@ const groupDetail = mockdata.groupDetail as Group;
 const members = mockdata.members as GroupMember[];
 const myRole = mockdata.myRole as 'OWNER' | 'ADMIN' | 'MEMBER';
 
+const pickGroupBaseInfo = (group: Group): GroupBaseInfo => ({
+  groupId: group.groupId,
+  groupName: group.groupName,
+  groupDesc: group.groupDesc,
+  groupCoverUrl: group.groupCoverUrl,
+  groupType: group.groupType,
+});
+
 const fetchGroupList = async (): Promise<{ groups: Group[]; total: number }> => {
   await delay(200);
   return { groups, total: groups.length };
+};
+
+const fetchGroupBaseInfo = async (groupId: string): Promise<GroupBaseInfo> => {
+  await delay(100);
+  const group = groups.find((item) => item.groupId === groupId) ?? groupDetail;
+  return pickGroupBaseInfo(
+    group.groupId === groupId ? group : { ...group, groupId, groupName: '' }
+  );
 };
 
 const fetchGroupInfo = async (_groupId: string): Promise<Group> => {
@@ -96,6 +113,7 @@ const kickMembers = async (): Promise<void> => {
 
 export const GroupServicesMock: IGroupService = {
   fetchGroupList,
+  fetchGroupBaseInfo,
   fetchGroupInfo,
   getGroupWalletInfo,
   fetchGroupResConfig,

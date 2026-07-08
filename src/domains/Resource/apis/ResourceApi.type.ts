@@ -1,7 +1,10 @@
+import type { PageR } from '@/apis/api.type';
 import type { ResourceActionKey, ResourceItem } from '@/domains/Resource';
 import type { AccessControlScope, TagResourceActionKey } from '@/domains/Tag';
-import type { UserDisplayBase } from '@/domains/User';
-import type { UserIdentityTypeApiValue } from '@/domains/User/apis/UserApi.type';
+import type { UserDisplayBaseApiResponse } from '@/domains/User/apis/UserApi.type';
+
+type ResourceActionApiValue = ResourceActionKey | number | `${number}`;
+export type ResourceActionApiList = ResourceActionApiValue[];
 
 export interface ResourceInteractionInfoApiResponse {
   readCount?: number;
@@ -12,7 +15,7 @@ export interface ResourceInteractionInfoApiResponse {
   commentCount?: number;
 }
 
-export interface ResourceTagInfoApiResponse {
+interface ResourceTagInfoApiResponse {
   tagName?: string;
   tagDesc?: string;
   tagIcon?: string;
@@ -21,10 +24,31 @@ export interface ResourceTagInfoApiResponse {
   isPath?: boolean;
 }
 
-export interface ResourceTagBindApiResponse {
+interface ResourceTagBindApiResponse {
   groupId?: string;
   primaryTagId?: string;
   tags?: Record<string, ResourceTagInfoApiResponse | null | undefined>;
+}
+
+type ResourceGroupTypeApiValue = 1 | 2 | 3 | '1' | '2' | '3';
+
+export interface ResourceGroupDisplayBaseApiResponse {
+  groupName?: string | null;
+  groupDesc?: string | null;
+  groupCoverUrl?: string | null;
+  groupType?: ResourceGroupTypeApiValue | null;
+}
+
+export interface ResourceGroupGrantedActionsApiResponse {
+  groupId: string;
+  groupInfo?: ResourceGroupDisplayBaseApiResponse | null;
+  grantedActions?: ResourceActionApiList | null;
+}
+
+export interface ResourceSpecifiedUserGrantedActionsApiResponse {
+  userId: string;
+  userInfo?: UserDisplayBaseApiResponse | null;
+  grantedActions?: ResourceActionApiList | null;
 }
 
 export interface ResourceItemApiResponse extends Omit<
@@ -39,20 +63,20 @@ export interface ResourceItemApiResponse extends Omit<
   | 'resourceIconType'
   | 'mainTagId'
   | 'linkTagIds'
+  | 'currentActions'
+  | 'overrideGrantedActions'
+  | 'specifiedUsersGrantedActions'
 > {
   size?: number;
-  ownerInfo: Omit<UserDisplayBase, 'identityType'> & { identityType?: UserIdentityTypeApiValue };
+  ownerInfo: UserDisplayBaseApiResponse;
   resourceInteractionInfo?: ResourceInteractionInfoApiResponse;
   tagBinds?: ResourceTagBindApiResponse[];
+  currentActions?: ResourceActionApiList | null;
+  overrideGrantedActions?: ResourceGroupGrantedActionsApiResponse[] | null;
+  specifiedUsersGrantedActions?: ResourceSpecifiedUserGrantedActionsApiResponse[] | null;
 }
 
-export interface ResourceListPageApiResponse {
-  list: ResourceItemApiResponse[];
-  total: number;
-  page: number;
-  size: number;
-  totalPage: number;
-}
+export type ResourceListPageApiResponse = PageR<ResourceItemApiResponse>;
 
 export interface ListResourceItemsApiRequest {
   page: number;
@@ -79,7 +103,7 @@ export interface ChangeResourceTagsApiRequest {
 
 export interface ChangeResourceActionPermissionApiRequest {
   resourceId: string;
-  overrideGrantedActions?: ResourceActionKey[] | null;
+  overrideGrantedActions?: Record<string, ResourceActionKey[] | null> | null;
   specifiedUsersGrantedActions?: Record<string, ResourceActionKey[]> | null;
 }
 
@@ -94,19 +118,15 @@ export interface GlobalSearchApiRequest {
   size: number;
 }
 
-export interface GlobalSearchApiResponse {
-  list: Array<{
-    resourceId: string;
-    resourceType: string;
-    resourceName: string;
-    highlightContent: string | null;
-    updateTime: string;
-  }>;
-  total: number;
-  page: number;
-  size: number;
-  totalPage: number;
+export interface GlobalSearchItemApiResponse {
+  resourceId: string;
+  resourceType: string;
+  resourceName: string;
+  highlightContent: string | null;
+  updateTime: string;
 }
+
+export type GlobalSearchApiResponse = PageR<GlobalSearchItemApiResponse>;
 
 export interface AddTagApiRequest {
   groupId?: string;
@@ -172,7 +192,7 @@ export interface TagTreeResponse {
   taggedResourceGrantedActionsMask?: number;
   tagMountPermissionScope?: AccessControlScope;
   tagMountSpecifiedUsers?: string[];
-  grantedActions?: number[];
+  grantedActions?: ResourceActionApiList;
   parentId?: string;
   children?: TagTreeResponse[];
 }

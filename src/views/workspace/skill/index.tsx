@@ -12,20 +12,19 @@ import { useResourceService, useSkillService } from '@/domains';
 import type { SkillFileNode, UploadSkillAssetResult } from '@/domains/Skill';
 import { SkillServicesMap } from '@/domains/Skill';
 import { useEffectForce } from '@/hooks/useEffectForce';
+import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import {
   useWorkspaceLayoutConfig,
   type WorkspaceLayoutConfig,
 } from '@/layouts/Workspace/WorkspaceOutletContext';
 import { parseErrorMessage } from '@/utils/error';
-import {
-  buildWorkspaceResourcePath,
-  RESOURCE_EDITOR_TYPE,
-} from '@/utils/navigation/workspaceRoute';
+import { WORKSPACE_RESOURCE_TYPE } from '@/utils/navigation/workspaceRoute';
 import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { FolderPlus, Pencil, Plus, Save, Upload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom';
+import ResourcePermissionControl from '../_components/ResourcePermissionControl';
 
 import CreateSkillModal from './_components/CreateSkillModal';
 import SkillSaveQueueDock from './_components/SkillSaveQueueDock';
@@ -610,6 +609,7 @@ function SkillToolbarTitle({ title, saveStatus }: SkillToolbarTitleProps) {
 
 function SkillView({ resourceId = '' }: SkillViewProps = {}) {
   const navigate = useNavigate();
+  const openInWorkspace = useOpenInWorkspace();
   const skillService = useSkillService();
   const resourceService = useResourceService();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -917,7 +917,9 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
 
   const handleCreateSuccess = (newResourceId: string) => {
     setCreateModalOpen(false);
-    navigate(buildWorkspaceResourcePath(RESOURCE_EDITOR_TYPE.SKILL, newResourceId), {
+    openInWorkspace({
+      resourceId: newResourceId,
+      resourceType: WORKSPACE_RESOURCE_TYPE.SKILL,
       replace: true,
     });
   };
@@ -1634,6 +1636,12 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
         ),
         extra: skill ? (
           <div className={styles.topBarActions}>
+            <ResourcePermissionControl
+              resourceId={skill.resourceId}
+              resourceType={WORKSPACE_RESOURCE_TYPE.SKILL}
+              ownerId={skill.ownerId}
+              onSuccess={refreshSkill}
+            />
             {canEdit ? (
               <>
                 <Button
@@ -1706,6 +1714,7 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
       isSaveQueueActive,
       moveLoading,
       publishLoading,
+      refreshSkill,
       saveLoading,
       skill,
       versionItems,

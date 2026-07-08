@@ -1,7 +1,6 @@
 import type {
   CreateNoteRequest,
   CreateNoteResponse,
-  DeleteNoteRequest,
   ForkNoteRequest,
   GetNoteInfoRequest,
   INoteService,
@@ -19,10 +18,6 @@ const syncTitle = async (params: SyncTitleRequest): Promise<void> => {
 
 const createNote = async (_params: CreateNoteRequest): Promise<CreateNoteResponse> => {
   return { resourceId: '123' };
-};
-
-const deleteNote = async (_params: DeleteNoteRequest): Promise<void> => {
-  return Promise.resolve();
 };
 
 const getNoteInfoDisplay = async (_params: GetNoteInfoRequest): Promise<NoteInfoDisplayData> => {
@@ -61,13 +56,7 @@ const listNoteVersions = async () => ({
 export const NoteServicesMock: INoteService = {
   syncTitle,
   createNote,
-  deleteNote,
   getNoteInfoDisplay,
-  getNotePermissionConfig: async () => ({
-    resourceId: '123',
-    overrideGrantedActions: null,
-    specifiedUsersGrantedActions: null,
-  }),
   getDrawIoLatestSnapshot,
   saveDrawIoSnapshot,
   forkNote,

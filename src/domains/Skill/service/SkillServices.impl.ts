@@ -13,7 +13,7 @@ import type {
   UploadSkillAssetsOptions,
 } from './index.type';
 
-export interface SkillServicesDeps {
+interface SkillServicesDeps {
   resourceService: IResourceService;
   userService: IUserService;
 }

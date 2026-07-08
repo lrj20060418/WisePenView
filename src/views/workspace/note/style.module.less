@@ -1,3 +1,5 @@
+@import '@/styles/scrollbar.module.less';
+
 /* 相对 WorkspaceLayout.middleContent（position: relative）铺满中间栏，不盖住侧栏与右侧面板 */
 .pageWrap {
   --workspace-view-max-width: 1200px;
@@ -158,23 +160,7 @@
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
-}
-
-/* 滚动条：默认透明，hover 时显示 */
-.outlineScrollArea::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-}
-.outlineScrollArea::-webkit-scrollbar-thumb {
-  background-color: transparent;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s ease;
-}
-.outlineScrollArea::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-
-.outlineScrollArea:hover::-webkit-scrollbar-thumb {
-  background-color: var(--surface-secondary);
+  .appSubtleScrollbar();
 }
 
 .outlineCollapsedCol {
