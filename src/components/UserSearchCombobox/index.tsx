@@ -43,7 +43,7 @@ function UserSearchCombobox({
   const keyword = value.trim();
   const [isFocused, setIsFocused] = useState(false);
   const [activeOption, setActiveOption] = useState<ActiveOptionState>({ keyword: '', index: 0 });
-  const blurTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const blurTimerRef = useRef<number | null>(null);
   const {
     data: queryResult,
     loading,
