@@ -44,52 +44,45 @@ export type TagResourceAction = ResourceAction;
 export type TagResourceActionKey = EnumKey<typeof TAG_RESOURCE_ACTION>;
 export type TagPermissionPresetKey = 'private' | 'readonly' | 'shared' | 'custom';
 type TagPermissionConcretePresetKey = Exclude<TagPermissionPresetKey, 'custom'>;
-/** 挂载权限不是 ResourceAction，用虚拟 action 接入标签权限列表。 */
-export const TAG_PERMISSION_MOUNT_ACTION_KEY = 'TAG_MOUNT' as const;
+export type TagMountPermissionPresetKey = 'all' | 'onlyAdmin' | 'advanced';
+type TagMountPermissionConcretePresetKey = Exclude<TagMountPermissionPresetKey, 'advanced'>;
 
 export interface TagPermissionPresetValues {
   taggedResourceAclGrantScope: AccessControlScope;
-  tagMountPermissionScope: AccessControlScope;
   grantedActions: TagResourceAction[];
 }
 
 export interface TagPermissionActionValues {
-  tagMountPermissionScope?: AccessControlScope;
-  tagMountSpecifiedUsers?: string[];
   grantedActions?: TagResourceAction[];
 }
 
-export type TagPermissionListAction =
-  | {
-      kind: 'tagMount';
-      key: typeof TAG_PERMISSION_MOUNT_ACTION_KEY;
-      label: string;
-    }
-  | {
-      kind: 'resource';
-      key: TagResourceActionKey;
-      label: string;
-      action: TagResourceAction;
-    };
+export interface TagMountPermissionPresetValues {
+  tagMountPermissionScope: AccessControlScope;
+  tagMountSpecifiedUsers: string[];
+}
 
-/** 标签权限预设的领域值；UI 文案由调用方自行组合。 */
+export interface TagPermissionListAction {
+  kind: 'resource';
+  key: TagResourceActionKey;
+  label: string;
+  action: TagResourceAction;
+}
+
+/** 标签内资源默认访问策略预设的领域值；UI 文案由调用方自行组合。 */
 export const TAG_PERMISSION_PRESET_VALUES: Record<
   TagPermissionConcretePresetKey,
   TagPermissionPresetValues
 > = {
   private: {
     taggedResourceAclGrantScope: ACCESS_CONTROL_SCOPE.ONLY_ADMIN,
-    tagMountPermissionScope: ACCESS_CONTROL_SCOPE.ONLY_ADMIN,
     grantedActions: [],
   },
   readonly: {
     taggedResourceAclGrantScope: ACCESS_CONTROL_SCOPE.ALL,
-    tagMountPermissionScope: ACCESS_CONTROL_SCOPE.ONLY_ADMIN,
     grantedActions: normalizeResourceActions([TAG_RESOURCE_ACTION.VIEW]),
   },
   shared: {
     taggedResourceAclGrantScope: ACCESS_CONTROL_SCOPE.ALL,
-    tagMountPermissionScope: ACCESS_CONTROL_SCOPE.ALL,
     grantedActions: normalizeResourceActions([
       TAG_RESOURCE_ACTION.EDIT,
       TAG_RESOURCE_ACTION.INLINE_COMMENT,
@@ -105,30 +98,38 @@ export const getTagPermissionPresetValues = (
 ): TagPermissionPresetValues | undefined =>
   key === 'custom' ? undefined : TAG_PERMISSION_PRESET_VALUES[key];
 
-export const TAG_PERMISSION_LIST_ACTIONS: TagPermissionListAction[] = [
-  {
-    kind: 'tagMount',
-    key: TAG_PERMISSION_MOUNT_ACTION_KEY,
-    label: '挂载资源',
+/** 文件夹自身挂载策略预设的领域值；高级模式由黑/白名单与指定成员表达。 */
+export const TAG_MOUNT_PERMISSION_PRESET_VALUES: Record<
+  TagMountPermissionConcretePresetKey,
+  TagMountPermissionPresetValues
+> = {
+  all: {
+    tagMountPermissionScope: ACCESS_CONTROL_SCOPE.ALL,
+    tagMountSpecifiedUsers: [],
   },
-  ...TAG_RESOURCE_ACTION.options.map((item) => ({
+  onlyAdmin: {
+    tagMountPermissionScope: ACCESS_CONTROL_SCOPE.ONLY_ADMIN,
+    tagMountSpecifiedUsers: [],
+  },
+};
+
+export const getTagMountPermissionPresetValues = (
+  key: TagMountPermissionPresetKey
+): TagMountPermissionPresetValues | undefined =>
+  key === 'advanced' ? undefined : TAG_MOUNT_PERMISSION_PRESET_VALUES[key];
+
+export const TAG_PERMISSION_LIST_ACTIONS: TagPermissionListAction[] =
+  TAG_RESOURCE_ACTION.options.map((item) => ({
     kind: 'resource' as const,
     key: item.key,
     label: item.label,
     action: item.value as TagResourceAction,
-  })),
-];
-
-const isTagMountPermissionSelected = (scope?: AccessControlScope): boolean =>
-  (scope ?? ACCESS_CONTROL_SCOPE.ALL) !== ACCESS_CONTROL_SCOPE.ONLY_ADMIN;
+  }));
 
 export const isTagPermissionListActionSelected = (
   values: TagPermissionActionValues,
   listAction: TagPermissionListAction
 ): boolean => {
-  if (listAction.kind === 'tagMount') {
-    return isTagMountPermissionSelected(values.tagMountPermissionScope);
-  }
   return normalizeResourceActions(values.grantedActions).includes(listAction.action);
 };
 
@@ -137,13 +138,6 @@ export const buildTagPermissionListActionSelectionPatch = (
   listAction: TagPermissionListAction,
   checked: boolean
 ): Partial<TagPermissionActionValues> => {
-  if (listAction.kind === 'tagMount') {
-    return {
-      tagMountPermissionScope: checked ? ACCESS_CONTROL_SCOPE.ALL : ACCESS_CONTROL_SCOPE.ONLY_ADMIN,
-      tagMountSpecifiedUsers: [],
-    };
-  }
-
   return {
     grantedActions: updateResourceActionSelection(
       values.grantedActions,

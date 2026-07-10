@@ -415,7 +415,8 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     createMenuItems,
     handleCreateMenuSelect,
     openUploadToGroup,
-    openTagPermission,
+    openTagAccessPermission,
+    openTagMountPermission,
     openResourcePermission,
     tagPermissionRefreshToken,
     resourcePermissionRefreshToken,
@@ -435,11 +436,6 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       <div className={styles.toolbarActions}>
         {showCreateMenu ? (
           <CreateMenu items={createMenuItems} onSelect={handleCreateMenuSelect} />
-        ) : null}
-        {showManagePermission ? (
-          <Button variant="secondary" size="sm" onPress={() => openTagPermission()}>
-            标签权限管理
-          </Button>
         ) : null}
         {showUploadToGroup ? (
           <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
@@ -463,12 +459,10 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       createMenuItems,
       handleCreateMenuSelect,
       isTrashView,
-      openTagPermission,
       openUploadToGroup,
       openTrash,
       canOpenTrash,
       showCreateMenu,
-      showManagePermission,
       showUploadToGroup,
       showToolbarTrash,
     ]
@@ -826,7 +820,8 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
               onRename={handleOpenRename}
               onMove={handleOpenMove}
               onDelete={handleOpenDelete}
-              onManageTagPermission={openTagPermission}
+              onManageTagAccessPermission={openTagAccessPermission}
+              onManageTagMountPermission={openTagMountPermission}
               onManageResourcePermission={openResourcePermission}
               onTagPermissionChange={refreshDrive}
             />

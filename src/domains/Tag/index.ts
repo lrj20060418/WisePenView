@@ -1,8 +1,8 @@
 export type { TagListByTagResponse } from './entity/tag';
 export {
   ACCESS_CONTROL_SCOPE,
+  TAG_MOUNT_PERMISSION_PRESET_VALUES,
   TAG_PERMISSION_LIST_ACTIONS,
-  TAG_PERMISSION_MOUNT_ACTION_KEY,
   TAG_PERMISSION_PRESET_VALUES,
   TAG_RESOURCE_ACTION,
   TAG_VISIBILITY_MODE,
@@ -11,6 +11,7 @@ export {
   coerceResourceActions,
   getResourceActionImpliedActions,
   getResourceActionImpliedMask,
+  getTagMountPermissionPresetValues,
   getTagPermissionPresetValues,
   hasResourceAction,
   isTagPermissionListActionSelected,
@@ -22,6 +23,8 @@ export {
 export type {
   AccessControlScope,
   AccessControlScopeKey,
+  TagMountPermissionPresetKey,
+  TagMountPermissionPresetValues,
   TagPermissionActionValues,
   TagPermissionListAction,
   TagPermissionPresetKey,

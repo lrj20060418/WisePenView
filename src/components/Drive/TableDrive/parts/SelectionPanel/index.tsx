@@ -13,7 +13,9 @@ import {
   type ResourcePermissionPresetKey,
 } from '@/components/Drive/common/resourcePermissionPolicy';
 import {
+  getTagMountPermissionPresetOption,
   getTagPermissionPresetOption,
+  resolveTagMountPermissionPresetKeyFromTag,
   resolveTagPermissionPresetKeyFromTag,
   TAG_PERMISSION_PRESETS,
 } from '@/components/Drive/common/tagPermissionPreset';
@@ -26,7 +28,9 @@ import type {
   ResourcePermissionResourceType,
 } from '@/domains/Resource';
 import {
+  ACCESS_CONTROL_SCOPE,
   getTagPermissionPresetValues,
+  type TagMountPermissionPresetKey,
   type TagPermissionPresetKey,
   type TagTreeNode,
 } from '@/domains/Tag';
@@ -34,14 +38,28 @@ import { parseErrorMessage } from '@/utils/error';
 import { resolveWorkspaceResourceType } from '@/utils/navigation/workspaceRoute';
 import { Button, ListBox, toast, type Selection } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { FolderInput, Pencil, ShieldCheck } from 'lucide-react';
+import { FolderInput, Pencil, Settings, ShieldCheck } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { TableDriveSelectionPanelProps } from './index.type';
 import NodeInfoSection from './parts/NodeInfoSection';
 import styles from './style.module.less';
 
 const EMPTY_HINT = '选中左侧文件或文件夹以查看详情';
-const TAG_PERMISSION_SIDEBAR_OPTIONS = TAG_PERMISSION_PRESETS;
+const TAG_ACCESS_PERMISSION_SIDEBAR_OPTIONS = TAG_PERMISSION_PRESETS;
+
+const formatTagMountPermissionSummary = (
+  presetKey: TagMountPermissionPresetKey,
+  presetOption: ReturnType<typeof getTagMountPermissionPresetOption>,
+  tag: TagTreeNode | undefined
+): string => {
+  if (presetKey !== 'advanced') {
+    return `${presetOption.label}：${presetOption.description}`;
+  }
+  const scope =
+    tag?.tagMountPermissionScope === ACCESS_CONTROL_SCOPE.BLACKLIST ? '黑名单' : '白名单';
+  const count = tag?.tagMountSpecifiedUsers?.length ?? 0;
+  return `${presetOption.label}：${scope} ${count} 人`;
+};
 
 interface ResourcePermissionPanelData {
   overview: ResourcePermissionOverview;
@@ -65,7 +83,8 @@ function TableDriveSelectionPanel({
   onRename,
   onMove,
   onDelete,
-  onManageTagPermission,
+  onManageTagAccessPermission,
+  onManageTagMountPermission,
   onManageResourcePermission,
   onTagPermissionChange,
 }: TableDriveSelectionPanelProps) {
@@ -185,6 +204,7 @@ function TableDriveSelectionPanel({
     }
   );
   const resolvedPresetKey = resolveTagPermissionPresetKeyFromTag(selectedTag);
+  const resolvedMountPresetKey = resolveTagMountPermissionPresetKeyFromTag(selectedTag);
   const optimisticSelection = optimisticPresetSelection;
   const optimisticPresetKey =
     optimisticSelection &&
@@ -195,6 +215,13 @@ function TableDriveSelectionPanel({
   const selectedPresetKey = optimisticPresetKey ?? resolvedPresetKey;
   const selectedPresetOption = getTagPermissionPresetOption(selectedPresetKey);
   const selectedPresetListKeys = new Set([selectedPresetKey]);
+  const selectedMountPresetKey = resolvedMountPresetKey;
+  const selectedMountPresetOption = getTagMountPermissionPresetOption(selectedMountPresetKey);
+  const selectedMountPresetSummary = formatTagMountPermissionSummary(
+    selectedMountPresetKey,
+    selectedMountPresetOption,
+    selectedTag
+  );
   const resourcePermissionPolicy = resolveResourcePermissionPolicy({
     overview: resourcePermissionData?.overview,
     groupId,
@@ -235,8 +262,6 @@ function TableDriveSelectionPanel({
           taggedResourceAclGrantScope: presetValues.taggedResourceAclGrantScope,
           taggedResourceAclGrantSpecifiedUsers: [],
           grantedActions: presetValues.grantedActions,
-          tagMountPermissionScope: presetValues.tagMountPermissionScope,
-          tagMountSpecifiedUsers: [],
         });
         mutateSelectedTag((prev) => ({
           ...(prev ?? {
@@ -247,12 +272,10 @@ function TableDriveSelectionPanel({
           taggedResourceAclGrantScope: presetValues.taggedResourceAclGrantScope,
           taggedResourceAclGrantSpecifiedUsers: [],
           grantedActions: presetValues.grantedActions,
-          tagMountPermissionScope: presetValues.tagMountPermissionScope,
-          tagMountSpecifiedUsers: [],
         }));
         setOptimisticPresetSelection(null);
         onTagPermissionChange?.();
-        toast.success('权限策略已保存');
+        toast.success('访问策略已保存');
         return true;
       } catch (err) {
         setOptimisticPresetSelection(null);
@@ -277,7 +300,7 @@ function TableDriveSelectionPanel({
     if (!folderTagId || !groupId) return;
     if (savingPresetKeyRef.current) return;
     if (presetKey === 'custom') {
-      onManageTagPermission?.(folderTagId);
+      onManageTagAccessPermission?.(folderTagId);
       return;
     }
     if (presetKey === selectedPresetKey) return;
@@ -289,6 +312,11 @@ function TableDriveSelectionPanel({
     const [key] = [...keys];
     if (key == null) return;
     void handlePresetSelect(String(key) as TagPermissionPresetKey);
+  };
+
+  const handleMountConfigPress = () => {
+    if (!folderTagId || !groupId) return;
+    onManageTagMountPermission?.(folderTagId);
   };
 
   const handleResourcePresetSelect = async (presetKey: ResourcePermissionPresetKey) => {
@@ -421,27 +449,51 @@ function TableDriveSelectionPanel({
           <div className={styles.body}>
             <NodeInfoSection selectedRow={selectedRow} />
             {canShowTagPermission ? (
-              <section className={styles.permissionSection} aria-label="权限策略">
+              <section className={styles.permissionSection} aria-label="访问策略">
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleRow}>
                     <ShieldCheck size={15} aria-hidden="true" />
-                    <span className={styles.sectionTitle}>权限策略</span>
+                    <span className={styles.sectionTitle}>访问策略</span>
                   </div>
                 </div>
                 <div className={styles.permissionSummary}>
                   {tagPermissionLoading
-                    ? '正在加载权限策略'
+                    ? '正在加载访问策略'
                     : `${selectedPresetOption.label}：${selectedPresetOption.description}`}
                 </div>
                 <ListBox
-                  aria-label="标签权限预设"
+                  aria-label="标签访问策略预设"
                   selectionMode="single"
                   selectedKeys={selectedPresetListKeys}
                   onSelectionChange={handlePresetSelectionChange}
+                  onAction={(key) => {
+                    if (String(key) === 'custom') {
+                      handlePresetSelect('custom');
+                    }
+                  }}
                   className={styles.permissionPresetList}
                 >
-                  {TAG_PERMISSION_SIDEBAR_OPTIONS.map((preset) => (
-                    <ListBox.Item id={preset.key} key={preset.key} textValue={preset.label}>
+                  {TAG_ACCESS_PERMISSION_SIDEBAR_OPTIONS.map((preset) => (
+                    <ListBox.Item
+                      id={preset.key}
+                      key={preset.key}
+                      textValue={preset.label}
+                      onPointerUp={
+                        preset.key === 'custom' && selectedPresetKey === 'custom'
+                          ? () => handlePresetSelect('custom')
+                          : undefined
+                      }
+                      onKeyDown={
+                        preset.key === 'custom' && selectedPresetKey === 'custom'
+                          ? (event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                handlePresetSelect('custom');
+                              }
+                            }
+                          : undefined
+                      }
+                    >
                       <span className={styles.presetContent}>
                         <span className={styles.presetTitle}>{preset.label}</span>
                         <span className={styles.presetDescription}>{preset.description}</span>
@@ -450,6 +502,30 @@ function TableDriveSelectionPanel({
                     </ListBox.Item>
                   ))}
                 </ListBox>
+              </section>
+            ) : null}
+            {canShowTagPermission ? (
+              <section className={styles.permissionSection} aria-label="挂载策略">
+                <div className={styles.sectionHeader}>
+                  <div className={styles.sectionTitleRow}>
+                    <FolderInput size={15} aria-hidden="true" />
+                    <span className={styles.sectionTitle}>挂载策略</span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isIconOnly
+                    className={styles.configBtn}
+                    aria-label="配置挂载策略"
+                    isDisabled={tagPermissionLoading}
+                    onPress={handleMountConfigPress}
+                  >
+                    <Settings size={15} aria-hidden="true" />
+                  </Button>
+                </div>
+                <div className={styles.permissionSummary}>
+                  {tagPermissionLoading ? '正在加载挂载策略' : selectedMountPresetSummary}
+                </div>
               </section>
             ) : null}
             {canShowResourcePermission ? (
@@ -476,10 +552,34 @@ function TableDriveSelectionPanel({
                   selectedKeys={selectedResourcePresetListKeys}
                   disabledKeys={disabledResourcePresetKeys}
                   onSelectionChange={handleResourcePresetSelectionChange}
+                  onAction={(key) => {
+                    if (String(key) === 'custom') {
+                      void handleResourcePresetSelect('custom');
+                    }
+                  }}
                   className={styles.permissionPresetList}
                 >
                   {RESOURCE_PERMISSION_PRESETS.map((preset) => (
-                    <ListBox.Item id={preset.key} key={preset.key} textValue={preset.label}>
+                    <ListBox.Item
+                      id={preset.key}
+                      key={preset.key}
+                      textValue={preset.label}
+                      onPointerUp={
+                        preset.key === 'custom' && selectedResourcePresetKey === 'custom'
+                          ? () => void handleResourcePresetSelect('custom')
+                          : undefined
+                      }
+                      onKeyDown={
+                        preset.key === 'custom' && selectedResourcePresetKey === 'custom'
+                          ? (event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                void handleResourcePresetSelect('custom');
+                              }
+                            }
+                          : undefined
+                      }
+                    >
                       <span className={styles.presetContent}>
                         <span className={styles.presetTitle}>{preset.label}</span>
                         <span className={styles.presetDescription}>{preset.description}</span>

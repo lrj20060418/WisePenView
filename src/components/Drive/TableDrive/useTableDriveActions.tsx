@@ -1,6 +1,7 @@
 import {
   NewFolderNodeModal,
   ResourcePermissionModal,
+  TagMountPermissionModal,
   TagPermissionModal,
   UploadDocumentModal,
   UploadFileToGroupModal,
@@ -39,7 +40,8 @@ export interface UseTableDriveActionsReturn {
   createMenuItems: CreateMenuItem[];
   handleCreateMenuSelect: (id: CreateMenuItem['id']) => void;
   openUploadToGroup: () => void;
-  openTagPermission: (tagId?: string) => void;
+  openTagAccessPermission: (tagId: string) => void;
+  openTagMountPermission: (tagId: string) => void;
   openResourcePermission: (target: ResourcePermissionModalTarget) => void;
   tagPermissionRefreshToken: number;
   resourcePermissionRefreshToken: number;
@@ -76,8 +78,8 @@ export function useTableDriveActions({
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
   const [uploadMountTagId, setUploadMountTagId] = useState<string>();
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [tagPermissionOpen, setTagPermissionOpen] = useState(false);
-  const [tagPermissionTagId, setTagPermissionTagId] = useState<string>();
+  const [tagAccessPermissionTagId, setTagAccessPermissionTagId] = useState<string>();
+  const [tagMountPermissionTagId, setTagMountPermissionTagId] = useState<string>();
   const [tagPermissionRefreshToken, setTagPermissionRefreshToken] = useState(0);
   const [resourcePermissionTarget, setResourcePermissionTarget] =
     useState<ResourcePermissionModalTarget | null>(null);
@@ -223,15 +225,27 @@ export function useTableDriveActions({
             onSuccess={refresh}
           />
         ) : null}
-        {groupId && tagPermissionOpen ? (
+        {groupId && tagAccessPermissionTagId ? (
           <TagPermissionModal
-            isOpen={tagPermissionOpen}
+            isOpen={Boolean(tagAccessPermissionTagId)}
             groupId={groupId}
-            initialTagId={tagPermissionTagId}
+            initialTagId={tagAccessPermissionTagId}
             onOpenChange={(open) => {
               if (!open) {
-                setTagPermissionOpen(false);
-                setTagPermissionTagId(undefined);
+                setTagAccessPermissionTagId(undefined);
+              }
+            }}
+            onSuccess={() => setTagPermissionRefreshToken((prev) => prev + 1)}
+          />
+        ) : null}
+        {groupId && tagMountPermissionTagId ? (
+          <TagMountPermissionModal
+            isOpen={Boolean(tagMountPermissionTagId)}
+            groupId={groupId}
+            initialTagId={tagMountPermissionTagId}
+            onOpenChange={(open) => {
+              if (!open) {
+                setTagMountPermissionTagId(undefined);
               }
             }}
             onSuccess={() => setTagPermissionRefreshToken((prev) => prev + 1)}
@@ -308,8 +322,8 @@ export function useTableDriveActions({
       resourcePermissionTarget,
       runCreateDrawio,
       targetTagId,
-      tagPermissionOpen,
-      tagPermissionTagId,
+      tagAccessPermissionTagId,
+      tagMountPermissionTagId,
       skillModalOpen,
       uploadDocumentOpen,
       uploadMountTagId,
@@ -333,9 +347,12 @@ export function useTableDriveActions({
     setUploadOpen(true);
   }, []);
 
-  const openTagPermission = useCallback((tagId?: string) => {
-    setTagPermissionTagId(tagId);
-    setTagPermissionOpen(true);
+  const openTagAccessPermission = useCallback((tagId: string) => {
+    setTagAccessPermissionTagId(tagId);
+  }, []);
+
+  const openTagMountPermission = useCallback((tagId: string) => {
+    setTagMountPermissionTagId(tagId);
   }, []);
 
   const openResourcePermission = useCallback((target: ResourcePermissionModalTarget) => {
@@ -449,7 +466,8 @@ export function useTableDriveActions({
     createMenuItems,
     handleCreateMenuSelect,
     openUploadToGroup,
-    openTagPermission,
+    openTagAccessPermission,
+    openTagMountPermission,
     openResourcePermission,
     tagPermissionRefreshToken,
     resourcePermissionRefreshToken,
