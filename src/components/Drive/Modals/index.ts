@@ -3,7 +3,7 @@ export { default as MoveNodeModal } from './Node/MoveNodeModal';
 export { default as NewFolderNodeModal } from './Node/NewFolderNodeModal';
 export { default as RenameNodeModal } from './Node/RenameNodeModal';
 export { default as ResourcePermissionModal } from './ResourcePermissionModal';
-export { default as TagPermissionModal } from './TagPermissionModal';
+export { TagMountPermissionModal, default as TagPermissionModal } from './TagPermissionModal';
 export { default as UploadDocumentModal } from './UploadDocumentModal';
 export { default as UploadFileToGroupModal } from './UploadFileToGroupModal';
 
@@ -15,6 +15,9 @@ export type {
   ResourcePermissionModalProps,
   ResourcePermissionModalTarget,
 } from './ResourcePermissionModal/index.type';
-export type { TagPermissionModalProps } from './TagPermissionModal/index.type';
+export type {
+  TagMountPermissionModalProps,
+  TagPermissionModalProps,
+} from './TagPermissionModal/index.type';
 export type { UploadDocumentModalProps } from './UploadDocumentModal/index.type';
 export type { UploadFileToGroupModalProps } from './UploadFileToGroupModal/index.type';

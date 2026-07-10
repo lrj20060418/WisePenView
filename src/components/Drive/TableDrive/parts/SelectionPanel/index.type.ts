@@ -16,7 +16,8 @@ export interface TableDriveSelectionPanelProps {
   onRename: (node: DriveActionTarget) => void;
   onMove: (node: DriveActionTarget) => void;
   onDelete: (node: DriveActionTarget) => void;
-  onManageTagPermission?: (tagId: string) => void;
+  onManageTagAccessPermission?: (tagId: string) => void;
+  onManageTagMountPermission?: (tagId: string) => void;
   onManageResourcePermission?: (target: ResourcePermissionModalTarget) => void;
   onTagPermissionChange?: () => void;
 }

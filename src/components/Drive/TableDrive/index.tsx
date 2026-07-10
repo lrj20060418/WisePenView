@@ -11,6 +11,7 @@ import { useDriveService } from '@/domains';
 import type { DriveNode } from '@/domains/Drive';
 import { useTrashTagStore } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
+import { formatFileSize } from '@/utils/format/formatFileSize';
 import { findTreeNodeById } from '@/utils/tree/findTreeNodeById';
 import { Button, toast, type SortDescriptor } from '@heroui/react';
 import { useMount, useRequest, useUnmount, useUpdateEffect } from 'ahooks';
@@ -90,6 +91,13 @@ function getTypeLabel(node: DriveNode): string {
   }
 }
 
+function formatDriveNodeSizeLabel(node: DriveNode): string {
+  if (node.type !== 'resource' && node.type !== 'link') {
+    return '—';
+  }
+  return node.size == null ? '—' : formatFileSize(node.size);
+}
+
 function toDriveTableRow(node: DriveRow): DriveTableRow {
   if (node.type === 'loading') {
     return {
@@ -108,7 +116,7 @@ function toDriveTableRow(node: DriveRow): DriveTableRow {
     resourceType: node.type === 'resource' ? node.resourceType : undefined,
     resourceIconType:
       node.type === 'resource' || node.type === 'link' ? node.resourceIconType : undefined,
-    sizeLabel: '—',
+    sizeLabel: formatDriveNodeSizeLabel(node),
     typeLabel: getTypeLabel(node),
     isExpandable: node.type === 'root' || node.type === 'folder',
     children: node.children?.map((child) => toDriveTableRow(child)),
@@ -407,7 +415,8 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     createMenuItems,
     handleCreateMenuSelect,
     openUploadToGroup,
-    openTagPermission,
+    openTagAccessPermission,
+    openTagMountPermission,
     openResourcePermission,
     tagPermissionRefreshToken,
     resourcePermissionRefreshToken,
@@ -427,11 +436,6 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       <div className={styles.toolbarActions}>
         {showCreateMenu ? (
           <CreateMenu items={createMenuItems} onSelect={handleCreateMenuSelect} />
-        ) : null}
-        {showManagePermission ? (
-          <Button variant="secondary" size="sm" onPress={() => openTagPermission()}>
-            标签权限管理
-          </Button>
         ) : null}
         {showUploadToGroup ? (
           <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
@@ -455,12 +459,10 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       createMenuItems,
       handleCreateMenuSelect,
       isTrashView,
-      openTagPermission,
       openUploadToGroup,
       openTrash,
       canOpenTrash,
       showCreateMenu,
-      showManagePermission,
       showUploadToGroup,
       showToolbarTrash,
     ]
@@ -818,7 +820,8 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
               onRename={handleOpenRename}
               onMove={handleOpenMove}
               onDelete={handleOpenDelete}
-              onManageTagPermission={openTagPermission}
+              onManageTagAccessPermission={openTagAccessPermission}
+              onManageTagMountPermission={openTagMountPermission}
               onManageResourcePermission={openResourcePermission}
               onTagPermissionChange={refreshDrive}
             />
