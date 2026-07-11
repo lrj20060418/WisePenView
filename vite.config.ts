@@ -3,11 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 
-const PROD_REQUIRED_KEYS = [
-  'VITE_API_SERVER_ADDR_EXTRANET',
-  'VITE_API_SERVER_ADDR_INTRANET',
-  'VITE_INTRANET_PING_PATH',
-] as const;
+const CLIENT_URL_KEYS = ['VITE_API_BASE_URL', 'VITE_NOTE_COLLAB_WS_URL'] as const;
 
 export default defineConfig(({ mode }) => {
   // 无前缀：仅构建期使用，不会注入 import.meta.env 到浏览器
@@ -20,18 +16,15 @@ export default defineConfig(({ mode }) => {
     );
   }
 
-  // env 内容由开发者/运维控制，仅做"非空"存在性校验，不在构建期跑格式正则。
-  // 非 production 使用单一 VITE_API_SERVER_ADDR；production 启动期在内外网地址中探测选择。
-  if (mode !== 'production' && !env.VITE_API_SERVER_ADDR) {
-    throw new Error(`[vite] 缺少 VITE_API_SERVER_ADDR。请检查 .env.${mode}`);
-  }
-
-  // production 模式：校验校内 / 外网 addr 和 ping 探针路径
-  if (mode === 'production') {
-    for (const key of PROD_REQUIRED_KEYS) {
-      if (!env[key]) {
-        throw new Error(`[vite] 缺少 ${key}。请检查 .env.${mode}`);
-      }
+  for (const key of CLIENT_URL_KEYS) {
+    const value = env[key];
+    if (!value) {
+      throw new Error(`[vite] 缺少 ${key}。请检查 .env.${mode}`);
+    }
+    try {
+      new URL(value);
+    } catch {
+      throw new Error(`[vite] ${key} 必须是绝对 URL。请检查 .env.${mode}`);
     }
   }
 

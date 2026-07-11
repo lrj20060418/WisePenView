@@ -1,4 +1,4 @@
-import { getApiServerAddr } from '@/apis/apiServerAddr';
+import { getApiBaseUrl } from '@/apis/apiEndpoint';
 import { ResultState, Spin } from '@/components/Feedback';
 import EntryIcon from '@/components/Icons/EntryIcon';
 import { useDocumentService, useResourceService } from '@/domains';
@@ -55,13 +55,9 @@ function readCurrentServerOnlyOfficeUrl(): string {
   let hostname = window.location.hostname;
 
   try {
-    const apiServerAddr = getApiServerAddr();
-    if (apiServerAddr?.trim()) {
-      const apiServerUrl = new URL(
-        apiServerAddr.includes('://')
-          ? apiServerAddr
-          : `${window.location.protocol}//${apiServerAddr}`
-      );
+    const apiBaseUrl = getApiBaseUrl();
+    if (apiBaseUrl) {
+      const apiServerUrl = new URL(apiBaseUrl);
       hostname = apiServerUrl.hostname;
     }
   } catch {
