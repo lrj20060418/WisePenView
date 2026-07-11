@@ -75,6 +75,55 @@
   gap: var(--space-xs);
 }
 
+.dndNameContent {
+  display: inline-flex;
+  min-width: 0;
+  cursor: grab;
+
+  &[data-dragging='true'] {
+    cursor: grabbing;
+  }
+}
+
+:global(.table__row):has(.dndNameContent[data-drop-target='true']) {
+  :global(.table__cell) {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+
+  :global(.table__cell:first-child) {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+}
+
+.breadcrumbDropTarget {
+  display: inline-flex;
+
+  &[data-drop-target='true'] > * {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--foreground);
+  }
+}
+
+.dragOverlay {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: 320px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--foreground);
+  cursor: grabbing;
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 960px) {
   .driveFrame {
     min-height: auto;

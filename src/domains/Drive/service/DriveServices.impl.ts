@@ -660,6 +660,20 @@ export const createDriveServices = (
     throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_UNSUPPORTED_MOVE);
   };
 
+  const ensureMoveRootTargetTracked = async (
+    params: Pick<MoveToFolderParams, 'targetFolderNodeId' | 'groupId'>
+  ): Promise<void> => {
+    // 移动会清空节点缓存，路径状态可能仍保留尚未重新登记的抽象根节点。
+    if (nodeMap.has(params.targetFolderNodeId)) {
+      return;
+    }
+    const decodedTarget = decodeNodeId(params.targetFolderNodeId);
+    if (decodedTarget.kind !== 'root') {
+      return;
+    }
+    await getRootNode({ rootId: params.targetFolderNodeId, groupId: params.groupId });
+  };
+
   const executeMoveNodeToFolderPlan = async (plan: MoveNodeToFolderPlan): Promise<void> => {
     if (plan.source.type === 'folder') {
       await tagService.moveTag({
@@ -682,6 +696,7 @@ export const createDriveServices = (
     params: MoveToFolderParams,
     options?: { clearCacheAfterMove?: boolean }
   ): Promise<void> => {
+    await ensureMoveRootTargetTracked(params);
     const plan = createMoveNodeToFolderPlan(params);
     await executeMoveNodeToFolderPlan(plan);
     if (options?.clearCacheAfterMove !== false) {
@@ -694,6 +709,7 @@ export const createDriveServices = (
   };
 
   const moveNodesToFolder: IDriveService['moveNodesToFolder'] = async (params) => {
+    await ensureMoveRootTargetTracked(params);
     const uniqueNodeIds = [...new Set(params.nodeIds)].filter(
       (nodeId) => nodeId !== params.targetFolderNodeId
     );
