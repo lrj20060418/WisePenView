@@ -27,7 +27,9 @@ import {
   type CSSProperties,
   type Ref,
 } from 'react';
+import NoteSideMenu from '../NoteSideMenu';
 import NoteSlashMenu from '../NoteSlashMenu';
+import NoteTableHandles from '../NoteTableHandles';
 import NoteToolbar from '../NoteToolbar';
 import { hasAiDiffContentFromEditor } from './AiDiffPresence';
 import { blockNoteSchema, type CustomBlockNoteEditor } from './blockNoteSchema';
@@ -751,6 +753,8 @@ function CustomBlockNoteEditor({
               theme="light"
               formattingToolbar={false}
               slashMenu={false}
+              sideMenu={false}
+              tableHandles={false}
               comments={false}
               editable={!readOnly}
               onSelectionChange={handleSelectionChange}
@@ -764,6 +768,8 @@ function CustomBlockNoteEditor({
                 }}
               />
               <NoteSlashMenu editor={editor} plugins={plugins} />
+              <NoteSideMenu plugins={plugins} />
+              <NoteTableHandles />
               {showCommentsUi ? (
                 <NoteCommentsUi
                   editor={editor}
