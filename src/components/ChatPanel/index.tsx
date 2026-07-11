@@ -8,6 +8,7 @@ import {
   useChatSessionHistoryRefreshStore,
   useCurrentChatSessionStore,
   useNewChatSessionStore,
+  usePendingChatContextStore,
 } from '@/store';
 import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
@@ -49,6 +50,12 @@ function ChatPanel({
   const currentSessionTitle = useCurrentChatSessionStore((state) => state.currentSessionTitle);
   const setCurrentSession = useCurrentChatSessionStore((state) => state.setCurrentSession);
   const clearCurrentSession = useCurrentChatSessionStore((state) => state.clearCurrentSession);
+  const pendingChatContext = usePendingChatContextStore((state) =>
+    currentSessionId ? state.pendingChatContextBySessionId[currentSessionId] : undefined
+  );
+  const clearPendingChatContext = usePendingChatContextStore(
+    (state) => state.clearPendingChatContext
+  );
 
   const [currentModel, setCurrentModel] = useState<Model | null>(null);
   const [sessionBarOpen, setSessionBarOpen] = useState(false);
@@ -126,6 +133,7 @@ function ChatPanel({
   }, [currentSessionId, hasRenderableChatContent, requestChatSessionHistoryRefresh]);
 
   const sending = status === 'submitted' || status === 'streaming';
+  const hasSelectedContext = Boolean(pendingChatContext?.text.trim());
   const panelTitle = currentSessionTitle || '新对话';
 
   const ensureChatSession = async (): Promise<string> => {
@@ -196,6 +204,13 @@ function ChatPanel({
   const handleSend = async (text: string, opts?: SendOptions) => {
     const targetModel = opts?.model ?? currentModel;
     if (!targetModel) return;
+    if (
+      workspaceContext?.editorType === 'note' &&
+      workspaceContext.noteSyncStatus !== 'connected'
+    ) {
+      toast.warning('笔记仍在同步或已断开连接，请连接成功后再让 AI 读取当前笔记');
+      return;
+    }
     setCurrentModel(targetModel);
     let targetSessionId = currentSessionId;
 
@@ -212,6 +227,8 @@ function ChatPanel({
       model: targetModel.modelId,
       providerId: targetModel.providerId,
       sessionId: targetSessionId,
+      selectedText: pendingChatContext?.text,
+      selectedNoteScope: pendingChatContext?.scope ?? undefined,
       workspaceContext,
       selectedResources: opts?.activeDocRefs,
       uploadedAttachments: opts?.activeAttachments,
@@ -220,6 +237,15 @@ function ChatPanel({
     });
 
     await sendPromise;
+    if (hasSelectedContext) {
+      clearPendingChatContext(targetSessionId);
+    }
+  };
+
+  const handleClearSelectedContext = () => {
+    if (currentSessionId) {
+      clearPendingChatContext(currentSessionId);
+    }
   };
 
   const handleCollapsePanel = () => {
@@ -342,6 +368,8 @@ function ChatPanel({
                   onSend={handleSend}
                   getUploadSessionId={ensureChatSession}
                   sending={sending}
+                  selectedContextText={pendingChatContext?.text}
+                  onClearSelectedContext={handleClearSelectedContext}
                 />
               </div>
             </div>
