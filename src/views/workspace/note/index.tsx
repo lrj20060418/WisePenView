@@ -16,7 +16,10 @@ import {
   NOTE_OUTLINE_TITLE_ID,
   type NoteOutlineItem,
 } from '@/components/Note/NoteOutline/index.type';
-import { useNoteResourceAsideStore } from '@/components/Note/_store/useNoteResourceAsideStore';
+import {
+  DEFAULT_NOTE_RESOURCE_ASIDE_MODE,
+  useNoteResourceAsideStore,
+} from '@/components/Note/_store/useNoteResourceAsideStore';
 import ResourceDiscussionPanel from '@/components/interact/ResourceDiscussionPanel';
 import { useNoteService, useResourceService, useUserService } from '@/domains';
 import type {
@@ -182,7 +185,7 @@ function NoteViewConnected({
   });
   const getNoteClientStateVector = useCallback(() => encodeNoteClientStateVector(doc), [doc]);
   const resourceAsideMode = useNoteResourceAsideStore(
-    (state) => state.modeByResourceId[resourceId] ?? 'annotation'
+    (state) => state.modeByResourceId[resourceId] ?? DEFAULT_NOTE_RESOURCE_ASIDE_MODE
   );
   const toggleResourceAsideMode = useNoteResourceAsideStore((state) => state.toggleMode);
   const resourceAsideWidth = useNoteResourceAsideStore((state) => state.getWidth(resourceId));
