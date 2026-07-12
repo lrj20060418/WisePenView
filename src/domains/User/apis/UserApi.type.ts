@@ -120,6 +120,17 @@ export interface PublishMessageApiRequest {
   extra?: string;
 }
 
+export interface AddFeedbackApiRequest {
+  content: string;
+  contact: string;
+  imageUrl?: string;
+  bugReport: boolean;
+  suggestion: boolean;
+  consultation: boolean;
+  complaint: boolean;
+  other: boolean;
+}
+
 export interface RedeemVoucherApiRequest {
   voucherCode: string;
 }

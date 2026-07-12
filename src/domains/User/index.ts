@@ -10,15 +10,17 @@ export type {
 export {
   DEGREE,
   EMAIL_SUFFIX,
+  FEEDBACK_TYPE,
   IDENTITY,
   SEX,
   USER_STATUS,
   USER_VERIFICATION,
   getVerificationModeLabel,
 } from './enum';
-export type { DegreeLevel, UserVerificationMode } from './enum';
+export type { DegreeLevel, FeedbackType, UserVerificationMode } from './enum';
 export type {
   ConfirmEmailVerifyRequest,
+  SubmitFeedbackRequest,
   FudanUISVerifyStatusData,
   IUserService,
   InitiateUISVerifyRequest,

@@ -39,6 +39,16 @@ export const getVerificationModeLabel = (mode: UserVerificationMode | null | und
   return USER_VERIFICATION.labels[mode] ?? '已认证';
 };
 
+/** 用户反馈类型选项 */
+export const FEEDBACK_TYPE = createEnum([
+  { value: 'BUG_REPORT', key: 'BUG_REPORT', label: '问题报错' },
+  { value: 'SUGGESTION', key: 'SUGGESTION', label: '功能建议' },
+  { value: 'CONSULTATION', key: 'CONSULTATION', label: '使用咨询' },
+  { value: 'COMPLAINT', key: 'COMPLAINT', label: '服务投诉' },
+  { value: 'OTHER', key: 'OTHER', label: '其他' },
+] as const);
+export type FeedbackType = EnumValue<typeof FEEDBACK_TYPE>;
+
 /** 学历层次（学生用） */
 export const DEGREE = createEnum([
   { value: 0, key: 'UNKNOWN', label: '未知' },
