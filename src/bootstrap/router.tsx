@@ -119,10 +119,10 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />, // 承载：普通 app 页面导航 + 右侧助手 + 中间内容
         children: [
-          // 默认重定向到文档列表
+          // 登录后的默认入口为 AI 对话。
           {
             index: true,
-            element: <Navigate to="/app/drive" replace />,
+            element: <Navigate to="/app/chat" replace />,
           },
           {
             path: 'chat',

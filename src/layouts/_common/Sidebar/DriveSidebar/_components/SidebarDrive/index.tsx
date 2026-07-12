@@ -23,6 +23,7 @@ import Tree from '@/components/Tree';
 import { useDocumentService, useDriveService, useNoteService, useResourceService } from '@/domains';
 import type { DriveNode, FolderNode, RootNode } from '@/domains/Drive';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
+import { useSidebarDriveExpansionStore } from '@/layouts/_common/Sidebar/DriveSidebar/_store/useSidebarDriveExpansionStore';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
 import { WORKSPACE_RESOURCE_TYPE } from '@/utils/navigation/workspaceRoute';
@@ -63,6 +64,7 @@ function SidebarDrive() {
   const resourceService = useResourceService();
   const navigationLocation = useWorkspaceNavigationStore((state) => state.location);
   const scope = navigationLocation.scope;
+  const expansionScopeKey = scope.rootId;
   const groupId = getDriveScopeGroupId(scope);
   const resourceLocation = navigationLocation.resource;
   const openInWorkspace = useOpenInWorkspace();
@@ -178,6 +180,9 @@ function SidebarDrive() {
   const { loading: treeLoading, refresh: refreshTree } = useRequest(
     async (): Promise<SidebarTreeLoadResult> => {
       const nodeMap = new Map<string, DriveNode>();
+      const cachedExpandedNodeIds =
+        useSidebarDriveExpansionStore.getState().expandedNodeIdsByScope[expansionScopeKey] ?? [];
+      const expandedNodeIds = new Set(cachedExpandedNodeIds);
       const rootNode = await driveService.getRootNode({
         rootId: scope.rootId,
         groupId,
@@ -191,40 +196,53 @@ function SidebarDrive() {
         return { treeData: [], nodeMap, expandedKeys: [], selectedKeys: [] };
       }
       const fixedRoot = { ...baseRoot, children: undefined, isLeaf: true };
-      const buildBaseResult = (): SidebarTreeLoadResult => ({
-        treeData: [fixedRoot, ...buildChildrenData(rootChildren, nodeMap)],
-        nodeMap,
-        expandedKeys: [],
-        selectedKeys: [],
-      });
+      const childrenByParent = new Map<string, DriveNode[]>([[rootNode.id, rootChildren]]);
+      let selectedNodeId: string | undefined;
 
-      if (!resourceLocation) return buildBaseResult();
-
-      try {
-        const pathNodes = await driveService.getNodePath({
-          nodeId: resourceLocation.parentNodeId,
-          groupId,
-        });
-        const parentPathNode = pathNodes[pathNodes.length - 1];
-        if (parentPathNode?.id !== resourceLocation.parentNodeId) {
-          return buildBaseResult();
-        }
-
-        const childrenByParent = new Map<string, DriveNode[]>([[rootNode.id, rootChildren]]);
-        for (const pathNode of pathNodes) {
-          if (pathNode.type !== 'folder') continue;
-          const children = await driveService.listNodeChildren({
-            nodeId: pathNode.id,
+      if (resourceLocation) {
+        try {
+          const pathNodes = await driveService.getNodePath({
+            nodeId: resourceLocation.parentNodeId,
             groupId,
           });
-          childrenByParent.set(pathNode.id, children);
+          const parentPathNode = pathNodes[pathNodes.length - 1];
+          if (parentPathNode?.id === resourceLocation.parentNodeId) {
+            pathNodes.forEach((node) => {
+              if (node.type === 'folder') expandedNodeIds.add(node.id);
+            });
+          }
+        } catch {
+          // 路径失效时仍按缓存恢复可用的展开分支。
         }
+      }
 
-        const buildLocatedTree = (nodes: DriveNode[]): DataNode[] =>
-          buildChildrenData(nodes, nodeMap).map((treeNode) => {
-            const children = childrenByParent.get(String(treeNode.key));
-            return children ? { ...treeNode, children: buildLocatedTree(children) } : treeNode;
-          });
+      const loadExpandedChildren = async (nodes: DriveNode[]): Promise<void> => {
+        await Promise.all(
+          nodes.map(async (node) => {
+            if (node.type !== 'folder' || !expandedNodeIds.has(node.id)) return;
+            try {
+              const children = await driveService.listNodeChildren({
+                nodeId: node.id,
+                groupId,
+              });
+              childrenByParent.set(node.id, children);
+              await loadExpandedChildren(children);
+            } catch {
+              expandedNodeIds.delete(node.id);
+            }
+          })
+        );
+      };
+
+      await loadExpandedChildren(rootChildren);
+
+      const buildExpandedTree = (nodes: DriveNode[]): DataNode[] =>
+        buildChildrenData(nodes, nodeMap).map((treeNode) => {
+          const children = childrenByParent.get(String(treeNode.key));
+          return children ? { ...treeNode, children: buildExpandedTree(children) } : treeNode;
+        });
+
+      if (resourceLocation) {
         const parentChildren = childrenByParent.get(resourceLocation.parentNodeId) ?? [];
         const locatedNode = resourceLocation.nodeId
           ? parentChildren.find((node) => node.id === resourceLocation.nodeId)
@@ -235,19 +253,24 @@ function SidebarDrive() {
           isResourceNode(locatedNode) && locatedNode.resourceId === resourceLocation.resourceId
             ? locatedNode
             : undefined;
-
-        return {
-          treeData: [fixedRoot, ...buildLocatedTree(rootChildren)],
-          nodeMap,
-          expandedKeys: pathNodes.filter((node) => node.type === 'folder').map((node) => node.id),
-          selectedKeys: selectedNode ? [selectedNode.id] : [],
-        };
-      } catch {
-        return buildBaseResult();
+        selectedNodeId = selectedNode?.id;
       }
+
+      const treeData = [fixedRoot, ...buildExpandedTree(rootChildren)];
+      const availableExpandedNodeIds = [...expandedNodeIds].filter(
+        (nodeId) => nodeMap.get(nodeId)?.type === 'folder'
+      );
+
+      return {
+        treeData,
+        nodeMap,
+        expandedKeys: availableExpandedNodeIds,
+        selectedKeys: selectedNodeId ? [selectedNodeId] : [],
+      };
     },
     {
       refreshDeps: [
+        expansionScopeKey,
         scope.rootId,
         groupId,
         resourceLocation?.resourceId,
@@ -263,6 +286,9 @@ function SidebarDrive() {
         setTreeData(result.treeData);
         setExpandedKeys(result.expandedKeys);
         setSelectedKeys(result.selectedKeys);
+        useSidebarDriveExpansionStore
+          .getState()
+          .setExpandedNodeIds(expansionScopeKey, result.expandedKeys.map(String));
       },
       onError: (err) => {
         setNodeMap(new Map());
@@ -400,6 +426,9 @@ function SidebarDrive() {
 
   const handleExpand = (nextKeys: React.Key[]): void => {
     setExpandedKeys(nextKeys);
+    useSidebarDriveExpansionStore
+      .getState()
+      .setExpandedNodeIds(expansionScopeKey, nextKeys.map(String));
   };
 
   const showSpin = treeLoading && treeData.length === 0;
@@ -407,6 +436,7 @@ function SidebarDrive() {
 
   return (
     <div className={styles.sidebar}>
+      <div className={styles.sectionTitle}>云盘</div>
       {showSpin ? (
         <div className={styles.stateBlock}>
           <Spin />
