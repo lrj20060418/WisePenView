@@ -1,6 +1,7 @@
-import { Tooltip } from '@heroui/react';
+import AppIconButton from '@/components/AppIconButton';
+import AppNavigationControls from '@/layouts/AppNavigation/AppNavigationControls';
 import clsx from 'clsx';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelRightOpen } from 'lucide-react';
 
 import ResourceHeader from '../ResourceHeader';
 import type { WorkspaceHeaderProps } from './index.type';
@@ -11,37 +12,29 @@ function WorkspaceHeader({
   inlineTitle,
   extra,
   titleBlock,
+  canGoBack = false,
+  canGoForward = false,
   leftSidebarCollapsed = false,
   rightSidebarCollapsed = true,
+  onGoBack,
+  onGoForward,
   onToggleLeftSidebar,
   onToggleRightSidebar,
   className,
 }: WorkspaceHeaderProps) {
-  const leftSidebarLabel = leftSidebarCollapsed ? '展开左侧栏' : '折叠左侧栏';
-  const rightSidebarLabel = rightSidebarCollapsed ? '展开右侧栏' : '折叠右侧栏';
-
   return (
     <header className={clsx(styles.root, className)}>
       <div className={styles.bar}>
         <div className={styles.toolbar}>
-          {onToggleLeftSidebar ? (
-            <Tooltip>
-              <Tooltip.Trigger>
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  onClick={onToggleLeftSidebar}
-                  aria-label={leftSidebarLabel}
-                >
-                  {leftSidebarCollapsed ? (
-                    <PanelLeftOpen size={18} aria-hidden="true" />
-                  ) : (
-                    <PanelLeftClose size={18} aria-hidden="true" />
-                  )}
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Content>{leftSidebarLabel}</Tooltip.Content>
-            </Tooltip>
+          {leftSidebarCollapsed && onToggleLeftSidebar && onGoBack && onGoForward ? (
+            <AppNavigationControls
+              sidebarCollapsed
+              canGoBack={canGoBack}
+              canGoForward={canGoForward}
+              onGoBack={onGoBack}
+              onGoForward={onGoForward}
+              onToggleSidebar={onToggleLeftSidebar}
+            />
           ) : null}
           {resource ? (
             <div className={styles.resourceHeader}>
@@ -54,25 +47,13 @@ function WorkspaceHeader({
           )}
           <div className={styles.toolbarEnd}>
             {resource ? null : extra}
-            {onToggleRightSidebar ? (
+            {rightSidebarCollapsed && onToggleRightSidebar ? (
               <div className={styles.sidebarControls}>
-                <Tooltip>
-                  <Tooltip.Trigger>
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      onClick={onToggleRightSidebar}
-                      aria-label={rightSidebarLabel}
-                    >
-                      {rightSidebarCollapsed ? (
-                        <PanelRightOpen size={18} aria-hidden="true" />
-                      ) : (
-                        <PanelRightClose size={18} aria-hidden="true" />
-                      )}
-                    </button>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>{rightSidebarLabel}</Tooltip.Content>
-                </Tooltip>
+                <AppIconButton
+                  icon={<PanelRightOpen size={18} aria-hidden="true" />}
+                  label="展开右侧栏"
+                  onPress={onToggleRightSidebar}
+                />
               </div>
             ) : null}
           </div>

@@ -10,6 +10,7 @@ import {
   SystemResizablePanelGroup,
 } from '@/layouts/_common/SystemResizable';
 import { useResizablePanelSize } from '@/layouts/_common/useResizablePanelSize';
+import { useAppNavigation } from '@/layouts/AppNavigation/AppNavigationContext';
 import {
   normalizeWorkspaceResourceType,
   resolveLegacyEditorTypeForWorkspace,
@@ -47,6 +48,7 @@ const clampWorkspaceLeftSidebarWidth = (width: number): number =>
   clampPanelWidth(width, WORKSPACE_LEFT_SIDEBAR_MIN_WIDTH, WORKSPACE_LEFT_SIDEBAR_MAX_WIDTH);
 
 function WorkspaceLayout() {
+  const appNavigation = useAppNavigation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [layoutConfig, setLayoutConfigState] = useState<WorkspaceLayoutConfig>({});
   const storedLeftSidebarWidth = useSystemLayoutStore((state) => state.workspaceLeftSidebarWidth);
@@ -264,8 +266,12 @@ function WorkspaceLayout() {
       <WorkspaceHeader
         {...headerConfig}
         resource={resource}
+        canGoBack={appNavigation.canGoBack}
+        canGoForward={appNavigation.canGoForward}
         leftSidebarCollapsed={sidebarCollapsed}
         rightSidebarCollapsed={safeChatPanelCollapsed}
+        onGoBack={appNavigation.goBack}
+        onGoForward={appNavigation.goForward}
         onToggleLeftSidebar={handleSidebarToggle}
         onToggleRightSidebar={handleChatPanelToggle}
       />
@@ -291,7 +297,14 @@ function WorkspaceLayout() {
         aria-hidden={sidebarCollapsed ? true : undefined}
         onResize={handleLeftSidebarResize}
       >
-        <DriveSidebar collapsed={sidebarCollapsed} />
+        <DriveSidebar
+          collapsed={sidebarCollapsed}
+          canGoBack={appNavigation.canGoBack}
+          canGoForward={appNavigation.canGoForward}
+          onGoBack={appNavigation.goBack}
+          onGoForward={appNavigation.goForward}
+          onToggle={handleSidebarToggle}
+        />
       </SystemResizablePanel>
 
       <SystemResizableHandle
@@ -352,7 +365,6 @@ function WorkspaceLayout() {
                   context: workspaceChatContext,
                   clearContext: clearWorkspaceChatContext,
                 }}
-                showCollapseButton={false}
               />
             ) : null}
           </SystemResizablePanel>

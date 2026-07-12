@@ -2,7 +2,7 @@ import EntryIcon from '@/components/Icons/EntryIcon';
 import ResourcePermissionModal from '@/components/Resource/ResourcePermissionModal';
 import { useUserService } from '@/domains';
 import { normalizeId } from '@/utils/normalize/normalizeId';
-import { Button, Dropdown } from '@heroui/react';
+import { Button, Dropdown, Tooltip } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import {
   ChevronRight,
@@ -77,18 +77,23 @@ function ResourceHeaderMore({
 
   return (
     <Dropdown>
-      <Dropdown.Trigger>
-        <Button
-          variant="ghost"
-          size="sm"
-          isIconOnly
-          isPending={menu?.isPending}
-          isDisabled={isDisabled}
-          aria-label="更多"
-        >
-          <Ellipsis size={18} aria-hidden="true" />
-        </Button>
-      </Dropdown.Trigger>
+      <Tooltip>
+        <Tooltip.Trigger>
+          <Dropdown.Trigger>
+            <Button
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              isPending={menu?.isPending}
+              isDisabled={isDisabled}
+              aria-label="更多"
+            >
+              <Ellipsis size={18} aria-hidden="true" />
+            </Button>
+          </Dropdown.Trigger>
+        </Tooltip.Trigger>
+        <Tooltip.Content>更多</Tooltip.Content>
+      </Tooltip>
       <Dropdown.Popover placement="bottom end" className={styles.popover}>
         <div className={styles.popoverHeader}>更多操作</div>
         <Dropdown.Menu aria-label="资源更多操作" onAction={handleAction}>

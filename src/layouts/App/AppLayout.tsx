@@ -6,9 +6,9 @@ import {
   SystemResizablePanelGroup,
 } from '@/layouts/_common/SystemResizable';
 import { useResizablePanelSize } from '@/layouts/_common/useResizablePanelSize';
-import { Tooltip } from '@heroui/react';
+import { useAppNavigation } from '@/layouts/AppNavigation/AppNavigationContext';
+import AppNavigationControls from '@/layouts/AppNavigation/AppNavigationControls';
 import clsx from 'clsx';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import type {
   Layout,
@@ -28,6 +28,7 @@ const clampSidebarWidth = (width: number): number =>
   Math.min(Math.max(Math.round(width), SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
 
 function AppLayout() {
+  const appNavigation = useAppNavigation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const storedSidebarWidth = useSystemLayoutStore((state) => state.appSidebarWidth);
   const setSidebarWidth = useSystemLayoutStore((state) => state.setAppSidebarWidth);
@@ -35,7 +36,6 @@ function AppLayout() {
   const pendingSidebarWidthRef = useRef<number | null>(null);
   const sidebarWidth = clampSidebarWidth(storedSidebarWidth);
   const sidebarPanelSize = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth;
-  const sidebarToggleLabel = sidebarCollapsed ? '展开侧边栏' : '收起侧边栏';
 
   useResizablePanelSize({
     panelRef: sidebarPanelRef,
@@ -77,28 +77,18 @@ function AppLayout() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.sidebarToggleHost}>
-        <Tooltip>
-          <Tooltip.Trigger>
-            <button
-              type="button"
-              className={clsx(
-                styles.sidebarToggle,
-                sidebarCollapsed && styles.sidebarToggleCollapsed
-              )}
-              onClick={handleSidebarToggle}
-              aria-label={sidebarToggleLabel}
-            >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen size={18} aria-hidden="true" />
-              ) : (
-                <PanelLeftClose size={18} aria-hidden="true" />
-              )}
-            </button>
-          </Tooltip.Trigger>
-          <Tooltip.Content>{sidebarToggleLabel}</Tooltip.Content>
-        </Tooltip>
-      </div>
+      {sidebarCollapsed ? (
+        <div className={styles.collapsedHeaderControls}>
+          <AppNavigationControls
+            sidebarCollapsed
+            canGoBack={appNavigation.canGoBack}
+            canGoForward={appNavigation.canGoForward}
+            onGoBack={appNavigation.goBack}
+            onGoForward={appNavigation.goForward}
+            onToggleSidebar={handleSidebarToggle}
+          />
+        </div>
+      ) : null}
 
       <SystemResizablePanelGroup
         orientation="horizontal"
@@ -117,7 +107,14 @@ function AppLayout() {
           aria-hidden={sidebarCollapsed ? true : undefined}
           onResize={handleSidebarResize}
         >
-          <AppSidebar collapsed={sidebarCollapsed} />
+          <AppSidebar
+            collapsed={sidebarCollapsed}
+            canGoBack={appNavigation.canGoBack}
+            canGoForward={appNavigation.canGoForward}
+            onGoBack={appNavigation.goBack}
+            onGoForward={appNavigation.goForward}
+            onToggle={handleSidebarToggle}
+          />
         </SystemResizablePanel>
 
         <SystemResizableHandle

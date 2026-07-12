@@ -10,8 +10,12 @@ export interface WorkspaceHeaderProps {
   extra?: ReactNode;
   /** 工具条下方整块区域，如笔记可编辑标题 */
   titleBlock?: ReactNode;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
   leftSidebarCollapsed?: boolean;
   rightSidebarCollapsed?: boolean;
+  onGoBack?: () => void;
+  onGoForward?: () => void;
   onToggleLeftSidebar?: () => void;
   onToggleRightSidebar?: () => void;
   className?: string;
