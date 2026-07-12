@@ -6,6 +6,7 @@ import type {
   GetUserInfoApiResponse,
   InitiateEmailVerifyApiRequest,
   InitiateFudanUISVerifyApiRequest,
+  AddFeedbackApiRequest,
   ListAdminMessagesApiRequest,
   ListAdminMessagesApiResponse,
   ListTransactionsApiRequest,
@@ -67,6 +68,10 @@ function publishMessage(req: PublishMessageApiRequest): Promise<void> {
   return apiPost('/admin/message/publishMessage', req);
 }
 
+function addFeedback(req: AddFeedbackApiRequest): Promise<void> {
+  return apiPost('/system/feedback/addFeedback', req);
+}
+
 export const UserApi = {
   getUserInfo,
   searchUser,
@@ -79,6 +84,7 @@ export const UserApi = {
   changeUserProfile,
   listAdminMessages,
   publishMessage,
+  addFeedback,
 };
 
 /** User Wallet API: /user/wallet/* */

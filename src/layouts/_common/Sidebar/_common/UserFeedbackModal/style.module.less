@@ -1,0 +1,74 @@
+.modalBody {
+  gap: 18px;
+}
+
+.imageField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.typeField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: #27272a;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.requiredMark {
+  margin-left: 2px;
+  color: var(--danger, #ef4444);
+}
+
+.typeTrigger {
+  width: 100%;
+  min-height: var(--control-height, 36px);
+  justify-content: space-between;
+  border-width: 1.5px;
+  border-color: color-mix(in oklab, var(--border, #e4e7ec) 82%, var(--surface, #ffffff) 18%);
+  background-color: color-mix(
+    in oklab,
+    var(--surface-tertiary, #f0f3f6) 35%,
+    var(--surface, #ffffff) 65%
+  );
+  color: var(--foreground);
+  font-weight: 400;
+
+  &:hover {
+    border-color: color-mix(in oklab, var(--border, #e4e7ec) 90%, var(--surface, #ffffff) 10%);
+    background-color: color-mix(
+      in oklab,
+      var(--surface-tertiary, #f0f3f6) 70%,
+      var(--surface, #ffffff) 30%
+    );
+  }
+}
+
+.typeText,
+.typePlaceholder {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typePlaceholder,
+.typeChevron {
+  color: var(--field-placeholder, var(--muted));
+}
+
+.typePopover {
+  min-width: 260px;
+  border: 1px solid color-mix(in oklab, var(--border, #e4e7ec) 88%, transparent);
+  border-radius: var(--app-radius-popover, min(32px, var(--radius-3xl)));
+}
+
+.typeList {
+  min-width: 240px;
+}

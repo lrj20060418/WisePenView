@@ -1,6 +1,6 @@
 import type { AdminMessage } from '../entity/message';
 import type { User, UserAccountProfile, UserSearchUser } from '../entity/user';
-import type { DegreeLevel } from '../enum';
+import type { DegreeLevel, FeedbackType } from '../enum';
 
 /** UserService 接口：供依赖注入使用 */
 export interface IUserService {
@@ -24,6 +24,7 @@ export interface IUserService {
   confirmEmailVerify(params: ConfirmEmailVerifyRequest): Promise<void>;
   listAdminMessages(params: ListAdminMessagesRequest): Promise<ListAdminMessagesResponse>;
   publishMessage(params: PublishMessageRequest): Promise<void>;
+  submitFeedback(params: SubmitFeedbackRequest): Promise<void>;
   /** 退出登录时清理缓存 */
   clearUserCache(): void;
 }
@@ -92,6 +93,13 @@ export interface PublishMessageRequest {
   content: string;
   jumpUrl?: string;
   extra?: string;
+}
+
+export interface SubmitFeedbackRequest {
+  types: FeedbackType[];
+  content: string;
+  contact: string;
+  imageUrl?: string;
 }
 
 /** 更新用户信息请求参数（仅基本档案可编辑；账号栏只读；impl 内按 userInfo / userProfile 拆成两次 PUT） */

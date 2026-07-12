@@ -3,6 +3,7 @@ import type {
   IUserService,
   ListAdminMessagesResponse,
   PublishMessageRequest,
+  SubmitFeedbackRequest,
   User,
   UserAccountProfile,
   UserSearchUser,
@@ -174,6 +175,10 @@ const publishMessage = async (_params: PublishMessageRequest): Promise<void> => 
   await delay(200);
 };
 
+const submitFeedback = async (_params: SubmitFeedbackRequest): Promise<void> => {
+  await delay(200);
+};
+
 const updateUserInfo = async (
   params: Parameters<IUserService['updateUserInfo']>[0]
 ): Promise<void> => {
@@ -223,5 +228,6 @@ export const UserServicesMock: IUserService = {
   confirmEmailVerify,
   listAdminMessages,
   publishMessage,
+  submitFeedback,
   clearUserCache,
 };

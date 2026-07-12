@@ -21,10 +21,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuthService } from '@/domains';
+import UserFeedbackModal from '../UserFeedbackModal';
 import styles from './style.module.less';
-
-/** 问卷星问题反馈页（内嵌 iframe） */
-const FEEDBACK_SURVEY_URL = 'https://v.wjx.cn/vm/PrUZetY.aspx';
 
 interface UserProfileProps {
   collapsed: boolean;
@@ -197,41 +195,7 @@ function UserProfile({ collapsed, menuMode = 'app' }: UserProfileProps) {
         </div>
       </AppDisplayDialog>
 
-      <AppDisplayDialog
-        isOpen={feedbackModalOpen}
-        onOpenChange={setFeedbackModalOpen}
-        title="问题反馈"
-        size="lg"
-        containerClassName={styles.feedbackModal}
-        closeText="关闭"
-      >
-        <AppDisplayDialog.DeferredContent fallback={<div className={styles.feedbackIframeWrap} />}>
-          {() => (
-            <>
-              <div className={styles.feedbackIframeWrap}>
-                <iframe
-                  className={styles.feedbackIframe}
-                  title="问卷星问题反馈"
-                  src={FEEDBACK_SURVEY_URL}
-                  allowFullScreen
-                />
-              </div>
-              <p className={styles.feedbackFallback}>
-                若页面无法显示，请
-                <a
-                  className={styles.feedbackFallbackLink}
-                  href={FEEDBACK_SURVEY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  在新窗口打开问卷
-                </a>
-                。
-              </p>
-            </>
-          )}
-        </AppDisplayDialog.DeferredContent>
-      </AppDisplayDialog>
+      <UserFeedbackModal isOpen={feedbackModalOpen} onOpenChange={setFeedbackModalOpen} />
     </>
   );
 }

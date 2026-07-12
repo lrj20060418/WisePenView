@@ -14,6 +14,7 @@ import type {
   QueryUserSearchCandidatesRequest,
   SearchUsersRequest,
   SendEmailVerifyRequest,
+  SubmitFeedbackRequest,
   UpdateUserInfoRequest,
 } from './index.type';
 
@@ -92,6 +93,11 @@ const publishMessage = async (params: PublishMessageRequest): Promise<void> => {
   await UserApi.publishMessage(payload);
 };
 
+const submitFeedback = async (params: SubmitFeedbackRequest): Promise<void> => {
+  const payload = UserServicesMap.mapSubmitFeedbackRequest(params);
+  await UserApi.addFeedback(payload);
+};
+
 export const createUserServices = (): IUserService => {
   /** 闭包级缓存，仅存非敏感展示字段，退出登录时通过 clearUserCache 清理 */
   let cachedUserInfo: CachedUserSafe | null = null;
@@ -145,6 +151,7 @@ export const createUserServices = (): IUserService => {
     confirmEmailVerify,
     listAdminMessages,
     publishMessage,
+    submitFeedback,
     clearUserCache,
   };
 };
