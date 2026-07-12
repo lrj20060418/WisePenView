@@ -1,4 +1,8 @@
-import type { ResourceIconType, ResourcePermissionResourceType } from '@/domains/Resource';
+import type {
+  ResourceAction,
+  ResourceIconType,
+  ResourcePermissionResourceType,
+} from '@/domains/Resource';
 import type { ReactNode } from 'react';
 
 export interface ResourceHeaderDownloadAction {
@@ -25,6 +29,8 @@ export interface ResourceHeaderConfig {
   resourceName: string;
   resourceType?: string;
   resourceIconType?: ResourceIconType;
+  currentActions?: ResourceAction[] | null;
+  copyVersion?: number;
   permissionResourceType: ResourcePermissionResourceType;
   ownerId?: string | null;
   onPermissionSuccess?: () => void;

@@ -1,6 +1,7 @@
 import { ONLYOFFICE_DOCUMENT_SERVER_PUBLIC_URL } from '@/apis/clientUrls';
 import { ResultState, Spin } from '@/components/Feedback';
 import { useDocumentService, useResourceService } from '@/domains';
+import type { ResourceAction } from '@/domains/Resource';
 import {
   useWorkspaceLayoutConfig,
   type WorkspaceLayoutConfig,
@@ -20,6 +21,7 @@ interface OfficeLayoutConfigProps {
   resourceId?: string;
   resourceName?: string;
   resourceType?: string;
+  resourceInfoActions?: ResourceAction[] | null;
   ownerId?: string | null;
   onPermissionSuccess?: () => void;
 }
@@ -41,6 +43,7 @@ function OfficeLayoutConfig({
   resourceId,
   resourceName,
   resourceType,
+  resourceInfoActions,
   ownerId,
   onPermissionSuccess,
 }: OfficeLayoutConfigProps) {
@@ -53,6 +56,7 @@ function OfficeLayoutConfig({
               resourceId,
               resourceName,
               resourceType,
+              currentActions: resourceInfoActions,
               permissionResourceType: WORKSPACE_RESOURCE_TYPE.FILE,
               ownerId,
               onPermissionSuccess,
@@ -60,7 +64,7 @@ function OfficeLayoutConfig({
           }
         : {},
     }),
-    [onPermissionSuccess, ownerId, resourceId, resourceName, resourceType]
+    [onPermissionSuccess, ownerId, resourceId, resourceInfoActions, resourceName, resourceType]
   );
   useWorkspaceLayoutConfig(frameConfig);
 
@@ -215,6 +219,7 @@ function OfficeView({ resourceId }: OfficeViewProps = {}) {
       resourceId={data.docInfo.resourceInfo.resourceId || resourceId}
       resourceName={resourceName}
       resourceType={resourceType}
+      resourceInfoActions={data.docInfo.resourceInfo.currentActions}
       ownerId={data.docInfo.resourceInfo.ownerId}
       onPermissionSuccess={refreshOfficeData}
     >

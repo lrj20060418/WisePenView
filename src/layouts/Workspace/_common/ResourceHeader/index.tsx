@@ -9,18 +9,22 @@ import {
   Copy,
   Download,
   Ellipsis,
+  ExternalLink,
   FolderInput,
   HardDrive,
-  History,
   Link2,
   MessageSquare,
   Printer,
   Settings2,
+  Share2,
   ShieldCheck,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import ResourceHeaderOperations, {
+  type ResourceHeaderOperationHandlers,
+} from './ResourceHeaderOperations';
 import type { ResourceHeaderMoreMenu, ResourceHeaderProps } from './index.type';
 import styles from './style.module.less';
 
@@ -48,11 +52,13 @@ function ResourceHeaderMenuItemContent({
 
 function ResourceHeaderMore({
   menu,
+  operations,
   canManagePermission,
   isDisabled,
   onOpenPermission,
 }: {
   menu?: ResourceHeaderMoreMenu;
+  operations: ResourceHeaderOperationHandlers;
   canManagePermission: boolean;
   isDisabled?: boolean;
   onOpenPermission: () => void;
@@ -60,6 +66,30 @@ function ResourceHeaderMore({
   const handleAction = (key: React.Key) => {
     if (key === 'permission') {
       onOpenPermission();
+      return;
+    }
+    if (key === 'create-copy') {
+      operations.onCopy?.();
+      return;
+    }
+    if (key === 'add-link') {
+      operations.onCreateLink?.();
+      return;
+    }
+    if (key === 'move-to') {
+      operations.onMove?.();
+      return;
+    }
+    if (key === 'share-to') {
+      operations.onShare?.();
+      return;
+    }
+    if (key === 'open-original') {
+      operations.onOpenOriginal?.();
+      return;
+    }
+    if (key === 'delete') {
+      operations.onDelete?.();
       return;
     }
     if (key === 'comment-history') {
@@ -84,7 +114,7 @@ function ResourceHeaderMore({
               variant="ghost"
               size="sm"
               isIconOnly
-              isPending={menu?.isPending}
+              isPending={menu?.isPending || operations.isLocating}
               isDisabled={isDisabled}
               aria-label="更多"
             >
@@ -97,22 +127,39 @@ function ResourceHeaderMore({
       <Dropdown.Popover placement="bottom end" className={styles.popover}>
         <div className={styles.popoverHeader}>更多操作</div>
         <Dropdown.Menu aria-label="资源更多操作" onAction={handleAction}>
-          <Dropdown.Section>
-            <Dropdown.Item id="version-management" textValue="版本管理" isDisabled>
-              <ResourceHeaderMenuItemContent icon={History} label="版本管理" />
-            </Dropdown.Item>
-            <Dropdown.Item id="create-copy" textValue="创建副本" isDisabled>
-              <ResourceHeaderMenuItemContent icon={Copy} label="创建副本" />
-            </Dropdown.Item>
-          </Dropdown.Section>
-          <Dropdown.Section>
-            <Dropdown.Item id="add-shortcut" textValue="添加快捷方式到" isDisabled>
-              <ResourceHeaderMenuItemContent icon={Link2} label="添加快捷方式到" />
-            </Dropdown.Item>
-            <Dropdown.Item id="move-to" textValue="移动到" isDisabled>
-              <ResourceHeaderMenuItemContent icon={FolderInput} label="移动到" />
-            </Dropdown.Item>
-          </Dropdown.Section>
+          {operations.onOpenOriginal ? (
+            <Dropdown.Section>
+              <Dropdown.Item id="open-original" textValue="打开文件本体">
+                <ResourceHeaderMenuItemContent icon={ExternalLink} label="打开文件本体" />
+              </Dropdown.Item>
+            </Dropdown.Section>
+          ) : null}
+          {operations.onCopy ? (
+            <Dropdown.Section>
+              <Dropdown.Item id="create-copy" textValue="创建副本">
+                <ResourceHeaderMenuItemContent icon={Copy} label="创建副本" />
+              </Dropdown.Item>
+            </Dropdown.Section>
+          ) : null}
+          {operations.onCreateLink || operations.onMove || operations.onShare ? (
+            <Dropdown.Section>
+              {operations.onCreateLink ? (
+                <Dropdown.Item id="add-link" textValue="添加链接到">
+                  <ResourceHeaderMenuItemContent icon={Link2} label="添加链接到" />
+                </Dropdown.Item>
+              ) : null}
+              {operations.onMove ? (
+                <Dropdown.Item id="move-to" textValue="移动到">
+                  <ResourceHeaderMenuItemContent icon={FolderInput} label="移动到" />
+                </Dropdown.Item>
+              ) : null}
+              {operations.onShare ? (
+                <Dropdown.Item id="share-to" textValue="分享到小组">
+                  <ResourceHeaderMenuItemContent icon={Share2} label="分享到小组" />
+                </Dropdown.Item>
+              ) : null}
+            </Dropdown.Section>
+          ) : null}
           {canManagePermission ? (
             <Dropdown.Section>
               <Dropdown.Item id="permission" textValue="权限">
@@ -131,21 +178,20 @@ function ResourceHeaderMore({
               </Dropdown.Item>
             </Dropdown.Section>
           ) : null}
-          <Dropdown.Section>
-            <Dropdown.Item id="print" textValue="打印" isDisabled={!menu?.onPrint}>
-              <ResourceHeaderMenuItemContent icon={Printer} label="打印" />
-            </Dropdown.Item>
-            <Dropdown.Item
-              id="download"
-              textValue={menu?.download?.label ?? '下载为'}
-              isDisabled={!menu?.download}
-            >
-              <ResourceHeaderMenuItemContent
-                icon={Download}
-                label={menu?.download?.label ?? '下载为'}
-              />
-            </Dropdown.Item>
-          </Dropdown.Section>
+          {menu?.onPrint || menu?.download ? (
+            <Dropdown.Section>
+              {menu.onPrint ? (
+                <Dropdown.Item id="print" textValue="打印">
+                  <ResourceHeaderMenuItemContent icon={Printer} label="打印" />
+                </Dropdown.Item>
+              ) : null}
+              {menu.download ? (
+                <Dropdown.Item id="download" textValue={menu.download.label}>
+                  <ResourceHeaderMenuItemContent icon={Download} label={menu.download.label} />
+                </Dropdown.Item>
+              ) : null}
+            </Dropdown.Section>
+          ) : null}
           {menu?.advanced ? (
             <Dropdown.Section>
               <Dropdown.SubmenuTrigger>
@@ -168,11 +214,20 @@ function ResourceHeaderMore({
               </Dropdown.SubmenuTrigger>
             </Dropdown.Section>
           ) : null}
-          <Dropdown.Section>
-            <Dropdown.Item id="delete" textValue="删除" isDisabled variant="danger">
-              <ResourceHeaderMenuItemContent icon={Trash2} label="删除" />
-            </Dropdown.Item>
-          </Dropdown.Section>
+          {operations.onDelete ? (
+            <Dropdown.Section>
+              <Dropdown.Item
+                id="delete"
+                textValue={operations.deleteLabel ?? '删除文件'}
+                variant="danger"
+              >
+                <ResourceHeaderMenuItemContent
+                  icon={Trash2}
+                  label={operations.deleteLabel ?? '删除文件'}
+                />
+              </Dropdown.Item>
+            </Dropdown.Section>
+          ) : null}
         </Dropdown.Menu>
       </Dropdown.Popover>
     </Dropdown>
@@ -184,6 +239,8 @@ function ResourceHeader({
   resourceName,
   resourceType,
   resourceIconType,
+  currentActions,
+  copyVersion,
   permissionResourceType,
   ownerId,
   onPermissionSuccess,
@@ -243,11 +300,21 @@ function ResourceHeader({
           {leadingActions}
           {actions}
           {resourceId ? (
-            <ResourceHeaderMore
-              menu={moreMenu}
-              canManagePermission={canManagePermission}
-              isDisabled={isDisabled}
-              onOpenPermission={() => setIsPermissionModalOpen(true)}
+            <ResourceHeaderOperations
+              resourceId={resourceId}
+              resourceName={resourceName}
+              resourceType={resourceType ?? permissionResourceType}
+              currentActions={currentActions}
+              copyVersion={copyVersion}
+              onResolve={(operations) => (
+                <ResourceHeaderMore
+                  menu={moreMenu}
+                  operations={operations}
+                  canManagePermission={canManagePermission}
+                  isDisabled={isDisabled}
+                  onOpenPermission={() => setIsPermissionModalOpen(true)}
+                />
+              )}
             />
           ) : null}
         </div>

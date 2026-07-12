@@ -1911,6 +1911,8 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
           resourceId: skill?.resourceId ?? resourceId,
           resourceName: skill?.title || 'Skill',
           resourceIconType: 'skill',
+          currentActions: skill?.currentActions,
+          copyVersion: skill?.version,
           permissionResourceType: WORKSPACE_RESOURCE_TYPE.SKILL,
           ownerId: skill?.ownerId,
           onPermissionSuccess: refreshSkill,

@@ -1,6 +1,7 @@
 import { ResultState, Spin } from '@/components/Feedback';
 import PdfViewer from '@/components/PdfViewer/index';
 import { useDocumentService, useResourceService } from '@/domains';
+import type { ResourceAction } from '@/domains/Resource';
 import { useWorkspaceLayoutConfig } from '@/layouts/Workspace/WorkspaceOutletContext';
 import { parseErrorMessage } from '@/utils/error';
 import { WORKSPACE_RESOURCE_TYPE } from '@/utils/navigation/workspaceRoute';
@@ -15,6 +16,7 @@ interface PdfLayoutConfigProps {
   resourceId?: string;
   resourceName?: string;
   resourceType?: string;
+  resourceInfoActions?: ResourceAction[] | null;
   ownerId?: string | null;
   onPermissionSuccess?: () => void;
 }
@@ -24,6 +26,7 @@ function PdfLayoutConfig({
   resourceId,
   resourceName,
   resourceType,
+  resourceInfoActions,
   ownerId,
   onPermissionSuccess,
 }: PdfLayoutConfigProps) {
@@ -36,6 +39,7 @@ function PdfLayoutConfig({
               resourceId,
               resourceName,
               resourceType,
+              currentActions: resourceInfoActions,
               permissionResourceType: WORKSPACE_RESOURCE_TYPE.FILE,
               ownerId,
               onPermissionSuccess,
@@ -43,7 +47,7 @@ function PdfLayoutConfig({
           }
         : {},
     }),
-    [onPermissionSuccess, ownerId, resourceId, resourceName, resourceType]
+    [onPermissionSuccess, ownerId, resourceId, resourceInfoActions, resourceName, resourceType]
   );
   useWorkspaceLayoutConfig(frameConfig);
 
@@ -173,6 +177,7 @@ function DocumentPreview({ resourceId }: DocumentPreviewProps = {}) {
         resourceId={docInfo.resourceInfo.resourceId || resourceId}
         resourceName={docInfo.resourceInfo.resourceName}
         resourceType={docInfo.resourceInfo.resourceType}
+        resourceInfoActions={docInfo.resourceInfo.currentActions}
         ownerId={docInfo.resourceInfo.ownerId}
         onPermissionSuccess={refreshDocInfo}
       >
@@ -199,6 +204,7 @@ function DocumentPreview({ resourceId }: DocumentPreviewProps = {}) {
       resourceId={docInfo.resourceInfo.resourceId || resourceId}
       resourceName={docInfo.resourceInfo.resourceName}
       resourceType={docInfo.resourceInfo.resourceType}
+      resourceInfoActions={docInfo.resourceInfo.currentActions}
       ownerId={docInfo.resourceInfo.ownerId}
       onPermissionSuccess={refreshDocInfo}
     >
