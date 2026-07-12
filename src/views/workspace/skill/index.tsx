@@ -1,5 +1,4 @@
 import { Empty, ResultState, Spin } from '@/components/Feedback';
-import EntryIcon from '@/components/Icons/EntryIcon';
 import { FormField, Input, TextArea } from '@/components/Input';
 import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
 import CreateSkillModal from '@/components/Skill/CreateSkillModal';
@@ -16,6 +15,7 @@ import type { SkillFileNode, UploadSkillAssetResult } from '@/domains/Skill';
 import { SkillServicesMap } from '@/domains/Skill';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
+import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
 import {
   useWorkspaceLayoutConfig,
   type WorkspaceLayoutConfig,
@@ -27,8 +27,6 @@ import { useRequest } from 'ahooks';
 import { FolderPlus, Pencil, Plus, Save, Settings, Upload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom';
-import ResourcePermissionControl from '../_components/ResourcePermissionControl';
-
 import SkillSaveQueueDock from './_components/SkillSaveQueueDock';
 import type { SkillSaveQueueItem } from './_components/SkillSaveQueueDock/index.type';
 import type { UnsavedSkillChangesMode } from './_components/UnsavedSkillChangesModal';
@@ -53,11 +51,6 @@ interface SkillViewProps {
 interface SkillLayoutConfigProps {
   children: ReactNode;
   config?: WorkspaceLayoutConfig;
-}
-
-interface SkillToolbarTitleProps {
-  title?: string;
-  saveStatus?: SkillWorkspaceSavePhase;
 }
 
 interface SaveAssetOptions {
@@ -601,30 +594,6 @@ function formatSaveStatus(status?: SkillWorkspaceSavePhase): string | null {
   return null;
 }
 
-function SkillToolbarTitle({ title, saveStatus }: SkillToolbarTitleProps) {
-  const saveStatusText = formatSaveStatus(saveStatus);
-
-  return (
-    <span className={styles.toolbarTitleText}>
-      <span className={styles.toolbarTitleIcon} aria-hidden="true">
-        <EntryIcon entryType="resource" resourceIconType="skill" size={18} />
-      </span>
-      <span className={styles.toolbarTitleContent}>
-        <span className={styles.toolbarTitleName}>{title || '未命名 Skill'}</span>
-        {saveStatusText ? (
-          <span
-            className={`${styles.toolbarSaveStatus} ${
-              saveStatus === 'dirty' || saveStatus === 'failed' ? styles.toolbarSaveStatusDirty : ''
-            }`}
-          >
-            {saveStatusText}
-          </span>
-        ) : null}
-      </span>
-    </span>
-  );
-}
-
 function SkillConfigPanel({
   name,
   description,
@@ -1107,6 +1076,9 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
     openInWorkspace({
       resourceId: newResourceId,
       resourceType: WORKSPACE_RESOURCE_TYPE.SKILL,
+      driveLocation: {
+        scope: useWorkspaceNavigationStore.getState().location.scope,
+      },
       replace: true,
     });
   };
@@ -1963,43 +1935,38 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
     }
   };
 
+  const headerSaveStatusText = formatSaveStatus(canEdit ? savePhase : undefined);
+
   const headerConfig = useMemo<WorkspaceLayoutConfig>(
     () => ({
       header: {
-        inlineTitle: (
-          <SkillToolbarTitle title={skill?.title} saveStatus={canEdit ? savePhase : undefined} />
-        ),
-        extra: skill ? (
-          <div className={styles.topBarActions}>
-            <ResourcePermissionControl
-              resourceId={skill.resourceId}
-              resourceType={WORKSPACE_RESOURCE_TYPE.SKILL}
-              ownerId={skill.ownerId}
-              onSuccess={refreshSkill}
-            />
-            {canEdit ? (
-              <>
-                <Button
-                  variant="secondary"
-                  onPress={handleToggleEditing}
-                  isDisabled={
-                    !canPreviewSelectedFile ||
-                    contentLoading ||
-                    saveLoading ||
-                    configLoading ||
-                    isSaveQueueActive ||
-                    moveLoading
-                  }
-                >
-                  <Pencil size={16} />
-                  <span>{editing ? '取消' : '编辑'}</span>
-                </Button>
-                {editing || hasSaveableChanges ? (
+        resource: {
+          resourceId: skill?.resourceId ?? resourceId,
+          resourceName: skill?.title || 'Skill',
+          resourceIconType: 'skill',
+          currentActions: skill?.currentActions,
+          copyVersion: skill?.version,
+          permissionResourceType: WORKSPACE_RESOURCE_TYPE.SKILL,
+          ownerId: skill?.ownerId,
+          onPermissionSuccess: refreshSkill,
+          titleMeta: headerSaveStatusText ? (
+            <span
+              className={`${styles.toolbarSaveStatus} ${
+                savePhase === 'dirty' || savePhase === 'failed' ? styles.toolbarSaveStatusDirty : ''
+              }`}
+            >
+              {headerSaveStatusText}
+            </span>
+          ) : undefined,
+          actions: skill ? (
+            <div className={styles.topBarActions}>
+              {canEdit ? (
+                <>
                   <Button
                     variant="secondary"
-                    onPress={handleSave}
+                    onPress={handleToggleEditing}
                     isDisabled={
-                      !hasSaveableChanges ||
+                      !canPreviewSelectedFile ||
                       contentLoading ||
                       saveLoading ||
                       configLoading ||
@@ -2007,35 +1974,52 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
                       moveLoading
                     }
                   >
-                    <Save size={16} />
-                    <span>保存</span>
+                    <Pencil size={16} />
+                    <span>{editing ? '取消' : '编辑'}</span>
                   </Button>
-                ) : null}
-                <Button
-                  variant="primary"
-                  onPress={handlePublish}
-                  isDisabled={
-                    publishLoading ||
-                    contentLoading ||
-                    saveLoading ||
-                    configLoading ||
-                    isSaveQueueActive ||
-                    moveLoading
-                  }
-                >
-                  <Upload size={16} />
-                  <span>发布</span>
-                </Button>
-              </>
-            ) : null}
-            <SkillVersionDropdown
-              items={versionItems}
-              disabledKeys={disabledVersionKeys}
-              formatVersion={SkillServicesMap.formatVersion}
-              onSelect={handleVersionSelect}
-            />
-          </div>
-        ) : undefined,
+                  {editing || hasSaveableChanges ? (
+                    <Button
+                      variant="secondary"
+                      onPress={handleSave}
+                      isDisabled={
+                        !hasSaveableChanges ||
+                        contentLoading ||
+                        saveLoading ||
+                        configLoading ||
+                        isSaveQueueActive ||
+                        moveLoading
+                      }
+                    >
+                      <Save size={16} />
+                      <span>保存</span>
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="primary"
+                    onPress={handlePublish}
+                    isDisabled={
+                      publishLoading ||
+                      contentLoading ||
+                      saveLoading ||
+                      configLoading ||
+                      isSaveQueueActive ||
+                      moveLoading
+                    }
+                  >
+                    <Upload size={16} />
+                    <span>发布</span>
+                  </Button>
+                </>
+              ) : null}
+              <SkillVersionDropdown
+                items={versionItems}
+                disabledKeys={disabledVersionKeys}
+                formatVersion={SkillServicesMap.formatVersion}
+                onSelect={handleVersionSelect}
+              />
+            </div>
+          ) : undefined,
+        },
       },
     }),
     [
@@ -2050,10 +2034,12 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
       handleToggleEditing,
       handleVersionSelect,
       hasSaveableChanges,
+      headerSaveStatusText,
       isSaveQueueActive,
       moveLoading,
       publishLoading,
       refreshSkill,
+      resourceId,
       savePhase,
       saveLoading,
       skill,
@@ -2063,7 +2049,7 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
 
   if (!resourceId) {
     return (
-      <SkillLayoutConfig config={{ header: { inlineTitle: <SkillToolbarTitle title="Skill" /> } }}>
+      <SkillLayoutConfig config={headerConfig}>
         <div className={styles.middleOverlay}>
           <ResultState
             status="info"
@@ -2086,7 +2072,7 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
 
   if (error) {
     return (
-      <SkillLayoutConfig config={{ header: { inlineTitle: <SkillToolbarTitle title="Skill" /> } }}>
+      <SkillLayoutConfig config={headerConfig}>
         <div className={styles.middleOverlay}>
           <ResultState
             status="warning"
@@ -2105,7 +2091,7 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
 
   if (loading && !skill) {
     return (
-      <SkillLayoutConfig config={{ header: { inlineTitle: <SkillToolbarTitle title="Skill" /> } }}>
+      <SkillLayoutConfig config={headerConfig}>
         <div className={styles.middleOverlay} aria-busy="true" aria-live="polite">
           <div className={styles.middleOverlayLoading}>
             <Spin size="large" />
