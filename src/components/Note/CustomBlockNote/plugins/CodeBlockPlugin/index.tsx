@@ -129,7 +129,7 @@ export const codeBlockPlugin = {
     markdownImport: { support: 'default' },
     markdownExport: { support: 'default' },
     aiDiff: { support: 'unsupported', reason: '当前 AI Diff 映射明确排除代码块' },
-    projection: { support: 'inherited', profile: 'inlineContent' },
+    projection: { support: 'default' },
     print: { support: 'custom' },
   },
   comments: { documentThreads: 'range' },

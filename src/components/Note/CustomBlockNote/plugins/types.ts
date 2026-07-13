@@ -21,7 +21,7 @@ export type PluginEditor = BlockNoteEditor<BlockSchema, InlineContentSchema, Sty
 export type NoteCapabilityDeclaration =
   | { support: 'default' }
   | { support: 'custom' }
-  | { support: 'inherited'; profile: string }
+  | { support: 'inherited' }
   | { support: 'unsupported'; reason: string };
 
 export interface NoteContentCapabilityDeclarations {

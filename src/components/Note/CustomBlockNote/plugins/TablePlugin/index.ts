@@ -60,7 +60,7 @@ export const tablePlugin = {
     markdownImport: { support: 'default' },
     markdownExport: { support: 'default' },
     aiDiff: { support: 'unsupported', reason: '结构化表格当前不承担 AI Diff 语义' },
-    projection: { support: 'default' },
+    projection: { support: 'custom' },
     print: { support: 'custom' },
   },
   comments: { documentThreads: 'unsupported' },

@@ -162,7 +162,7 @@ describe('createNotePluginRegistry', () => {
     const missingInheritedAiDiff = blockPlugin('missing-inherited-ai-diff', 'inheritedAiDiff');
     missingInheritedAiDiff.capabilities = {
       ...defaultCapabilities,
-      aiDiff: { support: 'inherited', profile: 'richTextBlock' },
+      aiDiff: { support: 'inherited' },
     };
     expect(() => createNotePluginRegistry(bundle([missingInheritedAiDiff]))).toThrow(
       'Note 插件 missing-inherited-ai-diff 的 AI Diff：声明为 inherited，但未提供实现'
@@ -191,7 +191,7 @@ describe('createNotePluginRegistry', () => {
     const first = inlinePlugin('first-text', 'firstText');
     first.capabilities = {
       ...defaultCapabilities,
-      aiDiff: { support: 'inherited', profile: 'testText' },
+      aiDiff: { support: 'inherited' },
     };
     first.aiDiff.generatedText = {
       read: () => undefined,
@@ -200,7 +200,7 @@ describe('createNotePluginRegistry', () => {
     const second = inlinePlugin('second-text', 'secondText');
     second.capabilities = {
       ...defaultCapabilities,
-      aiDiff: { support: 'inherited', profile: 'testText' },
+      aiDiff: { support: 'inherited' },
     };
     second.aiDiff.generatedText = {
       read: () => undefined,

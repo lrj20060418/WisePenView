@@ -31,8 +31,8 @@ function richTextCapabilities(): NoteContentCapabilityDeclarations {
   return {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
-    aiDiff: { support: 'inherited', profile: 'richTextBlock' },
-    projection: { support: 'inherited', profile: 'inlineContent' },
+    aiDiff: { support: 'inherited' },
+    projection: { support: 'inherited' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -44,7 +44,7 @@ function atomicCapabilities(
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff,
-    projection: DEFAULT_CAPABILITY,
+    projection: { support: 'inherited' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -110,8 +110,8 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
     capabilities: {
       markdownImport: DEFAULT_CAPABILITY,
       markdownExport: DEFAULT_CAPABILITY,
-      aiDiff: { support: 'inherited', profile: type === 'text' ? 'textDiff' : 'linkDiff' },
-      projection: { support: 'inherited', profile: type === 'text' ? 'text' : 'link' },
+      aiDiff: { support: 'inherited' },
+      projection: { support: 'inherited' },
       print: DEFAULT_CAPABILITY,
     },
     projection: {
@@ -232,7 +232,7 @@ export const defaultContentPlugin = {
       createDefaultBlockPlugin(
         type,
         {
-          ...atomicCapabilities({ support: 'inherited', profile: 'atomicProps' }),
+          ...atomicCapabilities({ support: 'inherited' }),
           ...(type === 'audio' || type === 'image' || type === 'video'
             ? { print: { support: 'custom' as const } }
             : {}),
