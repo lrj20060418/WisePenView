@@ -1,10 +1,10 @@
-import { createNoteBlockNoteSchema, getNoteEditorPlugins } from './plugins';
+import { createNoteBlockNoteSchema, notePluginRegistry } from './plugins';
 
 /**
  * 笔记正文编辑器 schema：合并各插件贡献的 blockSpecs / inlineContentSpecs。
- * 新增插件：在 `plugins/index.ts` 的 `NOTE_EDITOR_PLUGINS` 中追加即可。
+ * 新增内容类型：在 `plugins/index.ts` 的树中注册唯一 owner。
  */
-export const blockNoteSchema = createNoteBlockNoteSchema(getNoteEditorPlugins());
+export const blockNoteSchema = createNoteBlockNoteSchema(notePluginRegistry);
 
 export type CustomBlockNoteSchema = typeof blockNoteSchema;
 

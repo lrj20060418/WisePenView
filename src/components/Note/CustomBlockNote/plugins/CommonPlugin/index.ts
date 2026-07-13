@@ -1,4 +1,4 @@
-import type { NoteEditorPlugin } from '../types';
+import type { NoteRuntimeExtension } from '../types';
 import { stripEscapeCharExtension, stripEscapeEditorProps } from './stripEscape';
 
 /**
@@ -7,8 +7,8 @@ import { stripEscapeCharExtension, stripEscapeEditorProps } from './stripEscape'
  *
  * 默认 slash 菜单裁剪在 `Note/NoteSlashMenu` 内配置。
  */
-export const commonPlugin = {
+export const commonRuntimeExtension = {
   id: 'common',
   extensions: () => [stripEscapeCharExtension],
   editorProps: () => stripEscapeEditorProps,
-} satisfies NoteEditorPlugin;
+} satisfies NoteRuntimeExtension;

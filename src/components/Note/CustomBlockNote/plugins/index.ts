@@ -1,29 +1,43 @@
-import { aiDiffPlugin } from './AIDiffPlugin';
+import { aiDiffPlugin, aiDiffRuntimeExtension } from './AIDiffPlugin';
 import { codeBlockPlugin } from './CodeBlockPlugin';
-import { commonPlugin } from './CommonPlugin';
+import { commonRuntimeExtension } from './CommonPlugin';
+import { defaultContentPlugin } from './DefaultContentPlugin';
 import { latexPlugin } from './LatexPlugin';
-import type { NoteEditorPlugin } from './types';
+import {
+  collectNoteEditorExtensions,
+  collectNoteEditorProps,
+  createNoteBlockNoteSchema,
+  createNotePluginRegistry,
+  createNoteReadOnlyFilterExtension,
+  noteBlocksToMarkdownLossy,
+} from './registry';
+import type { NotePluginBundle } from './types';
 
-/**
- * 笔记正文编辑器的内置插件。顺序即 schema/extension/editorProps/slash 的贡献顺序，
- * 通用能力（commonPlugin）在前，业务块（latexPlugin 等）在后。
- */
-export const NOTE_EDITOR_PLUGINS: readonly NoteEditorPlugin[] = [
-  commonPlugin,
-  codeBlockPlugin,
-  latexPlugin,
-  aiDiffPlugin,
-];
+export const notePluginTree = {
+  kind: 'bundle',
+  id: 'note',
+  children: [defaultContentPlugin, codeBlockPlugin, latexPlugin, aiDiffPlugin],
+} satisfies NotePluginBundle;
 
-export function getNoteEditorPlugins(): readonly NoteEditorPlugin[] {
-  return NOTE_EDITOR_PLUGINS;
-}
+export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
+  commonRuntimeExtension,
+  aiDiffRuntimeExtension,
+]);
 
+export type {
+  NoteBlockPlugin,
+  NoteContentPlugin,
+  NoteInlinePlugin,
+  NotePluginBundle,
+  NotePluginNode,
+  NotePluginRegistry,
+  NoteRuntimeExtension,
+} from './types';
 export {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
-  composeNoteBlocksToMarkdownLossy,
   createNoteBlockNoteSchema,
+  createNotePluginRegistry,
   createNoteReadOnlyFilterExtension,
-} from './registry';
-export type { NoteEditorPlugin } from './types';
+  noteBlocksToMarkdownLossy,
+};

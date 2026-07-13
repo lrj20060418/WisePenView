@@ -1,7 +1,7 @@
 import type { CustomBlockNoteEditor } from '../CustomBlockNote/blockNoteSchema';
-import type { NoteEditorPlugin } from '../CustomBlockNote/plugins/types';
+import type { NoteContentPlugin } from '../CustomBlockNote/plugins/types';
 
 export interface NoteSlashMenuProps {
   editor: CustomBlockNoteEditor;
-  plugins: readonly NoteEditorPlugin[];
+  plugins: readonly NoteContentPlugin[];
 }

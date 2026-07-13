@@ -1,7 +1,7 @@
 import type { CustomBlockNoteEditor } from '@/components/Note/CustomBlockNote/blockNoteSchema';
 import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
 import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
-import type { NoteEditorPlugin } from '@/components/Note/CustomBlockNote/plugins/types';
+import type { NoteContentPlugin } from '@/components/Note/CustomBlockNote/plugins/types';
 import {
   applyBlockTypeToBlocks,
   blockMatchesBlockTypeItem,
@@ -220,7 +220,7 @@ function QuickBlockTypes({
   );
 }
 
-function CustomSideMenu({ plugins }: { plugins: readonly NoteEditorPlugin[] }) {
+function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) {
   const editor = useBlockNoteEditor(blockNoteSchema);
   const sideMenu = useExtension(SideMenuExtension, { editor });
   const suggestionMenu = useExtension(SuggestionMenu, { editor });
@@ -719,7 +719,7 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteEditorPlugin[] }) {
   );
 }
 
-export default function NoteSideMenu({ plugins }: { plugins: readonly NoteEditorPlugin[] }) {
+export default function NoteSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) {
   const readOnly = useNoteEditorReadOnlyContext();
 
   if (readOnly) {

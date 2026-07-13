@@ -71,9 +71,9 @@ import {
 import {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
-  composeNoteBlocksToMarkdownLossy,
   createNoteReadOnlyFilterExtension,
-  getNoteEditorPlugins,
+  noteBlocksToMarkdownLossy,
+  notePluginRegistry,
 } from './plugins';
 import {
   filterDocumentBlocksForAiDiffExport,
@@ -246,10 +246,9 @@ function CustomBlockNoteEditor({
     listInlineComments: resourceService.listInlineComments,
   });
 
-  const plugins = useMemo(() => getNoteEditorPlugins(), []);
   const editorExtensions = useMemo(() => {
     const extensions = [
-      ...collectNoteEditorExtensions(plugins),
+      ...collectNoteEditorExtensions(notePluginRegistry),
       createNoteReadOnlyFilterExtension(shouldBlockLocalDocWrites),
     ];
     if (commentsEnabled) {
@@ -296,7 +295,6 @@ function CustomBlockNoteEditor({
     commentsEnabled,
     commentsAuthorizable,
     isCommentVisibilityPrivileged,
-    plugins,
     resourceId,
     resourceService,
     threadsYMap,
@@ -306,8 +304,12 @@ function CustomBlockNoteEditor({
     commentResolverContextLatest,
   ]);
   const editorProps = useMemo(
-    () => mergeReadOnlyEditorProps(collectNoteEditorProps(plugins), effectiveBlockLocalDocWrites),
-    [plugins, effectiveBlockLocalDocWrites]
+    () =>
+      mergeReadOnlyEditorProps(
+        collectNoteEditorProps(notePluginRegistry),
+        effectiveBlockLocalDocWrites
+      ),
+    [effectiveBlockLocalDocWrites]
   );
 
   const editor = useCreateBlockNote({
@@ -432,7 +434,7 @@ function CustomBlockNoteEditor({
       activateWriteGuard();
       scheduleAiDiffBodyContentHashRefresh();
 
-      const isNoteEmpty = composeNoteBlocksToMarkdownLossy(editor, plugins).trim().length === 0;
+      const isNoteEmpty = noteBlocksToMarkdownLossy(editor).trim().length === 0;
       useNewNoteStore.getState().syncNewNoteBodyFromEditor(resourceId, isNoteEmpty);
       syncAiDiffPresence();
 
@@ -626,9 +628,8 @@ function CustomBlockNoteEditor({
           editor.document,
           AI_DIFF_DISPLAY_MODE.OLD_ONLY
         );
-        const markdown = composeNoteBlocksToMarkdownLossy(
+        const markdown = noteBlocksToMarkdownLossy(
           editor,
-          plugins,
           blocksForExport as typeof editor.document
         );
         const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
@@ -644,7 +645,7 @@ function CustomBlockNoteEditor({
         URL.revokeObjectURL(url);
       },
     }),
-    [aiDiffDisplayMode, editor, plugins]
+    [aiDiffDisplayMode, editor]
   );
 
   const onKeyDownCapture = useNoteCaptureKeyEvent({ provider, undoManager, readOnly });
@@ -840,8 +841,8 @@ function CustomBlockNoteEditor({
                   rememberPendingCommentReference();
                 }}
               />
-              <NoteSlashMenu editor={editor} plugins={plugins} />
-              <NoteSideMenu plugins={plugins} />
+              <NoteSlashMenu editor={editor} plugins={notePluginRegistry.contentPlugins} />
+              <NoteSideMenu plugins={notePluginRegistry.contentPlugins} />
               <NoteTableHandles />
               {showCommentsUi ? (
                 <NoteCommentsUi

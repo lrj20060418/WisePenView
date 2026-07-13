@@ -6,7 +6,7 @@ import type { EditorProps, EditorView } from '@tiptap/pm/view';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
 import { AI_DIFF_DISPLAY_MODE, type AiDiffDisplayMode } from '@/domains/Note';
-import type { NoteEditorPlugin } from '../types';
+import type { NoteInlinePlugin, NotePluginBundle, NoteRuntimeExtension } from '../types';
 import { isRecord, shouldFoldInlineContent } from './exportVisibility';
 import {
   aiAddInlineContentSpec,
@@ -331,17 +331,15 @@ function deleteRangesAndMaybeRemoveEmptyBlock(params: {
   view.dispatch(tr);
 }
 
-// AIDiff 插件本体：向编辑器系统注册（inline specs + extension + editorProps）
-export const aiDiffPlugin = {
-  id: 'ai-diff',
-  // 注册四种行内内容 spec（渲染/导出逻辑在 inlineContentSpecs/inlineContentViews 中）
-  inlineContentSpecs: {
-    'ai-diff': aiDiffInlineContentSpec,
-    'ai-add': aiAddInlineContentSpec,
-    'ai-delete': aiDeleteInlineContentSpec,
-    'ai-link-add': aiLinkAddInlineContentSpec,
-    'ai-link-delete': aiLinkDeleteInlineContentSpec,
-  },
+export const aiDiffRuntimeExtension = {
+  id: 'ai-diff.runtime',
+  dependencies: [
+    'ai-diff.inline.diff',
+    'ai-diff.inline.add',
+    'ai-diff.inline.delete',
+    'ai-diff.inline.link-add',
+    'ai-diff.inline.link-delete',
+  ],
   extensions: () => [aiDiffBlockFoldExtension()],
   editorProps: () => {
     const props: Partial<EditorProps> = {
@@ -404,7 +402,60 @@ export const aiDiffPlugin = {
     };
     return props;
   },
-} satisfies NoteEditorPlugin;
+} satisfies NoteRuntimeExtension;
+
+function createAiDiffInlinePlugin(params: {
+  id: string;
+  type: string;
+  spec: NoteInlinePlugin['spec'];
+}): NoteInlinePlugin {
+  return {
+    kind: 'inline',
+    id: params.id,
+    type: params.type,
+    spec: params.spec,
+    capabilities: {
+      markdownImport: { support: 'unsupported', reason: 'AI Diff 语法节点不从 Markdown 导入' },
+      markdownExport: { support: 'custom' },
+      aiDiff: { support: 'custom' },
+      comments: { support: 'unsupported', reason: 'AI Diff 内容不可创建批注' },
+      projection: { support: 'custom' },
+      print: { support: 'custom' },
+    },
+  };
+}
+
+export const aiDiffPlugin = {
+  kind: 'bundle',
+  id: 'ai-diff',
+  children: [
+    createAiDiffInlinePlugin({
+      id: 'ai-diff.inline.diff',
+      type: 'ai-diff',
+      spec: aiDiffInlineContentSpec,
+    }),
+    createAiDiffInlinePlugin({
+      id: 'ai-diff.inline.add',
+      type: 'ai-add',
+      spec: aiAddInlineContentSpec,
+    }),
+    createAiDiffInlinePlugin({
+      id: 'ai-diff.inline.delete',
+      type: 'ai-delete',
+      spec: aiDeleteInlineContentSpec,
+    }),
+    createAiDiffInlinePlugin({
+      id: 'ai-diff.inline.link-add',
+      type: 'ai-link-add',
+      spec: aiLinkAddInlineContentSpec,
+    }),
+    createAiDiffInlinePlugin({
+      id: 'ai-diff.inline.link-delete',
+      type: 'ai-link-delete',
+      spec: aiLinkDeleteInlineContentSpec,
+    }),
+  ],
+} satisfies NotePluginBundle;
 
 export { filterDocumentBlocksForAiDiffExport } from './markdownExport';
 export {

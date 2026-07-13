@@ -2,7 +2,7 @@ import type { DefaultReactSuggestionItem } from '@blocknote/react';
 import { getDefaultReactSlashMenuItems } from '@blocknote/react';
 
 import type { CustomBlockNoteEditor } from '../CustomBlockNote/blockNoteSchema';
-import type { NoteEditorPlugin, PluginEditor } from '../CustomBlockNote/plugins/types';
+import type { NoteContentPlugin, PluginEditor } from '../CustomBlockNote/plugins/types';
 
 /**
  * BlockNote 默认 slash 菜单项在源码中带稳定字段 `key`，但未对外公开类型；这里收敛窄化避免使用 any。
@@ -46,7 +46,7 @@ export function getFilteredDefaultReactSlashMenuItems(
  * 按插件顺序收集各插件贡献的 slash 菜单项。
  */
 export function collectPluginSlashMenuItems(
-  plugins: readonly NoteEditorPlugin[],
+  plugins: readonly NoteContentPlugin[],
   editor: CustomBlockNoteEditor
 ): DefaultReactSuggestionItem[] {
   // BlockNoteEditor 的若干配置（如 dropCursor 回调）让 editor 类型在 callback 参数位置不变（invariant），
@@ -57,7 +57,7 @@ export function collectPluginSlashMenuItems(
 
 export function getNoteSlashMenuItems(
   editor: CustomBlockNoteEditor,
-  plugins: readonly NoteEditorPlugin[],
+  plugins: readonly NoteContentPlugin[],
   hiddenDefaultKeys: ReadonlySet<string> | readonly string[]
 ): DefaultReactSuggestionItem[] {
   return [

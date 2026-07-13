@@ -12,30 +12,115 @@ import type { EditorProps } from '@tiptap/pm/view';
 import { ySyncPluginKey } from 'y-prosemirror';
 
 import { isWisePenCommentMarkSyncTransaction } from '../comments/core/commentDocumentMarks';
-import type { NoteEditorPlugin, NoteInlineContentSpecs, PluginEditor } from './types';
+import type {
+  NoteBlockPlugin,
+  NoteContentPlugin,
+  NoteInlineContentSpecs,
+  NoteInlinePlugin,
+  NotePluginBundle,
+  NotePluginNode,
+  NotePluginRegistry,
+  NoteRuntimeExtension,
+} from './types';
 
 type DOMEventHandlers = NonNullable<EditorProps['handleDOMEvents']>;
 type DOMEventName = keyof DOMEventHandlers;
 type DOMEventHandler = NonNullable<DOMEventHandlers[DOMEventName]>;
 
-function isYjsSyncTransaction(tr: Transaction): boolean {
-  return tr.getMeta(ySyncPluginKey) !== undefined || tr.getMeta('y-sync$') !== undefined;
+function flattenPluginTree(root: NotePluginBundle): NotePluginNode[] {
+  const nodes: NotePluginNode[] = [];
+  const visit = (node: NotePluginNode) => {
+    nodes.push(node);
+    if (node.kind === 'bundle') {
+      node.children.forEach(visit);
+    }
+  };
+  visit(root);
+  return nodes;
 }
 
-/**
- * 聚合所有插件的 blockSpecs / inlineContentSpecs，构造 BlockNoteSchema。
- * 运行时合并各插件贡献；类型侧为 BlockNote 默认 schema 宽度（不再做元组字面量推断）。
- */
-export function createNoteBlockNoteSchema(plugins: readonly NoteEditorPlugin[]) {
+function sortByDependencies<T extends { id: string; dependencies?: readonly string[] }>(
+  items: readonly T[],
+  availableIds: ReadonlySet<string>
+): T[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const sorted: T[] = [];
+
+  const visit = (item: T) => {
+    if (visited.has(item.id)) return;
+    if (visiting.has(item.id)) {
+      throw new Error(`Note 插件依赖存在环：${item.id}`);
+    }
+    visiting.add(item.id);
+    for (const dependencyId of item.dependencies ?? []) {
+      if (!availableIds.has(dependencyId)) {
+        throw new Error(`Note 插件 ${item.id} 缺少依赖：${dependencyId}`);
+      }
+      const dependency = byId.get(dependencyId);
+      if (dependency) visit(dependency);
+    }
+    visiting.delete(item.id);
+    visited.add(item.id);
+    sorted.push(item);
+  };
+
+  items.forEach(visit);
+  return sorted;
+}
+
+export function createNotePluginRegistry(
+  root: NotePluginBundle,
+  runtimeExtensions: readonly NoteRuntimeExtension[] = []
+): NotePluginRegistry {
+  const nodes = flattenPluginTree(root);
+  const allItems = [...nodes, ...runtimeExtensions];
+  const seenIds = new Set<string>();
+  for (const item of allItems) {
+    if (seenIds.has(item.id)) {
+      throw new Error(`Note 插件 id 重复：${item.id}`);
+    }
+    seenIds.add(item.id);
+  }
+
+  const contentPlugins = nodes.filter(
+    (node): node is NoteContentPlugin => node.kind === 'block' || node.kind === 'inline'
+  );
+  const sortedContentPlugins = sortByDependencies(contentPlugins, seenIds);
+  const sortedRuntimeExtensions = sortByDependencies(runtimeExtensions, seenIds);
+  const blockPlugins = new Map<string, NoteBlockPlugin>();
+  const inlinePlugins = new Map<string, NoteInlinePlugin>();
+
+  for (const plugin of sortedContentPlugins) {
+    const owners = plugin.kind === 'block' ? blockPlugins : inlinePlugins;
+    const currentOwner = owners.get(plugin.type);
+    if (currentOwner) {
+      throw new Error(
+        `Note ${plugin.kind} type ${plugin.type} 存在多个 owner：${currentOwner.id}、${plugin.id}`
+      );
+    }
+    owners.set(plugin.type, plugin as never);
+  }
+
+  return {
+    root,
+    contentPlugins: sortedContentPlugins,
+    blockPlugins,
+    inlinePlugins,
+    runtimeExtensions: sortedRuntimeExtensions,
+  };
+}
+
+export function createNoteBlockNoteSchema(registry: NotePluginRegistry) {
   const blockSpecs: BlockSpecs = {};
   const inlineContentSpecs: NoteInlineContentSpecs = {};
 
-  for (const plugin of plugins) {
-    if (plugin.blockSpecs) {
-      Object.assign(blockSpecs, plugin.blockSpecs);
-    }
-    if (plugin.inlineContentSpecs) {
-      Object.assign(inlineContentSpecs, plugin.inlineContentSpecs);
+  for (const plugin of registry.contentPlugins) {
+    if (plugin.kind === 'block') {
+      blockSpecs[plugin.type] = plugin.spec;
+    } else {
+      inlineContentSpecs[plugin.type] = plugin.spec;
     }
   }
 
@@ -45,11 +130,16 @@ export function createNoteBlockNoteSchema(plugins: readonly NoteEditorPlugin[]) 
   });
 }
 
-/** 收集所有插件的 BlockNote / Tiptap extension。 */
 export function collectNoteEditorExtensions(
-  plugins: readonly NoteEditorPlugin[]
+  registry: NotePluginRegistry
 ): ExtensionFactoryInstance[] {
-  return plugins.flatMap((plugin) => plugin.extensions?.() ?? []);
+  return [...registry.contentPlugins, ...registry.runtimeExtensions].flatMap(
+    (plugin) => plugin.extensions?.() ?? []
+  );
+}
+
+function isYjsSyncTransaction(tr: Transaction): boolean {
+  return tr.getMeta(ySyncPluginKey) !== undefined || tr.getMeta('y-sync$') !== undefined;
 }
 
 /** 无协同编辑权时拦截本地 ProseMirror 文档写入（Yjs 同步事务仍放行）。 */
@@ -62,18 +152,9 @@ export function createNoteReadOnlyFilterExtension(
       new Plugin({
         key: new PluginKey('noteReadOnlyFilter'),
         filterTransaction(tr) {
-          if (!isBlockLocalDocWrites()) {
-            return true;
-          }
-          if (!tr.docChanged) {
-            return true;
-          }
-          if (isYjsSyncTransaction(tr)) {
-            return true;
-          }
-          if (isWisePenCommentMarkSyncTransaction(tr)) {
-            return true;
-          }
+          if (!isBlockLocalDocWrites() || !tr.docChanged) return true;
+          if (isYjsSyncTransaction(tr)) return true;
+          if (isWisePenCommentMarkSyncTransaction(tr)) return true;
           return false;
         },
       }),
@@ -81,15 +162,10 @@ export function createNoteReadOnlyFilterExtension(
   });
 }
 
-/**
- * 合并相同 DOM 事件名上的多个 handler：按插件顺序串行调用，任一返回 `true` 即短路（与 PM 语义一致）。
- */
 function mergeHandleDOMEvents(
   handlersList: readonly DOMEventHandlers[]
 ): DOMEventHandlers | undefined {
-  if (handlersList.length === 0) {
-    return undefined;
-  }
+  if (handlersList.length === 0) return undefined;
 
   const grouped = new Map<DOMEventName, DOMEventHandler[]>();
   for (const handlers of handlersList) {
@@ -97,56 +173,33 @@ function mergeHandleDOMEvents(
       const handler = handlers[name];
       if (!handler) continue;
       const list = grouped.get(name);
-      if (list) {
-        list.push(handler);
-      } else {
-        grouped.set(name, [handler]);
-      }
+      if (list) list.push(handler);
+      else grouped.set(name, [handler]);
     }
-  }
-
-  if (grouped.size === 0) {
-    return undefined;
   }
 
   const merged: DOMEventHandlers = {};
-  for (const [name, list] of grouped) {
-    if (list.length === 1) {
-      (merged as Record<string, DOMEventHandler>)[name] = list[0];
-      continue;
-    }
+  for (const [name, handlers] of grouped) {
     const composed: DOMEventHandler = (view, event) => {
-      for (const handler of list) {
-        if (handler(view, event) === true) {
-          return true;
-        }
+      for (const handler of handlers) {
+        if (handler(view, event) === true) return true;
       }
       return false;
     };
     (merged as Record<string, DOMEventHandler>)[name] = composed;
   }
-  return merged;
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
-/**
- * 合并多个插件贡献的 editorProps：
- * - `handleDOMEvents` 走串行短路
- * - 其它字段后者覆盖前者，发生覆盖时打印 warn 提示冲突
- */
-export function collectNoteEditorProps(plugins: readonly NoteEditorPlugin[]): Partial<EditorProps> {
-  const propsList = plugins
-    .map((plugin) => plugin.editorProps?.())
-    .filter((value): value is Partial<EditorProps> => value !== undefined);
-
-  if (propsList.length === 0) {
-    return {};
-  }
-
+export function collectNoteEditorProps(registry: NotePluginRegistry): Partial<EditorProps> {
+  const contributors = [...registry.contentPlugins, ...registry.runtimeExtensions];
   const domHandlersList: DOMEventHandlers[] = [];
   const merged: Partial<EditorProps> = {};
-  const seenScalarKeys = new Set<string>();
+  const seenScalarKeys = new Map<string, string>();
 
-  for (const props of propsList) {
+  contributors.forEach((contributor) => {
+    const props = contributor.editorProps?.();
+    if (!props) return;
     for (const key of Object.keys(props) as Array<keyof EditorProps>) {
       const value = props[key];
       if (value === undefined) continue;
@@ -154,37 +207,29 @@ export function collectNoteEditorProps(plugins: readonly NoteEditorPlugin[]): Pa
         domHandlersList.push(value as DOMEventHandlers);
         continue;
       }
-      if (seenScalarKeys.has(key)) {
-        console.warn(`[NoteEditorPlugin] editorProps.${String(key)} 被多个插件贡献，后者覆盖前者`);
+      const previousContributor = seenScalarKeys.get(String(key));
+      if (previousContributor) {
+        throw new Error(
+          `Note editorProps.${String(key)} 存在多个 owner：${previousContributor}、${contributor?.id ?? 'unknown'}`
+        );
       }
-      seenScalarKeys.add(key);
+      seenScalarKeys.set(String(key), contributor?.id ?? 'unknown');
       (merged as Record<string, unknown>)[key] = value;
     }
-  }
+  });
 
   const mergedDomHandlers = mergeHandleDOMEvents(domHandlersList);
-  if (mergedDomHandlers) {
-    merged.handleDOMEvents = mergedDomHandlers;
-  }
+  if (mergedDomHandlers) merged.handleDOMEvents = mergedDomHandlers;
   return merged;
 }
 
-/**
- * 按 `NOTE_EDITOR_PLUGINS` 顺序：先 BlockNote 默认导出，再依次执行各插件的 `blocksToMarkdownLossy`。
- */
-export function composeNoteBlocksToMarkdownLossy<
+export function noteBlocksToMarkdownLossy<
   BSchema extends BlockSchema,
   I extends InlineContentSchema,
   S extends StyleSchema,
 >(
   editor: BlockNoteEditor<BSchema, I, S>,
-  plugins: readonly NoteEditorPlugin[],
   blocks?: Parameters<BlockNoteEditor<BSchema, I, S>['blocksToMarkdownLossy']>[0]
 ): string {
-  let markdown = editor.blocksToMarkdownLossy(blocks);
-  const pluginCtxEditor = editor as unknown as PluginEditor;
-  for (const plugin of plugins) {
-    markdown = plugin.blocksToMarkdownLossy?.(markdown, { editor: pluginCtxEditor }) ?? markdown;
-  }
-  return markdown;
+  return editor.blocksToMarkdownLossy(blocks);
 }

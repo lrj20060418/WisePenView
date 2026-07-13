@@ -1,23 +1,43 @@
-import type { NoteEditorPlugin } from '../types';
+import type { NoteBlockPlugin, NoteInlinePlugin, NotePluginBundle } from '../types';
 import { inlineMathContentSpec } from './InlineMath';
 import { inlineMathDollarExtension } from './InlineMath/inlineMathDollarExtension';
 import { createMathBlockSpec } from './MathBlock';
-import { latexBlocksToMarkdownLossy } from './markdownExport';
 import { createMathSlashMenuItem } from './slashMenuItem';
 
-/**
- * LaTeX 插件：贡献 `math` 块、`inlineMath` 行内内容、`$$...$$` 自动转换扩展，
- * 以及 slash 菜单中的「公式」入口。
- */
-export const latexPlugin = {
-  id: 'latex',
-  blockSpecs: {
-    math: createMathBlockSpec(),
+export const mathBlockPlugin = {
+  kind: 'block',
+  id: 'latex.block.math',
+  type: 'math',
+  spec: createMathBlockSpec(),
+  capabilities: {
+    markdownImport: { support: 'unsupported', reason: '当前没有公式块 Markdown parse' },
+    markdownExport: { support: 'custom' },
+    aiDiff: { support: 'custom' },
+    comments: { support: 'custom' },
+    projection: { support: 'custom' },
+    print: { support: 'custom' },
   },
-  inlineContentSpecs: {
-    inlineMath: inlineMathContentSpec,
+  slashMenu: ({ editor }) => [createMathSlashMenuItem(editor)],
+} satisfies NoteBlockPlugin;
+
+export const inlineMathPlugin = {
+  kind: 'inline',
+  id: 'latex.inline.inlineMath',
+  type: 'inlineMath',
+  spec: inlineMathContentSpec,
+  capabilities: {
+    markdownImport: { support: 'unsupported', reason: '当前没有行内公式 Markdown parse' },
+    markdownExport: { support: 'custom' },
+    aiDiff: { support: 'custom' },
+    comments: { support: 'custom' },
+    projection: { support: 'custom' },
+    print: { support: 'custom' },
   },
   extensions: () => [inlineMathDollarExtension()],
-  slashMenu: ({ editor }) => [createMathSlashMenuItem(editor)],
-  blocksToMarkdownLossy: latexBlocksToMarkdownLossy,
-} satisfies NoteEditorPlugin;
+} satisfies NoteInlinePlugin;
+
+export const latexPlugin = {
+  kind: 'bundle',
+  id: 'latex',
+  children: [mathBlockPlugin, inlineMathPlugin],
+} satisfies NotePluginBundle;
