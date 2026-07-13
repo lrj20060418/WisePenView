@@ -40,6 +40,13 @@ describe('LatexPlugin AI Diff', () => {
       );
 
     expect(mathPreview?.querySelector('.katex')).not.toBeNull();
+    expect(mathPreview?.matches('.bn-math-block-root')).toBe(true);
+    expect(mathPreview?.dataset.readOnly).toBe('true');
+    expect(mathPreview?.children).toHaveLength(1);
+    expect(
+      mathPreview?.firstElementChild?.firstElementChild?.querySelector('.katex')
+    ).not.toBeNull();
     expect(inlinePreview?.querySelector('.katex')).not.toBeNull();
+    expect(inlinePreview?.matches('.bn-math-block-root')).toBe(false);
   });
 });

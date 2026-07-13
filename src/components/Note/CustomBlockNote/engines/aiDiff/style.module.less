@@ -42,6 +42,7 @@
 }
 
 .review[data-ai-diff-content-type='codeBlock'],
+.review[data-ai-diff-content-type='math'],
 .review[data-ai-diff-content-type='table'] {
   flex-direction: column;
   gap: var(--space-xs);
@@ -52,9 +53,23 @@
   width: 100%;
 }
 
+.review[data-ai-diff-content-type='math'] {
+  width: 100%;
+}
+
 .review[data-ai-diff-content-type='codeBlock'] .comparison,
 .review[data-ai-diff-content-type='codeBlock'] .candidatePlain {
   width: 100%;
+}
+
+.review[data-ai-diff-content-type='math'] .candidate,
+.review[data-ai-diff-content-type='math'] .candidatePlain {
+  flex: none;
+  width: 100%;
+}
+
+.review[data-ai-diff-content-type='math'] .candidate {
+  padding: 0;
 }
 
 .review[data-ai-diff-content-type='table'] {
@@ -72,6 +87,14 @@
   width: fit-content;
   max-width: 100%;
   background: transparent;
+  color: inherit;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.current[data-content-type='math'] {
+  width: 100%;
+  border-radius: var(--radius-sm);
   color: inherit;
   pointer-events: none;
   text-decoration: none;
@@ -131,6 +154,7 @@
 }
 
 .review[data-ai-diff-content-type='codeBlock'] .actions,
+.review[data-ai-diff-content-type='math'] .actions,
 .review[data-ai-diff-content-type='table'] .actions {
   align-self: flex-end;
 }

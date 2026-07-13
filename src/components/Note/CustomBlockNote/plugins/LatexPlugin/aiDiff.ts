@@ -5,6 +5,7 @@ import {
 } from '../../engines/aiDiff/projection';
 import { stableStringify } from '../../engines/aiDiff/stableValue';
 import { renderKatexInto } from './katexRender';
+import mathBlockStyles from './MathBlock/style.module.less';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -26,13 +27,25 @@ export const inlineMathAiDiff: NoteInlineAiDiff = {
   },
 };
 
+function renderMathBlockCandidate(candidate: Record<string, unknown>): HTMLElement {
+  const shell = document.createElement('div');
+  shell.className = `${mathBlockStyles.mathShell} ${mathBlockStyles.mathShellBlock} bn-math-block-root`;
+  shell.contentEditable = 'false';
+  shell.dataset.readOnly = 'true';
+
+  const root = document.createElement('div');
+  root.className = `${mathBlockStyles.mathRoot} ${mathBlockStyles.mathRootReadonly}`;
+  const preview = document.createElement('div');
+  preview.className = mathBlockStyles.mathPreview;
+  renderKatexInto(preview, readExpression(candidate), mathBlockStyles.mathPlaceholder, true);
+  root.appendChild(preview);
+  shell.appendChild(root);
+  return shell;
+}
+
 export const mathBlockAiDiff: NoteBlockAiDiff = {
   resolve: resolveNoteAiDiffBlock,
-  renderCandidate(candidate) {
-    const root = document.createElement('div');
-    renderKatexInto(root, readExpression(candidate), '', true);
-    return root;
-  },
+  renderCandidate: renderMathBlockCandidate,
   apply(_block, aiContent, action) {
     return resolveNoteAiDiffBlockAction(aiContent, action, 'none');
   },
