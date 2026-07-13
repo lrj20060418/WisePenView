@@ -599,10 +599,16 @@ function NoteViewConnected({
                       onAiDiffPresenceChange={handleAiDiffPresenceChange}
                       onAskAi={handleAskAi}
                       comments={{
-                        enabled: noteInfoDisplay.commentsEnabled,
-                        uiEnabled: isConnected && noteInfoDisplay.commentsEnabled,
-                        authorizable: noteInfoDisplay.canEditComments,
-                        writable: isConnected && noteInfoDisplay.canEditComments,
+                        status: !noteInfoDisplay.commentsEnabled
+                          ? { kind: 'disabled' }
+                          : !isConnected
+                            ? {
+                                kind: 'connecting',
+                                authorizable: noteInfoDisplay.canEditComments,
+                              }
+                            : noteInfoDisplay.canEditComments
+                              ? { kind: 'writable' }
+                              : { kind: 'readOnly' },
                         actor: currentUser,
                         usersById: noteInfoDisplay.authorsById,
                         visibilityPrivileged: canManageCommentVisibility,

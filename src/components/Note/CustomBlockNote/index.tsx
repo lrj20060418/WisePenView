@@ -51,6 +51,7 @@ import {
   type PendingCommentReference,
   type PendingCommentSelection,
 } from './comments';
+import { resolveNoteCommentsRuntimePolicy } from './comments/core/commentPolicy';
 import { syncCommentUserProfileToYMap } from './comments/core/commentUserProfile';
 import { mergeReadOnlyEditorProps, NoteEditorReadOnlyProvider } from './editorReadOnly';
 import {
@@ -118,10 +119,7 @@ function CustomBlockNote({
   onAiDiffPresenceChange,
   onAskAi,
   comments: {
-    enabled: commentsEnabled,
-    uiEnabled: commentsUiEnabled,
-    authorizable: commentsAuthorizable,
-    writable: commentsWritable,
+    status: commentsStatus,
     actor: commentUser,
     usersById: commentUsersById,
     documentRole: commentDocumentRole = 'editor',
@@ -141,6 +139,12 @@ function CustomBlockNote({
   onAiDiffBodyContentHashChange,
   ref,
 }: CustomBlockNoteProps & { ref?: Ref<NoteBodyEditorHandle> }) {
+  const {
+    enabled: commentsEnabled,
+    uiEnabled: commentsUiEnabled,
+    authorizable: commentsAuthorizable,
+    writable: commentsWritable,
+  } = resolveNoteCommentsRuntimePolicy(commentsStatus);
   const imageService = useImageService();
   const resourceService = useResourceService();
   const setCurrentSelection = useNoteEditorSelectionStore((state) => state.setCurrentSelection);
@@ -194,7 +198,7 @@ function CustomBlockNote({
   const commitPendingReferenceForThreadRef = useRef<(threadId: string) => void>(() => undefined);
   const rememberPendingCommentReferenceRef = useRef<() => void>(() => undefined);
   const noteFragment = useNoteYjsFragment(doc);
-  const showCommentsUi = (commentsUiEnabled ?? commentsEnabled) && commentsEnabled;
+  const showCommentsUi = commentsUiEnabled;
   const threadsYMap = getBlockNoteThreadsYMap(doc);
   const commentUsersYMap = getBlockNoteCommentUsersYMap(doc);
   const { activeCommentUserId, activeCommentUsername, activeCommentAvatarUrl } =

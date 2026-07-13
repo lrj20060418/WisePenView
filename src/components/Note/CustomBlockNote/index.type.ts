@@ -50,21 +50,15 @@ export interface NoteEditorState {
   blockLocalDocWrites: boolean;
 }
 
+export type NoteCommentsStatus =
+  | { kind: 'disabled' }
+  | { kind: 'connecting'; authorizable: boolean }
+  | { kind: 'readOnly' }
+  | { kind: 'writable' };
+
 export interface NoteCommentsConfig {
-  /**
-   * 是否挂载批注 schema/扩展（与笔记是否开启批注能力一致，不受连接状态影响）。
-   * 连接中也必须为 true，否则 y-prosemirror 无法解析 Yjs 中的 comment mark，会删除正文。
-   */
-  enabled: boolean;
-  /** 是否展示批注 UI（侧栏、历史等）；通常仅在协同已连接时为 true */
-  uiEnabled: boolean;
-  /**
-   * 用户是否具备批注编辑权限（来自服务端，不受连接状态影响）。
-   * 用于初始化 threadStoreAuth，避免连接前挂载编辑器后权限被锁死在只读。
-   */
-  authorizable: boolean;
-  /** 当前是否允许创建/回复/解决批注（通常需已连接且具备权限） */
-  writable: boolean;
+  /** 连接中仍挂载 schema，并保留服务端 authorizable 供 threadStoreAuth 初始化。 */
+  status: NoteCommentsStatus;
   /** 页面已加载的当前用户，作为批注 actor；不在编辑器内重复请求。 */
   actor?: User;
   usersById?: NoteCommentUserDisplayRecord;
