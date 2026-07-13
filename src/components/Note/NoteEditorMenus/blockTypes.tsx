@@ -16,7 +16,7 @@ import {
   Type,
   type LucideIcon,
 } from 'lucide-react';
-import { isRecord, toBlockUpdate, type NoteBlock, type NotePartialBlock } from './utils';
+import { isRecord, toBlockUpdate, type NoteBlock } from './utils';
 
 export type BlockTypeProps = Record<string, boolean | number | string>;
 
@@ -174,11 +174,4 @@ export function applyBlockTypeToBlocks(
       );
     }
   });
-}
-
-export function blockTypeItemToPartialBlock(item: BlockTypeMenuItem): NotePartialBlock {
-  return {
-    type: item.type,
-    props: item.props,
-  } as NotePartialBlock;
 }

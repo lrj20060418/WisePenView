@@ -9,12 +9,12 @@ import type { NoteOutlineItem } from '@/components/Note/NoteOutline/index.type';
 import { notePluginRegistry } from './plugins';
 import { projectBlockPlainText } from './plugins/projection';
 
-export type FlatBlockSnapshot = {
+type FlatBlockSnapshot = {
   id: string;
   outline: boolean;
 };
 
-export interface NoteOutlineProjection {
+interface NoteOutlineProjection {
   items: NoteOutlineItem[];
   flatBlocks: FlatBlockSnapshot[];
 }

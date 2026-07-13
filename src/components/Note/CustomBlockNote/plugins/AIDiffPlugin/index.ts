@@ -491,12 +491,3 @@ export const aiDiffPlugin = {
     }),
   ],
 } satisfies NotePluginBundle;
-
-export {
-  aiGeneratedBlocksToBlockNoteBlocks,
-  applyAiDiffActionForKey,
-  isInlineContentEffectivelyEmpty,
-} from './patch';
-export type { AiGeneratedBlock } from './patch';
-export { aiProtoBlocksToAiGeneratedBlocks, transformAiDiffProtoBlocks } from './proto';
-export type { AiDiffProtoBlock, AiDiffProtoTransformResult } from './proto';

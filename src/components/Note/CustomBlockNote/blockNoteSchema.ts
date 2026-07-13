@@ -6,9 +6,5 @@ import { createNoteBlockNoteSchema, notePluginRegistry } from './plugins';
  */
 export const blockNoteSchema = createNoteBlockNoteSchema(notePluginRegistry);
 
-export type CustomBlockNoteSchema = typeof blockNoteSchema;
-
 /** 带各插件块的编辑器类型，供 slash 菜单与插入 API 使用 */
 export type CustomBlockNoteEditor = typeof blockNoteSchema.BlockNoteEditor;
-
-export type CustomBlockNotePartialBlock = typeof blockNoteSchema.PartialBlock;

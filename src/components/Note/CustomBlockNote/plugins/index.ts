@@ -7,14 +7,13 @@ import { tablePlugin } from './TablePlugin';
 import {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
-  collectNotePrintStyles,
   createNoteBlockNoteSchema,
   createNotePluginRegistry,
   createNoteReadOnlyFilterExtension,
 } from './registry';
 import type { NotePluginBundle } from './types';
 
-export const notePluginTree = {
+const notePluginTree = {
   kind: 'bundle',
   id: 'note',
   children: [defaultContentPlugin, codeBlockPlugin, tablePlugin, latexPlugin, aiDiffPlugin],
@@ -25,27 +24,12 @@ export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
   aiDiffRuntimeExtension,
 ]);
 
-export {
-  exportNoteFullHtml,
-  exportNoteMarkdown,
-  projectNoteBlocksForMarkdown,
-} from './markdownExport';
+export { exportNoteFullHtml, exportNoteMarkdown } from './markdownExport';
 export { importNoteMarkdown } from './markdownImport';
-export { hasAiDiffContentFromEditor, hasAiDiffInBlock } from './presence';
-export type {
-  NoteBlockPlugin,
-  NoteContentPlugin,
-  NoteInlinePlugin,
-  NotePluginBundle,
-  NotePluginNode,
-  NotePluginRegistry,
-  NoteRuntimeExtension,
-} from './types';
+export { hasAiDiffContentFromEditor } from './presence';
 export {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
-  collectNotePrintStyles,
   createNoteBlockNoteSchema,
-  createNotePluginRegistry,
   createNoteReadOnlyFilterExtension,
 };
