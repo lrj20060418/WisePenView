@@ -65,6 +65,7 @@ function ChatPanel({
     status,
     setMessages: setLiveMessages,
     sendSessionMessage,
+    stop,
   } = useChatSession({
     sessionId: currentSessionId ?? '',
     model: currentModel?.modelId,
@@ -361,18 +362,20 @@ function ChatPanel({
                     canLoadMoreHistory={Boolean(currentSessionId) && historyPage < historyTotalPage}
                     loadingMoreHistory={loadingMoreHistory}
                     onLoadMoreHistory={loadMoreHistoryMessages}
+                    footer={
+                      <div className={styles.footer}>
+                        <ChatInput
+                          onSend={handleSend}
+                          getUploadSessionId={ensureChatSession}
+                          sending={sending}
+                          onStop={stop}
+                          contextPreview={resourceChatContext?.preview}
+                          onClearContext={handleClearContext}
+                        />
+                      </div>
+                    }
                   />
                 </div>
-              </div>
-
-              <div className={styles.footer}>
-                <ChatInput
-                  onSend={handleSend}
-                  getUploadSessionId={ensureChatSession}
-                  sending={sending}
-                  contextPreview={resourceChatContext?.preview}
-                  onClearContext={handleClearContext}
-                />
               </div>
             </div>
           )}

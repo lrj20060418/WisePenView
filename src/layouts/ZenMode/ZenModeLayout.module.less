@@ -33,9 +33,15 @@
 
 .content,
 .resourceArea,
-.resourcePanel,
-.chatDock {
+.resourcePanel {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chatDock {
+  min-width: var(--chat-panel-min-width);
   min-height: 0;
   height: 100%;
   overflow: hidden;

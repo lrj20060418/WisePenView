@@ -43,7 +43,7 @@ import styles from './ZenModeLayout.module.less';
 import { isZenModeNodeSelectable, normalizeZenModeTarget } from './zenModeResource';
 
 const RESOURCE_PANE_MIN_WIDTH = 320;
-const CHAT_PANEL_MIN_WIDTH = 320;
+const CHAT_PANEL_MIN_WIDTH = 480;
 const CHAT_PANEL_MAX_WIDTH = 720;
 const RESIZE_TARGET_MINIMUM_SIZE = { fine: 16, coarse: 32 };
 
