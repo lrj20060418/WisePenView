@@ -3,8 +3,8 @@ import { useExtensionState } from '@blocknote/react';
 import { useMount, useUpdateEffect } from 'ahooks';
 import { useState } from 'react';
 
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
 import type { FormulaThreadAnchor } from '../../../comments/core/commentThreadConstants';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 
 type UseMathBlockCommentHighlightOptions = {
   commentEditor: CustomBlockNoteEditor;

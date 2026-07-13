@@ -1,4 +1,4 @@
-import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
+import { blockNoteSchema } from '@/components/Note/CustomBlockNote/noteEditor';
 import { useBlockNoteEditor, useEditorState } from '@blocknote/react';
 import { ToggleButtonGroup } from '@heroui/react';
 import { Bold, Code, Italic, Strikethrough, Underline } from 'lucide-react';

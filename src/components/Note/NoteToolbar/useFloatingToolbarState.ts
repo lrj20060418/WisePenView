@@ -3,8 +3,8 @@ import type { EditorView } from '@tiptap/pm/view';
 import { useMount, useUnmount } from 'ahooks';
 import { useRef, useState } from 'react';
 
-import type { CustomBlockNoteEditor } from '@/components/Note/CustomBlockNote/blockNoteSchema';
 import { getRootDomSelection } from '@/components/Note/CustomBlockNote/engines/editor/dom';
+import type { CustomBlockNoteEditor } from '@/components/Note/CustomBlockNote/noteEditor';
 
 type FloatingToolbarState = {
   visible: boolean;

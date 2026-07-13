@@ -1,7 +1,7 @@
 import { createContext, createElement, use, type ReactNode } from 'react';
 
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
 import type { FormulaThreadAnchor } from '../../../comments/core/commentThreadConstants';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 import type {
   StartFormulaCommentOptions,
   UpdateFormulaCommentReferenceOptions,

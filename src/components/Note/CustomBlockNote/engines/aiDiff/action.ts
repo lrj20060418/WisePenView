@@ -1,11 +1,11 @@
 import type * as Y from 'yjs';
 
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import type {
   NoteAiDiffAction,
   NoteAiDiffBlockMutation,
   NotePluginRegistry,
 } from '../../content/types';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import { stableStringify } from './stableValue';
 import {
   AI_DIFF_ACTION_ORIGIN,

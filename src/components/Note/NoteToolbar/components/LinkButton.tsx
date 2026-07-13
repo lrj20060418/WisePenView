@@ -1,4 +1,4 @@
-import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
+import { blockNoteSchema } from '@/components/Note/CustomBlockNote/noteEditor';
 import { Popover } from '@/components/Overlay';
 import { isTableCellSelection } from '@blocknote/core';
 import {

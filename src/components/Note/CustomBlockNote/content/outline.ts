@@ -6,8 +6,8 @@ import type {
 } from '@blocknote/core';
 
 import type { NoteOutlineItem } from '@/components/Note/NoteOutline/index.type';
-import { projectBlockPlainText } from './content/projection';
-import { notePluginRegistry } from './noteEditor';
+import { projectBlockPlainText } from './projection';
+import type { NotePluginRegistry } from './types';
 
 type FlatBlockSnapshot = {
   id: string;
@@ -27,11 +27,14 @@ export function buildOutlineProjection<
   BSchema extends BlockSchema,
   ISchema extends InlineContentSchema,
   SSchema extends StyleSchema,
->(editor: BlockNoteEditor<BSchema, ISchema, SSchema>): NoteOutlineProjection {
+>(
+  editor: BlockNoteEditor<BSchema, ISchema, SSchema>,
+  registry: NotePluginRegistry
+): NoteOutlineProjection {
   const items: NoteOutlineItem[] = [];
   const flatBlocks: FlatBlockSnapshot[] = [];
   editor.forEachBlock((block) => {
-    const owner = notePluginRegistry.blockPlugins.get(block.type);
+    const owner = registry.blockPlugins.get(block.type);
     const level = owner?.projection?.outlineLevel?.(toBlockRecord(block));
     flatBlocks.push({ id: block.id, outline: level !== undefined });
     if (level === undefined) return true;
@@ -39,7 +42,7 @@ export function buildOutlineProjection<
     items.push({
       id: block.id,
       level,
-      text: projectBlockPlainText(block, notePluginRegistry).replace(/\s+/g, ' ').trim(),
+      text: projectBlockPlainText(block, registry).replace(/\s+/g, ' ').trim(),
     });
     return true;
   });

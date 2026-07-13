@@ -4,7 +4,6 @@ import { useCallback, useRef, useState, type RefObject } from 'react';
 import type { Doc } from 'yjs';
 
 import { useNoteResourceAsideStore } from '@/components/Note/_store/useNoteResourceAsideStore';
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
 import { runWithFormulaCommentSync } from '../../../comments/core/commentDocumentMarks';
 import type { CollaboratorCommentVisibility } from '../../../comments/core/commentSettings';
 import {
@@ -24,6 +23,7 @@ import {
   getHiddenThreadIdsForUser,
   type ThreadVisibilityContext,
 } from '../../../comments/core/threadVisibility';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 import {
   getFormulaCommentReferenceText,
   isSameFormulaThreadAnchor,

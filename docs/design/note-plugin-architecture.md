@@ -26,6 +26,7 @@ CustomBlockNote/
 │   ├── types.ts
 │   ├── registry.ts
 │   ├── projection.ts
+│   ├── outline.ts
 │   └── registry.test.ts
 ├── engines/
 │   ├── aiDiff/
@@ -35,22 +36,30 @@ CustomBlockNote/
 │   │   ├── store.ts
 │   │   ├── useAiDiffSidecarRuntime.ts
 │   │   └── *.test.ts
+│   ├── collaboration/
+│   │   ├── useNoteCaptureKeyEvent.ts
+│   │   └── useNoteYjsUndoStack.ts
 │   ├── editor/
+│   │   ├── dom.ts
+│   │   ├── readOnly.ts
+│   │   └── stripEscape.ts
 │   ├── markdown/
 │   └── print/
 ├── comments/
-├── hooks/
 ├── noteEditor.ts
-└── index.tsx
+├── index.type.ts
+├── index.tsx
+└── style.module.less
 ```
 
 目录规则：
 
 - `plugins/` 只放内容 owner；内容专属 UI、codec 和 comments 实现属于 owner，可留在对应 plugin 内；
 - `content/` 放 plugin 契约、registry 和内容 projection 基础设施；
-- `engines/` 放 Markdown、print、editor、AI Diff 等跨内容类型编排；
+- `engines/` 放 Markdown、print、editor、collaboration、AI Diff 等跨内容类型编排；
 - `comments/` 放全局批注 runtime 与选区策略；
-- `noteEditor.ts` 是唯一组合入口，负责装配 plugin tree 与 runtime extensions；
+- `noteEditor.ts` 是唯一组合入口，负责装配 plugin tree、runtime extensions 与最终 schema；
+- 根目录只保留组件入口、组件 props/style 与组合根，不放横切实现；
 - 测试与对应实现放在同一目录。
 
 ## 3. Plugin Tree 与 Registry

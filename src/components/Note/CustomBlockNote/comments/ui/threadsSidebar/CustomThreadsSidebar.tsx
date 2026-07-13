@@ -11,7 +11,7 @@ import {
   type WisePenCommentAuthorInfo,
   type WisePenSidebarThread,
 } from '@/components/CommentsSidebar';
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 import { getBlockNoteThreadsYMap } from '../../core/commentThreadConstants';
 import {
   buildTextCommentBody,

@@ -3,8 +3,8 @@ import { CommentMark, CommentsExtension, YjsThreadStore } from '@blocknote/core/
 import type * as Y from 'yjs';
 import type { Doc } from 'yjs';
 
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import type { NotePluginRegistry } from '../../content/types';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import type { BlockNoteCommentDocumentRole } from '../comments.types';
 import { bindDynamicCommentUserId } from '../core/bindDynamicCommentUserId';
 import {

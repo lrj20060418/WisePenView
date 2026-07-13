@@ -9,9 +9,9 @@ import {
 } from 'y-prosemirror';
 import * as Y from 'yjs';
 
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import type { NotePluginRegistry } from '../../content/types';
 import { getRootDomSelection } from '../../engines/editor/dom';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import {
   getBlockNoteThreadsYMap,
   isThreadActive,

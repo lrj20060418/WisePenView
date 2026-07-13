@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildOutlineProjection, resolveActiveHeadingId } from './Outline';
+import { notePluginRegistry } from '../noteEditor';
+import { buildOutlineProjection, resolveActiveHeadingId } from './outline';
 
 describe('Note outline projection', () => {
   it('通过 inline owner 聚合标题文本', () => {
@@ -22,7 +23,7 @@ describe('Note outline projection', () => {
       },
     };
 
-    expect(buildOutlineProjection(editor as never)).toEqual({
+    expect(buildOutlineProjection(editor as never, notePluginRegistry)).toEqual({
       items: [{ id: 'heading-1', level: 2, text: '算法 文档x^2' }],
       flatBlocks: [{ id: 'heading-1', outline: true }],
     });

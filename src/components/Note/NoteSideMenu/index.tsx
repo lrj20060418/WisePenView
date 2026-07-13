@@ -1,12 +1,12 @@
-import type { CustomBlockNoteEditor } from '@/components/Note/CustomBlockNote/blockNoteSchema';
-import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
 import type { NoteContentPlugin } from '@/components/Note/CustomBlockNote/content/types';
-import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
+import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/engines/editor/readOnly';
 import {
   exportNoteFullHtml,
   exportNoteMarkdown,
 } from '@/components/Note/CustomBlockNote/engines/markdown/markdownExport';
+import type { CustomBlockNoteEditor } from '@/components/Note/CustomBlockNote/noteEditor';
 import {
+  blockNoteSchema,
   createDefaultNoteBlock,
   notePluginRegistry,
 } from '@/components/Note/CustomBlockNote/noteEditor';

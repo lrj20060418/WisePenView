@@ -1,4 +1,4 @@
-import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
+import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/engines/editor/readOnly';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 import type { DefaultReactSuggestionItem, SuggestionMenuProps } from '@blocknote/react';
 import { SuggestionMenuController } from '@blocknote/react';

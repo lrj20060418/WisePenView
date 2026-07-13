@@ -1,6 +1,6 @@
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import { collectNotePrintStyles } from '../../content/registry';
 import type { NotePluginRegistry } from '../../content/types';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import { getProseMirrorRoot } from '../editor/dom';
 
 export interface PrintNotePdfOptions {

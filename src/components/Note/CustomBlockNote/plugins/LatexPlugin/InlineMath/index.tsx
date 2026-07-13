@@ -13,7 +13,7 @@ import {
   INLINE_MATH_PM_TYPE,
   type FormulaThreadAnchor,
 } from '../../../comments/core/commentThreadConstants';
-import { useNoteEditorReadOnlyContext } from '../../../editorReadOnly';
+import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
 import { useLatexComment } from '../comments/latexCommentContext';
 import { captureInlineMathAnchor } from '../comments/latexCommentSupport';
 import { LatexFormulaCommentButton } from '../comments/LatexFormulaCommentButton';

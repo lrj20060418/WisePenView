@@ -1,5 +1,5 @@
-import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
-import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
+import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/engines/editor/readOnly';
+import { blockNoteSchema } from '@/components/Note/CustomBlockNote/noteEditor';
 import {
   getSafeTableCellSelection,
   getTableHandles,

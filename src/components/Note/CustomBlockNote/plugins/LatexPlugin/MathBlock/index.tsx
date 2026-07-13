@@ -12,8 +12,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useEffectForce } from '@/hooks/useEffectForce';
 import 'katex/dist/katex.min.css';
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
-import { useNoteEditorReadOnlyContext } from '../../../editorReadOnly';
+import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 import { useLatexComment } from '../comments/latexCommentContext';
 import { LatexFormulaCommentButton } from '../comments/LatexFormulaCommentButton';
 import { useMathBlockCommentHighlight } from '../comments/useMathBlockThreadMarkClasses';

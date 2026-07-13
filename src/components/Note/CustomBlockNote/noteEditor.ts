@@ -4,7 +4,6 @@ import {
   createDefaultNoteBlock,
   createNoteBlockNoteSchema,
   createNotePluginRegistry,
-  createNoteReadOnlyFilterExtension,
 } from './content/registry';
 import type { NotePluginBundle } from './content/types';
 import { aiDiffRuntimeExtension } from './engines/aiDiff/runtime';
@@ -25,10 +24,10 @@ export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
   aiDiffRuntimeExtension,
 ]);
 
-export {
-  collectNoteEditorExtensions,
-  collectNoteEditorProps,
-  createDefaultNoteBlock,
-  createNoteBlockNoteSchema,
-  createNoteReadOnlyFilterExtension,
-};
+/** 笔记正文 schema 由唯一的内容插件树生成。 */
+export const blockNoteSchema = createNoteBlockNoteSchema(notePluginRegistry);
+
+/** 带所有内容 owner 的编辑器类型。 */
+export type CustomBlockNoteEditor = typeof blockNoteSchema.BlockNoteEditor;
+
+export { collectNoteEditorExtensions, collectNoteEditorProps, createDefaultNoteBlock };

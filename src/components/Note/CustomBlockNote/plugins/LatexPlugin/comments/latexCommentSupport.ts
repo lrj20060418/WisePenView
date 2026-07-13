@@ -5,7 +5,6 @@ import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import type * as Y from 'yjs';
 
-import type { CustomBlockNoteEditor } from '../../../blockNoteSchema';
 import {
   WISEPEN_COMMENT_MARK_SYNC_META,
   WISEPEN_FORMULA_YJS_ORIGIN,
@@ -15,6 +14,7 @@ import {
   isThreadActive,
   type FormulaThreadAnchor,
 } from '../../../comments/core/commentThreadConstants';
+import type { CustomBlockNoteEditor } from '../../../noteEditor';
 
 const BLOCK_CONTAINER_TYPE = 'blockContainer';
 const MATH_BLOCK_PM_TYPE = 'math';

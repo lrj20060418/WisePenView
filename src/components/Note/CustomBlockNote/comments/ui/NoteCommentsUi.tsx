@@ -8,7 +8,7 @@ import type { Doc } from 'yjs';
 
 import type { WisePenCommentAuthorInfo } from '@/components/CommentsSidebar';
 import type { NoteCommentUserDisplayRecord } from '@/domains/Note';
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import {
   isFormulaCommentSyncing,
   isWisePenFormulaYjsTransaction,

@@ -2,8 +2,7 @@
 import { BlockNoteEditor } from '@blocknote/core';
 import { describe, expect, it } from 'vitest';
 
-import { blockNoteSchema } from '../../blockNoteSchema';
-import { notePluginRegistry } from '../../noteEditor';
+import { blockNoteSchema, notePluginRegistry } from '../../noteEditor';
 import { exportNoteMarkdown } from './markdownExport';
 import { importNoteMarkdown } from './markdownImport';
 

@@ -1,8 +1,8 @@
 import { createPortal } from 'react-dom';
 import type * as Y from 'yjs';
 
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import type { NoteAiDiffAction, NotePluginRegistry } from '../../content/types';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 import { applyAllNoteAiDiffActions } from './action';
 import styles from './style.module.less';
 

@@ -1,4 +1,4 @@
-import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
+import { blockNoteSchema } from '@/components/Note/CustomBlockNote/noteEditor';
 import { ColorPaletteContent } from '@/components/Note/NoteEditorMenus/colorPalette';
 import { getColorItem, type ColorKey } from '@/components/Note/NoteEditorMenus/colorPaletteData';
 import { Popover } from '@/components/Overlay';

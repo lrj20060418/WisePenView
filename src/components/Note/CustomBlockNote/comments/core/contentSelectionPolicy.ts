@@ -1,6 +1,6 @@
-import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
 import type { NoteContentComments, NotePluginRegistry } from '../../content/types';
 import { hasAiDiffForBlockInEditorState } from '../../engines/aiDiff/runtime';
+import type { CustomBlockNoteEditor } from '../../noteEditor';
 
 function getCommentsPolicy(
   type: string,

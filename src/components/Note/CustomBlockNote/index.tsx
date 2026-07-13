@@ -29,7 +29,6 @@ import NoteSideMenu from '../NoteSideMenu';
 import NoteSlashMenu from '../NoteSlashMenu';
 import NoteTableHandles from '../NoteTableHandles';
 import NoteToolbar from '../NoteToolbar';
-import { blockNoteSchema, type CustomBlockNoteEditor } from './blockNoteSchema';
 import {
   buildCommentsExtension,
   capturePendingCommentSelection,
@@ -50,27 +49,31 @@ import {
 } from './comments';
 import { resolveNoteCommentsRuntimePolicy } from './comments/core/commentPolicy';
 import { syncCommentUserProfileToYMap } from './comments/core/commentUserProfile';
-import { NoteEditorReadOnlyProvider } from './editorReadOnly';
+import { buildOutlineProjection, resolveActiveHeadingId } from './content/outline';
 import { AiDiffBulkActions } from './engines/aiDiff/BulkActions';
 import { AI_DIFF_ACTION_ORIGIN, getAiContentStore } from './engines/aiDiff/store';
 import { useAiDiffSidecarRuntime } from './engines/aiDiff/useAiDiffSidecarRuntime';
+import { useNoteCaptureKeyEvent } from './engines/collaboration/useNoteCaptureKeyEvent';
+import {
+  useAttachNoteYjsUndoStack,
+  useNoteYjsFragment,
+  useNoteYjsUndoManager,
+} from './engines/collaboration/useNoteYjsUndoStack';
+import {
+  createNoteReadOnlyFilterExtension,
+  NoteEditorReadOnlyProvider,
+} from './engines/editor/readOnly';
 import { exportNoteMarkdown } from './engines/markdown/markdownExport';
 import { importNoteMarkdown } from './engines/markdown/markdownImport';
 import { printNotePdfViaBrowser, waitForEditorPaint } from './engines/print/noteBrowserPrint';
-import {
-  useAttachNoteYjsUndoStack,
-  useNoteCaptureKeyEvent,
-  useNoteYjsFragment,
-  useNoteYjsUndoManager,
-} from './hooks';
 import type { CustomBlockNoteProps, NoteBodyEditorHandle } from './index.type';
 import {
+  blockNoteSchema,
   collectNoteEditorExtensions,
   collectNoteEditorProps,
-  createNoteReadOnlyFilterExtension,
   notePluginRegistry,
+  type CustomBlockNoteEditor,
 } from './noteEditor';
-import { buildOutlineProjection, resolveActiveHeadingId } from './Outline';
 import styles from './style.module.less';
 
 type CreateBlockNoteOptions = NonNullable<Parameters<typeof useCreateBlockNote>[0]>;
@@ -373,7 +376,7 @@ function CustomBlockNote({
 
     const syncOutlineProjection = () => {
       if (!onOutlineChange && !onActiveHeadingChange) return;
-      const projection = buildOutlineProjection(editor);
+      const projection = buildOutlineProjection(editor, notePluginRegistry);
       flatBlocksRef.current = projection.flatBlocks;
       onOutlineChange?.(projection.items);
     };
