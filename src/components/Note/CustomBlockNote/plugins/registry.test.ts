@@ -2,7 +2,7 @@ import { defaultBlockSpecs, defaultInlineContentSpecs } from '@blocknote/core';
 import { describe, expect, it } from 'vitest';
 
 import { notePluginRegistry } from '.';
-import { createNotePluginRegistry } from './registry';
+import { collectNotePrintStyles, createNotePluginRegistry } from './registry';
 import type {
   NoteBlockPlugin,
   NoteContentCapabilityDeclarations,
@@ -149,5 +149,20 @@ describe('createNotePluginRegistry', () => {
     const registry = createNotePluginRegistry(bundle([blockPlugin('base', 'base')]), [runtime]);
 
     expect(registry.runtimeExtensions).toEqual([runtime]);
+  });
+
+  it('去重并组合内容 owner 与 Runtime extension 的打印样式', () => {
+    const owner = blockPlugin('base', 'base');
+    owner.capabilities = { ...defaultCapabilities, print: { support: 'custom' } };
+    owner.print = { styles: ['.base { display: block; }', '.shared { color: red; }'] };
+    const runtime: NoteRuntimeExtension = {
+      id: 'runtime',
+      print: { styles: ['.shared { color: red; }', '  .runtime { display: none; }  '] },
+    };
+    const registry = createNotePluginRegistry(bundle([owner]), [runtime]);
+
+    expect(collectNotePrintStyles(registry)).toBe(
+      '.base { display: block; }\n.shared { color: red; }\n.runtime { display: none; }'
+    );
   });
 });

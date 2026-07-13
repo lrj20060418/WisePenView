@@ -81,6 +81,10 @@ export interface NoteInlineComments {
   canCreateDocumentThread: boolean;
 }
 
+export interface NotePrintContribution {
+  styles: readonly string[];
+}
+
 export type NoteAiDiffBlockActionResult =
   | { kind: 'none' }
   | { kind: 'remove' }
@@ -164,6 +168,7 @@ interface NotePluginNodeBase {
 interface NoteContentPluginBase extends NotePluginNodeBase {
   type: string;
   capabilities: NoteContentCapabilityDeclarations;
+  print?: NotePrintContribution;
   extensions?: (context: NotePluginRuntimeContext) => ExtensionFactoryInstance[];
   editorProps?: () => Partial<EditorProps>;
   slashMenu?: (ctx: { editor: PluginEditor }) => DefaultReactSuggestionItem[];
@@ -198,6 +203,7 @@ export type NoteContentPlugin = NoteBlockPlugin | NoteInlinePlugin;
 export type NotePluginNode = NotePluginBundle | NoteContentPlugin;
 
 export interface NoteRuntimeExtension extends NotePluginNodeBase {
+  print?: NotePrintContribution;
   extensions?: (context: NotePluginRuntimeContext) => ExtensionFactoryInstance[];
   editorProps?: () => Partial<EditorProps>;
 }

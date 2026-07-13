@@ -90,6 +90,7 @@ export function createNotePluginRegistry(
       ['Markdown 导入', plugin.capabilities.markdownImport, plugin.markdownImport],
       ['Markdown 导出', plugin.capabilities.markdownExport, plugin.markdownExport],
       ['AI Diff', plugin.capabilities.aiDiff, plugin.aiDiff],
+      ['打印', plugin.capabilities.print, plugin.print],
     ] as const;
     for (const [name, declaration, implementation] of executableCapabilities) {
       const needsImplementation =
@@ -147,6 +148,17 @@ export function collectNoteEditorExtensions(
   return [...registry.contentPlugins, ...registry.runtimeExtensions].flatMap(
     (plugin) => plugin.extensions?.({ registry }) ?? []
   );
+}
+
+export function collectNotePrintStyles(registry: NotePluginRegistry): string {
+  const styles = new Set<string>();
+  for (const plugin of [...registry.contentPlugins, ...registry.runtimeExtensions]) {
+    for (const style of plugin.print?.styles ?? []) {
+      const normalized = style.trim();
+      if (normalized) styles.add(normalized);
+    }
+  }
+  return [...styles].join('\n');
 }
 
 function isYjsSyncTransaction(tr: Transaction): boolean {

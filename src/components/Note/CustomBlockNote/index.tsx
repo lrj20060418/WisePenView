@@ -603,7 +603,7 @@ function CustomBlockNote({
           setExportDisplayModeOverride(AI_DIFF_DISPLAY_MODE.OLD_ONLY);
           syncAiDiffBlockFoldDisplayMode(editor.prosemirrorView, AI_DIFF_DISPLAY_MODE.OLD_ONLY);
           await waitForEditorPaint();
-          await printNotePdfViaBrowser(editor, {
+          await printNotePdfViaBrowser(editor, notePluginRegistry, {
             title: options?.title,
             titleRoot: options?.titleRoot,
           });

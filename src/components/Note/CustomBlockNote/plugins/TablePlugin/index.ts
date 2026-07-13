@@ -61,7 +61,19 @@ export const tablePlugin = {
     aiDiff: { support: 'unsupported', reason: '结构化表格当前不承担 AI Diff 语义' },
     comments: { support: 'unsupported', reason: '表格批注 selection 尚未建模' },
     projection: { support: 'default' },
-    print: { support: 'default' },
+    print: { support: 'custom' },
+  },
+  print: {
+    styles: [
+      `.note-print-body .bn-block-content[data-content-type='table'],
+.note-print-body table {
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+}
+.note-print-body table {
+  max-width: 100% !important;
+}`,
+    ],
   },
   projection: { plainText: () => '' },
   sideMenu: {

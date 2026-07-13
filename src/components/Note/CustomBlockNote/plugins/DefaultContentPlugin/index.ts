@@ -18,6 +18,7 @@ import type {
   NoteContentCapabilityDeclarations,
   NoteInlinePlugin,
   NotePluginBundle,
+  NotePrintContribution,
 } from '../types';
 
 const DEFAULT_CAPABILITY: NoteCapabilityDeclaration = { support: 'default' };
@@ -60,6 +61,7 @@ function createDefaultBlockPlugin(
   options: {
     outline?: boolean;
     aiDiff?: NoteBlockPlugin['aiDiff'];
+    print?: NotePrintContribution;
     sideMenu?: NoteBlockPlugin['sideMenu'];
   } = {}
 ) {
@@ -74,6 +76,7 @@ function createDefaultBlockPlugin(
     spec,
     capabilities,
     ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
+    ...(options.print ? { print: options.print } : {}),
     ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
     projection: {
       plainText: (block, registry) => projectInlinePlainText(block.content, registry),
@@ -133,6 +136,36 @@ const richTextBlockTypes = [
 
 const passThroughAtomicBlockTypes = ['audio', 'divider', 'file', 'image', 'video'] as const;
 
+const headingPrint: NotePrintContribution = {
+  styles: [
+    `.note-print-body .bn-block-content[data-content-type='heading'],
+.note-print-title .bn-block-content[data-content-type='heading'] {
+  break-after: avoid-page;
+  page-break-after: avoid;
+}`,
+  ],
+};
+
+const quotePrint: NotePrintContribution = {
+  styles: [
+    `.note-print-body .bn-block-content[data-content-type='quote'] {
+  break-after: avoid-page;
+  page-break-after: avoid;
+}`,
+  ],
+};
+
+const atomicMediaPrint: NotePrintContribution = {
+  styles: [
+    `.note-print-body .bn-block-content[data-content-type='image'],
+.note-print-body .bn-block-content[data-content-type='video'],
+.note-print-body .bn-block-content[data-content-type='audio'] {
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+}`,
+  ],
+};
+
 const toggleListItemAiDiff = {
   ...richTextBlockAiDiff,
   getFoldedChildrenAnchorId(block, mode, registry) {
@@ -156,30 +189,49 @@ export const defaultContentPlugin = {
     createDefaultInlinePlugin('text'),
     createDefaultInlinePlugin('link'),
     ...richTextBlockTypes.map((type) =>
-      createDefaultBlockPlugin(type, richTextCapabilities(), {
-        outline: type === 'heading',
-        aiDiff: type === 'toggleListItem' ? toggleListItemAiDiff : richTextBlockAiDiff,
-        ...(type === 'heading'
-          ? {
-              sideMenu: {
-                inspect(block: Record<string, unknown>) {
-                  const props =
-                    typeof block.props === 'object' && block.props !== null
-                      ? (block.props as Record<string, unknown>)
-                      : {};
-                  return { attributes: { level: String(props.level ?? 1) } };
+      createDefaultBlockPlugin(
+        type,
+        {
+          ...richTextCapabilities(),
+          ...(type === 'heading' || type === 'quote'
+            ? { print: { support: 'custom' as const } }
+            : {}),
+        },
+        {
+          outline: type === 'heading',
+          aiDiff: type === 'toggleListItem' ? toggleListItemAiDiff : richTextBlockAiDiff,
+          ...(type === 'heading' ? { print: headingPrint } : {}),
+          ...(type === 'quote' ? { print: quotePrint } : {}),
+          ...(type === 'heading'
+            ? {
+                sideMenu: {
+                  inspect(block: Record<string, unknown>) {
+                    const props =
+                      typeof block.props === 'object' && block.props !== null
+                        ? (block.props as Record<string, unknown>)
+                        : {};
+                    return { attributes: { level: String(props.level ?? 1) } };
+                  },
                 },
-              },
-            }
-          : {}),
-      })
+              }
+            : {}),
+        }
+      )
     ),
     ...passThroughAtomicBlockTypes.map((type) =>
       createDefaultBlockPlugin(
         type,
-        atomicCapabilities({ support: 'inherited', profile: 'atomicProps' }),
+        {
+          ...atomicCapabilities({ support: 'inherited', profile: 'atomicProps' }),
+          ...(type === 'audio' || type === 'image' || type === 'video'
+            ? { print: { support: 'custom' as const } }
+            : {}),
+        },
         {
           aiDiff: atomicPropsBlockAiDiff,
+          ...(type === 'audio' || type === 'image' || type === 'video'
+            ? { print: atomicMediaPrint }
+            : {}),
           ...(type === 'image' ? { sideMenu: { icon: ImageIcon } } : {}),
         }
       )

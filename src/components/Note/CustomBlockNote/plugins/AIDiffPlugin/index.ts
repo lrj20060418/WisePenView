@@ -329,6 +329,15 @@ export const aiDiffRuntimeExtension = {
     'ai-diff.inline.link-add',
     'ai-diff.inline.link-delete',
   ],
+  print: {
+    styles: [
+      `.note-print-body [data-ai-diff-block-display-hidden='true'],
+.note-print-body .bn-block-outer:has(> .bn-block-content [data-ai-diff-block-display-hidden='true']),
+.note-print-body .bn-block-outer:has([data-ai-diff-block-display-hidden='true']) {
+  display: none !important;
+}`,
+    ],
+  },
   extensions: ({ registry }) => [createAiDiffBlockFoldExtension(registry)()],
   editorProps: () => {
     const props: Partial<EditorProps> = {
@@ -411,6 +420,19 @@ function createAiDiffInlinePlugin(params: {
       comments: { support: 'unsupported', reason: 'AI Diff 内容不可创建批注' },
       projection: { support: 'custom' },
       print: { support: 'custom' },
+    },
+    print: {
+      styles: [
+        `.note-print-body [class*='aiActionsRoot'],
+.note-print-body [class*='aiActionsAnchor'],
+.note-print-body [class*='aiDiffInlineStrategyHidden'] {
+  display: none !important;
+  visibility: hidden !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}`,
+      ],
     },
     projection: {
       plainText: (inline) => {

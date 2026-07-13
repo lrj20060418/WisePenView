@@ -21,6 +21,23 @@ export const mathBlockPlugin = {
     projection: { support: 'custom' },
     print: { support: 'custom' },
   },
+  print: {
+    styles: [
+      `.note-print-body .bn-block-content[data-content-type='math'] {
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+}
+.note-print-body .bn-editor .katex-display,
+.note-print-title .katex-display {
+  margin: 0.6em 0 !important;
+}
+.note-print-body [class*='mathDiffActionLayer'],
+.note-print-body [class*='mathDiffActions'] {
+  display: none !important;
+  visibility: hidden !important;
+}`,
+    ],
+  },
   slashMenu: ({ editor }) => [createMathSlashMenuItem(editor)],
   projection: {
     plainText: (block) => {
@@ -57,7 +74,7 @@ export const inlineMathPlugin = {
     aiDiff: { support: 'custom' },
     comments: { support: 'custom' },
     projection: { support: 'custom' },
-    print: { support: 'custom' },
+    print: { support: 'default' },
   },
   extensions: () => [inlineMathDollarExtension()],
   projection: {

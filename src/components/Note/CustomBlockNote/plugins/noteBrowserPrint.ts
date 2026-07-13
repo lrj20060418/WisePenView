@@ -1,5 +1,7 @@
 import type { CustomBlockNoteEditor } from '../blockNoteSchema';
 import { getProseMirrorRoot } from './editorProseMirrorRoot';
+import { collectNotePrintStyles } from './registry';
+import type { NotePluginRegistry } from './types';
 
 export interface PrintNotePdfOptions {
   /** 文档 `<title>` 与无 titleRoot 时的合成 h1 文案 */
@@ -14,7 +16,7 @@ const PRINT_IFRAME_STYLE =
 const PRINT_IFRAME_CLEANUP_MS = 120_000;
 const STYLESHEET_LOAD_TIMEOUT_MS = 5_000;
 
-const PRINT_SUPPLEMENTAL_CSS = `
+const PRINT_BASE_CSS = `
   @page { size: A4; margin: 18mm 16mm 20mm; }
   *,
   *::before,
@@ -71,54 +73,10 @@ const PRINT_SUPPLEMENTAL_CSS = `
   .note-print-body .bodyBlockNoteView {
     padding-right: 0 !important;
   }
-  .note-print-body .bn-block-content[data-content-type='heading'],
-  .note-print-title .bn-block-content[data-content-type='heading'],
-  .note-print-body .bn-block-content[data-content-type='quote'] {
-    break-after: avoid-page;
-    page-break-after: avoid;
-  }
-  .note-print-body .bn-block-content[data-content-type='codeBlock'],
-  .note-print-body .bn-block-content[data-content-type='math'],
-  .note-print-body .bn-block-content[data-content-type='table'],
-  .note-print-body .bn-block-content[data-content-type='image'],
-  .note-print-body .bn-block-content[data-content-type='video'],
-  .note-print-body .bn-block-content[data-content-type='audio'],
-  .note-print-body table,
   .note-print-body figure,
   .note-print-body img {
     break-inside: avoid-page;
     page-break-inside: avoid;
-  }
-  .note-print-body table {
-    max-width: 100% !important;
-  }
-  .note-print-body .bn-block-content[data-content-type='codeBlock'] > pre {
-    overflow: visible !important;
-    white-space: pre-wrap !important;
-    overflow-wrap: anywhere;
-  }
-  .note-print-body .bn-editor .katex-display,
-  .note-print-title .katex-display {
-    margin: 0.6em 0 !important;
-  }
-  .note-print-body [data-ai-diff-block-display-hidden='true'],
-  .note-print-body .bn-block-outer:has(> .bn-block-content [data-ai-diff-block-display-hidden='true']),
-  .note-print-body .bn-block-outer:has([data-ai-diff-block-display-hidden='true']) {
-    display: none !important;
-  }
-  .note-print-body [class*='aiActionsRoot'],
-  .note-print-body [class*='aiActionsAnchor'],
-  .note-print-body [class*='aiDiffInlineStrategyHidden'] {
-    display: none !important;
-    visibility: hidden !important;
-    max-width: 0 !important;
-    max-height: 0 !important;
-    overflow: hidden !important;
-  }
-  .note-print-body [class*='mathDiffActionLayer'],
-  .note-print-body [class*='mathDiffActions'] {
-    display: none !important;
-    visibility: hidden !important;
   }
   .note-print-body .bn-side-menu,
   .note-print-body .bn-formatting-toolbar,
@@ -259,6 +217,7 @@ function cloneEditorWithStyleScope(doc: Document, proseMirrorRoot: HTMLElement):
 function buildPrintDocument(
   doc: Document,
   proseMirrorRoot: HTMLElement,
+  registry: NotePluginRegistry,
   options?: PrintNotePdfOptions
 ): void {
   const titleText = options?.title?.trim() ?? '';
@@ -269,7 +228,7 @@ function buildPrintDocument(
   doc.head.appendChild(titleEl);
 
   const styleEl = doc.createElement('style');
-  styleEl.textContent = PRINT_SUPPLEMENTAL_CSS;
+  styleEl.textContent = `${PRINT_BASE_CSS}\n${collectNotePrintStyles(registry)}`;
   doc.head.appendChild(styleEl);
 
   const article = doc.createElement('article');
@@ -301,6 +260,7 @@ function buildPrintDocument(
  */
 export async function printNotePdfViaBrowser(
   editor: CustomBlockNoteEditor,
+  registry: NotePluginRegistry,
   options?: PrintNotePdfOptions
 ): Promise<void> {
   const proseMirrorRoot = getProseMirrorRoot(editor);
@@ -335,7 +295,7 @@ export async function printNotePdfViaBrowser(
     doc.close();
 
     cloneHostStylesInto(doc.head);
-    buildPrintDocument(doc, proseMirrorRoot, options);
+    buildPrintDocument(doc, proseMirrorRoot, registry, options);
 
     await waitForPrintIframeReady(win);
 

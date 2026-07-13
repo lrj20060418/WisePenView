@@ -7,6 +7,7 @@ import { tablePlugin } from './TablePlugin';
 import {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
+  collectNotePrintStyles,
   createNoteBlockNoteSchema,
   createNotePluginRegistry,
   createNoteReadOnlyFilterExtension,
@@ -43,6 +44,7 @@ export type {
 export {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
+  collectNotePrintStyles,
   createNoteBlockNoteSchema,
   createNotePluginRegistry,
   createNoteReadOnlyFilterExtension,

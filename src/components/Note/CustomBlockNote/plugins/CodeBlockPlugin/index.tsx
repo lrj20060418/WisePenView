@@ -132,4 +132,17 @@ export const codeBlockPlugin = {
     projection: { support: 'inherited', profile: 'inlineContent' },
     print: { support: 'custom' },
   },
+  print: {
+    styles: [
+      `.note-print-body .bn-block-content[data-content-type='codeBlock'] {
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+}
+.note-print-body .bn-block-content[data-content-type='codeBlock'] > pre {
+  overflow: visible !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere;
+}`,
+    ],
+  },
 } satisfies NoteBlockPlugin;
