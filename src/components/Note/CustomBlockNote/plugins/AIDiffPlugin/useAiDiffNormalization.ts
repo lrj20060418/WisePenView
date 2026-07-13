@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react';
 import type * as Y from 'yjs';
 
 import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
+import type { NotePluginRegistry } from '../types';
 import { aiGeneratedBlocksToBlockNoteBlocks } from './patch';
 import { aiProtoBlocksToAiGeneratedBlocks } from './proto';
 import {
@@ -59,9 +60,10 @@ export function useAiDiffNormalization(params: {
   noteFragment: Y.XmlFragment;
   editor: CustomBlockNoteEditor;
   provider: WisepenProvider;
+  registry: NotePluginRegistry;
   onNormalized: () => void;
 }): void {
-  const { doc, noteFragment, editor, provider, onNormalized } = params;
+  const { doc, noteFragment, editor, provider, registry, onNormalized } = params;
   const awareness = provider.awareness as NormalizationAwareness;
   const queuedTimerRef = useRef<number | null>(null);
 
@@ -81,7 +83,9 @@ export function useAiDiffNormalization(params: {
         continue;
       }
       const generated = aiProtoBlocksToAiGeneratedBlocks([protoBlock]);
-      const mapped = generated ? aiGeneratedBlocksToBlockNoteBlocks(generated)?.[0] : null;
+      const mapped = generated
+        ? aiGeneratedBlocksToBlockNoteBlocks(generated, registry)?.[0]
+        : null;
       if (isRecord(mapped)) mappedBlocks.set(id, mapped);
     }
 
@@ -103,7 +107,7 @@ export function useAiDiffNormalization(params: {
     }, AI_DIFF_NORMALIZATION_ORIGIN);
 
     if (changed) window.requestAnimationFrame(onNormalized);
-  }, [awareness, doc, editor, noteFragment, onNormalized, provider]);
+  }, [awareness, doc, editor, noteFragment, onNormalized, provider, registry]);
 
   /**
    * 执行时机：后端或协同客户端向正文/AI-content store 写入待审阅内容时调度规范化。

@@ -1,3 +1,4 @@
+import type { NoteAiDiffAction, NoteBlockAiDiff, NotePluginRegistry } from '../types';
 import {
   buildAiEditJsonUnits,
   DEFAULT_MERGE_DIFF_HUNKS_OPTIONS,
@@ -47,44 +48,10 @@ export type NoteInlineContentLike =
   | InlineMathContent
   | Record<string, unknown>;
 
-export type AiDiffActionMode = 'accept' | 'discard';
-
 type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
 
 type AiDiffPropsActionResult =
   { kind: 'none' } | { kind: 'remove' } | { kind: 'update'; props: Record<string, unknown> };
-
-const SUPPORTED_SCHEMA_BLOCK_TYPES = new Set([
-  'audio',
-  'bulletListItem',
-  'checkListItem',
-  'codeBlock',
-  'divider',
-  'file',
-  'heading',
-  'image',
-  'math',
-  'numberedListItem',
-  'paragraph',
-  'quote',
-  'table',
-  'toggleListItem',
-  'video',
-]);
-
-const EXCLUDED_CODE_BLOCK_TYPES = new Set(['codeBlock']);
-
-const INLINE_AI_DIFF_BLOCK_TYPES = new Set([
-  'bulletListItem',
-  'checkListItem',
-  'heading',
-  'numberedListItem',
-  'paragraph',
-  'quote',
-  'toggleListItem',
-]);
-
-const CONTENT_NONE_AI_BLOCK_TYPES = new Set(['audio', 'divider', 'file', 'image', 'math', 'video']);
 
 const AI_DIFF_INLINE_TYPES = new Set([
   'ai-diff',
@@ -180,17 +147,6 @@ function isAiGeneratedInlineLink(v: unknown): v is AiGeneratedInlineLink {
   if (v['type'] !== 'link') return false;
   const content = v['content'];
   return Array.isArray(content);
-}
-
-function hasAiGeneratedInlineContent(content: unknown): boolean {
-  return (
-    Array.isArray(content) &&
-    content.some((item) => {
-      if (isAiGeneratedInline(item) && item.type !== 'text') return true;
-      if (!isAiGeneratedInlineLink(item)) return false;
-      return item.aiDiffType === 'create' || item.aiDiffType === 'delete';
-    })
-  );
 }
 
 function resolveAiGeneratedEditText(item: AiGeneratedInlineEdit): {
@@ -460,9 +416,51 @@ function aiGeneratedMathProps(
   };
 }
 
-export function aiGeneratedBlocksToBlockNoteBlocks(input: unknown): unknown[] | null {
+export const richTextBlockAiDiff: NoteBlockAiDiff = {
+  normalizeGenerated({ props, content, keyPrefix }) {
+    const normalized = normalizeAiGeneratedInlineContent(content);
+    if (!normalized) return null;
+    const mapped = aiGeneratedInlineToInlineContentArray(normalized, keyPrefix);
+    return mapped ? { props, content: mapped } : null;
+  },
+  applyAll(block, action) {
+    const content = applyAllAiDiffActionsToContent(block.content, action);
+    if (!content) return { kind: 'none' };
+    return {
+      kind: 'update',
+      content,
+      removeWhenChildless: isInlineContentEffectivelyEmpty(content),
+    };
+  },
+};
+
+export const atomicPropsBlockAiDiff: NoteBlockAiDiff = {
+  normalizeGenerated({ props, content }) {
+    return content == null || (Array.isArray(content) && content.length === 0) ? { props } : null;
+  },
+  applyAll() {
+    return { kind: 'none' };
+  },
+};
+
+export const mathBlockAiDiff: NoteBlockAiDiff = {
+  normalizeGenerated({ props, content, keyPrefix }) {
+    const mappedProps = aiGeneratedMathProps(toJsonProps(props), content, keyPrefix);
+    return mappedProps ? { props: mappedProps } : null;
+  },
+  applyAll(block, action) {
+    const result = applyAiDiffActionToProps(block.props, action);
+    if (result.kind === 'remove' || result.kind === 'none') return result;
+    return { kind: 'update', props: result.props };
+  },
+};
+
+export function aiGeneratedBlocksToBlockNoteBlocks(
+  input: unknown,
+  registry: NotePluginRegistry
+): unknown[] | null {
   const seed = `ai-${hashStableValue(input)}`;
-  return aiGeneratedBlocksToBlockNoteBlocksInner(input, seed, 'root');
+  return aiGeneratedBlocksToBlockNoteBlocksInner(input, seed, 'root', registry);
 }
 
 function hashStableValue(value: unknown): string {
@@ -489,7 +487,8 @@ function stableStringify(value: unknown): string {
 function aiGeneratedBlocksToBlockNoteBlocksInner(
   input: unknown,
   seed: string,
-  path: string
+  path: string,
+  registry: NotePluginRegistry
 ): unknown[] | null {
   if (!Array.isArray(input)) return null;
   const out: unknown[] = [];
@@ -499,40 +498,29 @@ function aiGeneratedBlocksToBlockNoteBlocksInner(
     const id = toStringOrEmpty(raw['id']);
     const type = toStringOrEmpty(raw['type']);
     if (!id || !type) return null;
-    if (!SUPPORTED_SCHEMA_BLOCK_TYPES.has(type)) return null;
-    if (EXCLUDED_CODE_BLOCK_TYPES.has(type)) return null;
+    const owner = registry.blockPlugins.get(type);
+    if (!owner?.aiDiff) return null;
 
     const props = toJsonProps(raw['props']);
     const content = raw['content'];
     const children = raw['children'];
 
     const keyPrefix = `${seed}:${path}:${id}:${idx}`;
-    const isInlineBlock = INLINE_AI_DIFF_BLOCK_TYPES.has(type);
-    const isContentNoneBlock = CONTENT_NONE_AI_BLOCK_TYPES.has(type);
-    const normalizedInlineContent = isInlineBlock
-      ? normalizeAiGeneratedInlineContent(content)
-      : null;
-    if (isInlineBlock && !normalizedInlineContent) return null;
-    const mappedContent = isInlineBlock
-      ? aiGeneratedInlineToInlineContentArray(normalizedInlineContent, keyPrefix)
-      : [];
-    if (isInlineBlock && !mappedContent) return null;
-    if (!isInlineBlock && type !== 'math' && hasAiGeneratedInlineContent(content)) return null;
-
-    const mappedChildren =
-      aiGeneratedBlocksToBlockNoteBlocksInner(
-        Array.isArray(children) ? children : [],
-        seed,
-        `${path}.${id}.${idx}`
-      ) ?? [];
-    const mappedProps = type === 'math' ? aiGeneratedMathProps(props, content, keyPrefix) : props;
-    if (!mappedProps) return null;
+    const projection = owner.aiDiff.normalizeGenerated({ props, content, keyPrefix });
+    if (!projection) return null;
+    const mappedChildren = aiGeneratedBlocksToBlockNoteBlocksInner(
+      Array.isArray(children) ? children : [],
+      seed,
+      `${path}.${id}.${idx}`,
+      registry
+    );
+    if (!mappedChildren) return null;
 
     out.push({
       id,
       type,
-      props: mappedProps,
-      ...(isContentNoneBlock ? {} : { content: mappedContent }),
+      props: projection.props,
+      ...('content' in projection ? { content: projection.content } : {}),
       children: mappedChildren,
     });
   }
@@ -733,7 +721,7 @@ function getLinkContentFromProps(props: Record<string, unknown>): TextInlineCont
 export function applyAiDiffActionForKey(
   content: unknown,
   key: string,
-  mode: AiDiffActionMode
+  mode: NoteAiDiffAction
 ): NoteInlineContentLike[] | null {
   if (!Array.isArray(content)) return null;
   if (!key) return null;
@@ -782,7 +770,7 @@ export function applyAiDiffActionForKey(
 function resolveAiInlineReplacement(
   changeType: string,
   changeProps: Record<string, unknown>,
-  mode: AiDiffActionMode
+  mode: NoteAiDiffAction
 ): NoteInlineContentLike[] {
   const replacement: NoteInlineContentLike[] = [];
 
@@ -827,7 +815,7 @@ function clearAiDiffProps(props: Record<string, unknown>): Record<string, unknow
 
 export function applyAiDiffActionToProps(
   props: unknown,
-  mode: AiDiffActionMode
+  mode: NoteAiDiffAction
 ): AiDiffPropsActionResult {
   if (!isRecord(props)) return { kind: 'none' };
 
@@ -859,7 +847,7 @@ export function applyAiDiffActionToProps(
 
 export function applyAllAiDiffActionsToContent(
   content: unknown,
-  mode: AiDiffActionMode
+  mode: NoteAiDiffAction
 ): NoteInlineContentLike[] | null {
   if (!Array.isArray(content)) return null;
 

@@ -6,6 +6,7 @@ import {
   type InlineContentSpec,
 } from '@blocknote/core';
 
+import { atomicPropsBlockAiDiff, richTextBlockAiDiff } from '../AIDiffPlugin/patch';
 import { projectInlinePlainText } from '../projection';
 import type {
   NoteBlockPlugin,
@@ -36,11 +37,13 @@ function richTextCapabilities(): NoteContentCapabilityDeclarations {
   };
 }
 
-function atomicCapabilities(): NoteContentCapabilityDeclarations {
+function atomicCapabilities(
+  aiDiff: NoteCapabilityDeclaration = UNSUPPORTED_AI_DIFF
+): NoteContentCapabilityDeclarations {
   return {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
-    aiDiff: UNSUPPORTED_AI_DIFF,
+    aiDiff,
     comments: UNSUPPORTED_COMMENTS,
     projection: DEFAULT_CAPABILITY,
     print: DEFAULT_CAPABILITY,
@@ -50,7 +53,7 @@ function atomicCapabilities(): NoteContentCapabilityDeclarations {
 function createDefaultBlockPlugin(
   type: string,
   capabilities: NoteContentCapabilityDeclarations,
-  outline = false
+  options: { outline?: boolean; aiDiff?: NoteBlockPlugin['aiDiff'] } = {}
 ) {
   const spec = (defaultBlockSpecs as BlockSpecs)[type];
   if (!spec) {
@@ -62,9 +65,10 @@ function createDefaultBlockPlugin(
     type,
     spec,
     capabilities,
+    ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
     projection: {
       plainText: (block, registry) => projectInlinePlainText(block.content, registry),
-      ...(outline
+      ...(options.outline
         ? {
             outlineLevel: (block: Record<string, unknown>) => {
               const props =
@@ -116,7 +120,7 @@ const richTextBlockTypes = [
   'toggleListItem',
 ] as const;
 
-const atomicBlockTypes = ['audio', 'divider', 'file', 'image', 'table', 'video'] as const;
+const passThroughAtomicBlockTypes = ['audio', 'divider', 'file', 'image', 'video'] as const;
 
 export const defaultContentPlugin = {
   kind: 'bundle',
@@ -125,8 +129,18 @@ export const defaultContentPlugin = {
     createDefaultInlinePlugin('text'),
     createDefaultInlinePlugin('link'),
     ...richTextBlockTypes.map((type) =>
-      createDefaultBlockPlugin(type, richTextCapabilities(), type === 'heading')
+      createDefaultBlockPlugin(type, richTextCapabilities(), {
+        outline: type === 'heading',
+        aiDiff: richTextBlockAiDiff,
+      })
     ),
-    ...atomicBlockTypes.map((type) => createDefaultBlockPlugin(type, atomicCapabilities())),
+    ...passThroughAtomicBlockTypes.map((type) =>
+      createDefaultBlockPlugin(
+        type,
+        atomicCapabilities({ support: 'inherited', profile: 'atomicProps' }),
+        { aiDiff: atomicPropsBlockAiDiff }
+      )
+    ),
+    createDefaultBlockPlugin('table', atomicCapabilities()),
   ],
 } satisfies NotePluginBundle;

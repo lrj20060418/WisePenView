@@ -77,15 +77,10 @@ import {
 } from './plugins';
 import { syncAiDiffBlockFoldDisplayMode } from './plugins/AIDiffPlugin';
 import { AiDiffDisplayModeProvider } from './plugins/AIDiffPlugin/displayModeContext';
-import {
-  applyAiDiffActionToProps,
-  applyAllAiDiffActionsToContent,
-  isInlineContentEffectivelyEmpty,
-  type AiDiffActionMode,
-} from './plugins/AIDiffPlugin/patch';
 import aiDiffStyles from './plugins/AIDiffPlugin/style.module.less';
 import { useAiDiffNormalization } from './plugins/AIDiffPlugin/useAiDiffNormalization';
 import { printNotePdfViaBrowser, waitForEditorPaint } from './plugins/noteBrowserPrint';
+import type { NoteAiDiffAction } from './plugins/types';
 import styles from './style.module.less';
 
 type CreateBlockNoteOptions = NonNullable<Parameters<typeof useCreateBlockNote>[0]>;
@@ -410,6 +405,7 @@ function CustomBlockNoteEditor({
     noteFragment,
     editor,
     provider,
+    registry: notePluginRegistry,
     onNormalized: syncAiDiffPresence,
   });
 
@@ -685,7 +681,7 @@ function CustomBlockNoteEditor({
   };
 
   const applyAllAiDiffActions = useCallback(
-    (mode: AiDiffActionMode) => {
+    (mode: NoteAiDiffAction) => {
       if (readOnly) {
         return;
       }
@@ -703,30 +699,25 @@ function CustomBlockNoteEditor({
       const blocksToRemove: Parameters<typeof editor.removeBlocks>[0] = [];
 
       for (const block of blocks) {
-        const propsAction = applyAiDiffActionToProps(block.props, mode);
-        const nextContent = applyAllAiDiffActionsToContent(block.content, mode);
+        const owner = notePluginRegistry.blockPlugins.get(block.type);
+        const action = owner?.aiDiff?.applyAll(block as unknown as Record<string, unknown>, mode);
+        if (!action || action.kind === 'none') continue;
 
-        if (propsAction.kind === 'remove') {
+        if (action.kind === 'remove') {
           blocksToRemove.push(block);
           continue;
         }
 
-        if (nextContent && isInlineContentEffectivelyEmpty(nextContent)) {
-          if (!blockHasNestedChildren(block)) {
-            blocksToRemove.push(block);
-            continue;
-          }
-        }
-
-        if (!nextContent && propsAction.kind !== 'update') {
+        if (action.removeWhenChildless && !blockHasNestedChildren(block)) {
+          blocksToRemove.push(block);
           continue;
         }
 
         updates.push({
           block,
           update: {
-            ...(nextContent ? { content: nextContent } : {}),
-            ...(propsAction.kind === 'update' ? { props: propsAction.props } : {}),
+            ...('content' in action ? { content: action.content } : {}),
+            ...('props' in action ? { props: action.props } : {}),
           } as Parameters<typeof editor.updateBlock>[1],
         });
       }

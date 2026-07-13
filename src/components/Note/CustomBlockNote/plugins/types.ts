@@ -52,6 +52,39 @@ export interface NoteMarkdownExportProjection {
   ) => Record<string, unknown> | null;
 }
 
+export interface NoteAiDiffGeneratedBlockInput {
+  props: Record<string, unknown>;
+  content: unknown;
+  keyPrefix: string;
+}
+
+export interface NoteAiDiffGeneratedBlockProjection {
+  props: Record<string, unknown>;
+  content?: unknown;
+}
+
+export type NoteAiDiffAction = 'accept' | 'discard';
+
+export type NoteAiDiffBlockActionResult =
+  | { kind: 'none' }
+  | { kind: 'remove' }
+  | {
+      kind: 'update';
+      props?: Record<string, unknown>;
+      content?: unknown;
+      removeWhenChildless?: boolean;
+    };
+
+export interface NoteBlockAiDiff {
+  normalizeGenerated: (
+    input: NoteAiDiffGeneratedBlockInput
+  ) => NoteAiDiffGeneratedBlockProjection | null;
+  applyAll: (
+    block: Record<string, unknown>,
+    action: NoteAiDiffAction
+  ) => NoteAiDiffBlockActionResult;
+}
+
 interface NotePluginNodeBase {
   id: string;
   dependencies?: readonly string[];
@@ -70,6 +103,7 @@ export interface NoteBlockPlugin extends NoteContentPluginBase {
   spec: BlockSpecs[string];
   projection?: NoteBlockProjection;
   markdownExport?: NoteMarkdownExportProjection;
+  aiDiff?: NoteBlockAiDiff;
 }
 
 export interface NoteInlinePlugin extends NoteContentPluginBase {
