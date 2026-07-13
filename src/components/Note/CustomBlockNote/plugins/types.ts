@@ -10,6 +10,7 @@ import type {
 } from '@blocknote/core';
 import type { DefaultReactSuggestionItem } from '@blocknote/react';
 import type { EditorProps } from '@tiptap/pm/view';
+import type { LucideIcon } from 'lucide-react';
 
 import type { AiDiffDisplayMode } from '@/domains/Note';
 
@@ -121,6 +122,29 @@ export interface NoteMarkdownInlineImport {
   ) => readonly Record<string, unknown>[] | undefined;
 }
 
+export interface NoteSideMenuAction {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  kind: 'command' | 'toggle';
+  selected?: boolean;
+}
+
+export interface NoteSideMenuState {
+  variant?: 'standard' | 'structured';
+  attributes?: Readonly<Record<string, string | undefined>>;
+  actions?: readonly NoteSideMenuAction[];
+}
+
+export interface NoteBlockSideMenu {
+  icon?: LucideIcon;
+  inspect?: (block: Record<string, unknown>) => NoteSideMenuState;
+  apply?: (
+    block: Record<string, unknown>,
+    actionId: string
+  ) => { type?: string; props?: Record<string, unknown>; content?: unknown } | null;
+}
+
 interface NotePluginNodeBase {
   id: string;
   dependencies?: readonly string[];
@@ -141,6 +165,7 @@ export interface NoteBlockPlugin extends NoteContentPluginBase {
   markdownImport?: NoteMarkdownBlockImport;
   markdownExport?: NoteMarkdownExportProjection;
   aiDiff?: NoteBlockAiDiff;
+  sideMenu?: NoteBlockSideMenu;
 }
 
 export interface NoteInlinePlugin extends NoteContentPluginBase {

@@ -1,0 +1,100 @@
+import { defaultBlockSpecs } from '@blocknote/core';
+import { PanelLeft, PanelTop, StretchHorizontal, Table2 } from 'lucide-react';
+
+import type { NoteBlockPlugin, NoteSideMenuAction } from '../types';
+
+interface TableContentLike {
+  rows: Array<{ cells: unknown[] }>;
+  columnWidths: Array<number | undefined>;
+  headerRows?: number;
+  headerCols?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readTableContent(block: Record<string, unknown>): TableContentLike | null {
+  if (!isRecord(block.content)) return null;
+  const content = block.content;
+  if (!Array.isArray(content.rows) || !Array.isArray(content.columnWidths)) return null;
+  return content as unknown as TableContentLike;
+}
+
+function tableActions(content: TableContentLike | null): NoteSideMenuAction[] {
+  return [
+    ...(content
+      ? [
+          {
+            id: 'header-row',
+            label: '标题行',
+            icon: PanelTop,
+            kind: 'toggle' as const,
+            selected: Boolean(content.headerRows),
+          },
+          {
+            id: 'header-column',
+            label: '标题列',
+            icon: PanelLeft,
+            kind: 'toggle' as const,
+            selected: Boolean(content.headerCols),
+          },
+        ]
+      : []),
+    {
+      id: 'reset-column-widths',
+      label: '均分列宽',
+      icon: StretchHorizontal,
+      kind: 'command',
+    },
+  ];
+}
+
+export const tablePlugin = {
+  kind: 'block',
+  id: 'table',
+  type: 'table',
+  spec: defaultBlockSpecs.table,
+  capabilities: {
+    markdownImport: { support: 'default' },
+    markdownExport: { support: 'default' },
+    aiDiff: { support: 'unsupported', reason: '结构化表格当前不承担 AI Diff 语义' },
+    comments: { support: 'unsupported', reason: '表格批注 selection 尚未建模' },
+    projection: { support: 'default' },
+    print: { support: 'default' },
+  },
+  projection: { plainText: () => '' },
+  sideMenu: {
+    icon: Table2,
+    inspect(block) {
+      return { variant: 'structured', actions: tableActions(readTableContent(block)) };
+    },
+    apply(block, actionId) {
+      const content = readTableContent(block);
+      if (!content) return null;
+      if (actionId === 'header-row') {
+        return {
+          type: 'table',
+          content: { ...content, headerRows: content.headerRows ? undefined : 1 },
+        };
+      }
+      if (actionId === 'header-column') {
+        return {
+          type: 'table',
+          content: { ...content, headerCols: content.headerCols ? undefined : 1 },
+        };
+      }
+      if (actionId === 'reset-column-widths') {
+        const columnCount = content.columnWidths.length || content.rows[0]?.cells.length || 0;
+        return {
+          type: 'table',
+          content: {
+            ...content,
+            columnWidths: Array.from({ length: columnCount }, () => undefined),
+          },
+        };
+      }
+      return null;
+    },
+  },
+} satisfies NoteBlockPlugin;

@@ -30,14 +30,7 @@ import {
   sortSuggestionItemsForDisplay,
 } from '@/components/Note/NoteSlashMenu/slashMenuModel';
 import { SlashMenuDropdownItems } from '@/components/Note/NoteSlashMenu/slashMenuView';
-import {
-  blockHasType,
-  defaultProps,
-  editorHasBlockWithType,
-  type InlineContentSchema,
-  type StyleSchema,
-  type TableContent,
-} from '@blocknote/core';
+import { blockHasType, defaultProps, editorHasBlockWithType } from '@blocknote/core';
 import { SideMenuExtension, SuggestionMenu } from '@blocknote/core/extensions';
 import type { DefaultReactSuggestionItem } from '@blocknote/react';
 import {
@@ -56,17 +49,12 @@ import {
   ChevronRight,
   Copy,
   GripVertical,
-  Image as ImageIcon,
   IndentDecrease,
   IndentIncrease,
   Paintbrush,
-  PanelLeft,
-  PanelTop,
   Plus,
   PlusSquare,
   Scissors,
-  StretchHorizontal,
-  Table2,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -74,18 +62,12 @@ import { useState, type DragEvent, type ReactNode } from 'react';
 import styles from './style.module.less';
 
 type TextAlignment = 'left' | 'center' | 'right';
-type NoteTableContent = TableContent<InlineContentSchema, StyleSchema>;
 
 const textAlignItems: Array<{ key: TextAlignment; label: string; icon: LucideIcon }> = [
   { key: 'left', label: '左对齐', icon: AlignLeft },
   { key: 'center', label: '居中对齐', icon: AlignCenter },
   { key: 'right', label: '右对齐', icon: AlignRight },
 ];
-
-const blockHandleIconMap: Partial<Record<string, LucideIcon>> = {
-  image: ImageIcon,
-  table: Table2,
-};
 
 function isBlockEmpty(block: NoteBlock) {
   const content = (block as { content?: unknown }).content;
@@ -116,16 +98,6 @@ function getBlockProp(block: NoteBlock, prop: string) {
   return isRecord(block.props) && typeof block.props[prop] === 'string'
     ? block.props[prop]
     : undefined;
-}
-
-function getTableContent(block: NoteBlock): NoteTableContent | undefined {
-  return block.type === 'table' && isRecord((block as { content?: unknown }).content)
-    ? ((block as { content?: unknown }).content as NoteTableContent)
-    : undefined;
-}
-
-function getTableColumnCount(content: NoteTableContent) {
-  return content.columnWidths.length || content.rows[0]?.cells.length || 0;
 }
 
 async function writeClipboardData(data: { html: string; text: string }) {
@@ -177,7 +149,7 @@ function MenuItemContent({
   );
 }
 
-function TableMenuSwitch({ isSelected }: { isSelected: boolean }) {
+function MenuSwitch({ isSelected }: { isSelected: boolean }) {
   return (
     <span
       className={styles.switchIndicator}
@@ -249,10 +221,12 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
   );
   const selectedBlockType = allItems.find((item) => blockMatchesBlockTypeItem(block, item));
   const blockIsEmpty = isBlockEmpty(block);
-  const isTable = block.type === 'table';
-  const SelectedBlockIcon = selectedBlockType?.icon ?? blockHandleIconMap[block.type];
-  const headingLevel =
-    block.type === 'heading' && isRecord(block.props) ? String(block.props.level) : undefined;
+  const owner = notePluginRegistry.blockPlugins.get(block.type);
+  const ownerSideMenuState = owner?.sideMenu?.inspect?.(
+    block as unknown as Record<string, unknown>
+  );
+  const isStructured = ownerSideMenuState?.variant === 'structured';
+  const SelectedBlockIcon = selectedBlockType?.icon ?? owner?.sideMenu?.icon;
   const canUseTextColor = blockSupportsTextColor(block, editor);
   const canUseBackgroundColor = blockSupportsBackgroundColor(block, editor);
   const canUseColor = canUseTextColor || canUseBackgroundColor;
@@ -261,10 +235,7 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
   const textAlignment = canUseTextAlignment
     ? String(blockProps.textAlignment ?? defaultProps.textAlignment.default)
     : undefined;
-  const tableContent = getTableContent(block);
-  const canUseTableHeaders = Boolean(isTable && tableContent);
-  const isHeaderRow = Boolean(tableContent?.headerRows);
-  const isHeaderColumn = Boolean(tableContent?.headerCols);
+  const contentActions = ownerSideMenuState?.actions ?? [];
 
   const closeMenu = () => {
     setOpen(false);
@@ -383,40 +354,10 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
     closeMenu();
   };
 
-  const toggleTableHeader = (target: 'row' | 'column') => {
-    if (!canUseTableHeaders || !tableContent) {
-      return;
-    }
-    editor.updateBlock(
-      block,
-      toBlockUpdate({
-        type: 'table',
-        content: {
-          ...tableContent,
-          ...(target === 'row'
-            ? { headerRows: isHeaderRow ? undefined : 1 }
-            : { headerCols: isHeaderColumn ? undefined : 1 }),
-        },
-      })
-    );
-    closeMenu();
-  };
-
-  const resetTableColumnWidths = () => {
-    if (!isTable || !tableContent) {
-      return;
-    }
-    const columnCount = getTableColumnCount(tableContent);
-    editor.updateBlock(
-      block,
-      toBlockUpdate({
-        type: 'table',
-        content: {
-          ...tableContent,
-          columnWidths: Array.from({ length: columnCount }, () => undefined),
-        },
-      })
-    );
+  const applyContentAction = (actionId: string) => {
+    const update = owner?.sideMenu?.apply?.(block as unknown as Record<string, unknown>, actionId);
+    if (!update) return;
+    editor.updateBlock(block, toBlockUpdate(update));
     closeMenu();
     window.setTimeout(() => editor.focus());
   };
@@ -485,7 +426,7 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
   );
 
   const colorMenu =
-    canUseColor && !isTable ? (
+    canUseColor && !isStructured ? (
       <Dropdown.SubmenuTrigger>
         <Dropdown.Item id="colors" textValue="颜色" className={styles.menuItem}>
           <MenuItemContent icon={Paintbrush} label="颜色" trailing={<ChevronRight size={16} />} />
@@ -515,7 +456,7 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
       </Dropdown.SubmenuTrigger>
     ) : null;
 
-  const tableIndentMenu = (
+  const structuredIndentMenu = (
     <Dropdown.SubmenuTrigger>
       <Dropdown.Item id="indent" textValue="缩进" className={styles.menuItem}>
         <MenuItemContent icon={IndentIncrease} label="缩进" trailing={<ChevronRight size={16} />} />
@@ -549,7 +490,12 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
     <div
       className={clsx('bn-side-menu', styles.sideMenu)}
       data-block-type={block.type}
-      data-level={headingLevel}
+      {...Object.fromEntries(
+        Object.entries(ownerSideMenuState?.attributes ?? {}).map(([key, value]) => [
+          `data-${key}`,
+          value,
+        ])
+      )}
     >
       {blockIsEmpty ? (
         <Button
@@ -593,7 +539,7 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
             </Dropdown.Trigger>
             <Dropdown.Popover className={styles.popover} placement="left top" offset={8}>
               <div className={styles.menuSurface}>
-                {!isTable ? (
+                {!isStructured ? (
                   <QuickBlockTypes block={block} items={quickItems} onSelect={applyBlockType} />
                 ) : null}
                 <Dropdown.Menu
@@ -616,19 +562,13 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
                     if (action === 'delete') {
                       deleteBlock();
                     }
-                    if (action === 'table-header-row') {
-                      toggleTableHeader('row');
-                    }
-                    if (action === 'table-header-column') {
-                      toggleTableHeader('column');
-                    }
-                    if (action === 'table-reset-column-widths') {
-                      resetTableColumnWidths();
+                    if (action.startsWith('content:')) {
+                      applyContentAction(action.slice('content:'.length));
                     }
                   }}
                 >
-                  {isTable ? tableIndentMenu : indentAlignMenu}
-                  {!isTable ? colorMenu : null}
+                  {isStructured ? structuredIndentMenu : indentAlignMenu}
+                  {!isStructured ? colorMenu : null}
 
                   <Dropdown.Section>
                     <Dropdown.Item id="cut" textValue="剪切" className={styles.menuItem}>
@@ -642,41 +582,26 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
                     </Dropdown.Item>
                   </Dropdown.Section>
 
-                  {isTable ? (
+                  {contentActions.length > 0 ? (
                     <Dropdown.Section>
-                      {canUseTableHeaders ? (
-                        <>
-                          <Dropdown.Item
-                            id="table-header-row"
-                            textValue="标题行"
-                            className={styles.menuItem}
-                          >
-                            <MenuItemContent
-                              icon={PanelTop}
-                              label="标题行"
-                              trailing={<TableMenuSwitch isSelected={isHeaderRow} />}
-                            />
-                          </Dropdown.Item>
-                          <Dropdown.Item
-                            id="table-header-column"
-                            textValue="标题列"
-                            className={styles.menuItem}
-                          >
-                            <MenuItemContent
-                              icon={PanelLeft}
-                              label="标题列"
-                              trailing={<TableMenuSwitch isSelected={isHeaderColumn} />}
-                            />
-                          </Dropdown.Item>
-                        </>
-                      ) : null}
-                      <Dropdown.Item
-                        id="table-reset-column-widths"
-                        textValue="均分列宽"
-                        className={styles.menuItem}
-                      >
-                        <MenuItemContent icon={StretchHorizontal} label="均分列宽" />
-                      </Dropdown.Item>
+                      {contentActions.map((action) => (
+                        <Dropdown.Item
+                          key={action.id}
+                          id={`content:${action.id}`}
+                          textValue={action.label}
+                          className={styles.menuItem}
+                        >
+                          <MenuItemContent
+                            icon={action.icon}
+                            label={action.label}
+                            trailing={
+                              action.kind === 'toggle' ? (
+                                <MenuSwitch isSelected={Boolean(action.selected)} />
+                              ) : null
+                            }
+                          />
+                        </Dropdown.Item>
+                      ))}
                     </Dropdown.Section>
                   ) : null}
 

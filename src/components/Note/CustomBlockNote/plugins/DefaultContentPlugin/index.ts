@@ -5,6 +5,7 @@ import {
   type InlineContentConfig,
   type InlineContentSpec,
 } from '@blocknote/core';
+import { Image as ImageIcon } from 'lucide-react';
 
 import { plainInlineAiDiff } from '../AIDiffPlugin/ownerPresence';
 import { atomicPropsBlockAiDiff, richTextBlockAiDiff } from '../AIDiffPlugin/patch';
@@ -54,7 +55,11 @@ function atomicCapabilities(
 function createDefaultBlockPlugin(
   type: string,
   capabilities: NoteContentCapabilityDeclarations,
-  options: { outline?: boolean; aiDiff?: NoteBlockPlugin['aiDiff'] } = {}
+  options: {
+    outline?: boolean;
+    aiDiff?: NoteBlockPlugin['aiDiff'];
+    sideMenu?: NoteBlockPlugin['sideMenu'];
+  } = {}
 ) {
   const spec = (defaultBlockSpecs as BlockSpecs)[type];
   if (!spec) {
@@ -67,6 +72,7 @@ function createDefaultBlockPlugin(
     spec,
     capabilities,
     ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
+    ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
     projection: {
       plainText: (block, registry) => projectInlinePlainText(block.content, registry),
       ...(options.outline
@@ -135,15 +141,30 @@ export const defaultContentPlugin = {
       createDefaultBlockPlugin(type, richTextCapabilities(), {
         outline: type === 'heading',
         aiDiff: richTextBlockAiDiff,
+        ...(type === 'heading'
+          ? {
+              sideMenu: {
+                inspect(block: Record<string, unknown>) {
+                  const props =
+                    typeof block.props === 'object' && block.props !== null
+                      ? (block.props as Record<string, unknown>)
+                      : {};
+                  return { attributes: { level: String(props.level ?? 1) } };
+                },
+              },
+            }
+          : {}),
       })
     ),
     ...passThroughAtomicBlockTypes.map((type) =>
       createDefaultBlockPlugin(
         type,
         atomicCapabilities({ support: 'inherited', profile: 'atomicProps' }),
-        { aiDiff: atomicPropsBlockAiDiff }
+        {
+          aiDiff: atomicPropsBlockAiDiff,
+          ...(type === 'image' ? { sideMenu: { icon: ImageIcon } } : {}),
+        }
       )
     ),
-    createDefaultBlockPlugin('table', atomicCapabilities()),
   ],
 } satisfies NotePluginBundle;

@@ -3,6 +3,7 @@ import { codeBlockPlugin } from './CodeBlockPlugin';
 import { commonRuntimeExtension } from './CommonPlugin';
 import { defaultContentPlugin } from './DefaultContentPlugin';
 import { latexPlugin } from './LatexPlugin';
+import { tablePlugin } from './TablePlugin';
 import {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
@@ -15,7 +16,7 @@ import type { NotePluginBundle } from './types';
 export const notePluginTree = {
   kind: 'bundle',
   id: 'note',
-  children: [defaultContentPlugin, codeBlockPlugin, latexPlugin, aiDiffPlugin],
+  children: [defaultContentPlugin, codeBlockPlugin, tablePlugin, latexPlugin, aiDiffPlugin],
 } satisfies NotePluginBundle;
 
 export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
