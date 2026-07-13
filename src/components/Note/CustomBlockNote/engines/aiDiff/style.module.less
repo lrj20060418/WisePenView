@@ -34,6 +34,36 @@
   flex: 1;
 }
 
+.comparison {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inlineComparison,
+.inlineHunk {
+  display: inline;
+}
+
+.inlineDelete,
+.inlineAdd {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.inlineDelete {
+  background: var(--error-soft);
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.inlineAdd {
+  background: var(--success-soft);
+  color: inherit;
+  font-weight: 600;
+}
+
 .actions {
   display: inline-flex;
   flex: none;

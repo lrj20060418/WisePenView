@@ -3,28 +3,18 @@ import { createCodeBlockSpec } from '@blocknote/core';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
-import { projectInlinePlainText } from '../../content/projection';
 import type { NoteBlockPlugin } from '../../content/types';
 import {
   resolveNoteAiDiffBlock,
   resolveNoteAiDiffBlockAction,
 } from '../../engines/aiDiff/projection';
-import { CodeBlockToolbar, type CodeBlockLanguageOption } from './CodeBlockToolbar';
+import { CodeBlockAiDiffView } from './AiDiffView';
+import { CodeBlockToolbar } from './CodeBlockToolbar';
+import { getCodeBlockLanguageOptions } from './language';
 
 const CODE_BLOCK_THEME = 'github-light';
 
-const BASE_LANGUAGE_OPTIONS: CodeBlockLanguageOption[] = Object.entries(
-  codeBlockOptions.supportedLanguages ?? {}
-).map(([id, { name }]) => ({ id, label: name }));
-
 const collapsedCodeBlockIds = new Set<string>();
-
-function getLanguageOptions(language: string) {
-  if (BASE_LANGUAGE_OPTIONS.some((option) => option.id === language)) {
-    return BASE_LANGUAGE_OPTIONS;
-  }
-  return [{ id: language, label: language }, ...BASE_LANGUAGE_OPTIONS];
-}
 
 function syncPreCollapsed(preElement: HTMLPreElement, collapsed: boolean) {
   if (collapsed) {
@@ -98,7 +88,7 @@ export const codeBlockPlugin = {
               collapsed={collapsed}
               isEditable={editor.isEditable}
               language={language}
-              languageOptions={getLanguageOptions(language)}
+              languageOptions={getCodeBlockLanguageOptions(language)}
               onCollapsedChange={(collapsed) => {
                 if (collapsed) {
                   collapsedCodeBlockIds.add(block.id);
@@ -140,13 +130,7 @@ export const codeBlockPlugin = {
   comments: { mode: 'range' },
   aiDiff: {
     resolve: resolveNoteAiDiffBlock,
-    renderCandidate(candidate, registry) {
-      const pre = document.createElement('pre');
-      const code = document.createElement('code');
-      code.textContent = projectInlinePlainText(candidate.content, registry);
-      pre.appendChild(code);
-      return pre;
-    },
+    renderCandidate: CodeBlockAiDiffView,
     apply(_block, aiContent, action) {
       return resolveNoteAiDiffBlockAction(aiContent, action, 'inline');
     },

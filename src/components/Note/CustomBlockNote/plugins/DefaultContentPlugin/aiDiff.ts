@@ -1,9 +1,12 @@
+import { projectInlinePlainText } from '../../content/projection';
 import type { NoteBlockAiDiff, NoteInlineAiDiff, NotePluginRegistry } from '../../content/types';
 import {
   resolveNoteAiDiffBlock,
   resolveNoteAiDiffBlockAction,
 } from '../../engines/aiDiff/projection';
 import { stableStringify } from '../../engines/aiDiff/stableValue';
+import styles from '../../engines/aiDiff/style.module.less';
+import { buildAiDiffTextHunks } from '../../engines/aiDiff/wordDiff';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -39,6 +42,39 @@ function inlineContentEquals(
     if (type !== next.type) return false;
     return registry.inlinePlugins.get(type)?.aiDiff.equals(inline, next) ?? false;
   });
+}
+
+function renderRichTextComparison(
+  current: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+  registry: NotePluginRegistry
+): HTMLElement {
+  const root = document.createElement('span');
+  root.className = styles.inlineComparison;
+  root.dataset.aiDiffGranularity = 'word';
+  const hunks = buildAiDiffTextHunks(
+    projectInlinePlainText(current.content, registry),
+    projectInlinePlainText(candidate.content, registry)
+  );
+  for (const hunk of hunks) {
+    if (hunk.mode === 'outside') {
+      root.append(hunk.segments.map((segment) => segment.text).join(''));
+      continue;
+    }
+    const hunkRoot = document.createElement('span');
+    hunkRoot.className = styles.inlineHunk;
+    hunkRoot.dataset.aiDiffHunk = 'true';
+    for (const segment of hunk.segments) {
+      const span = document.createElement('span');
+      span.textContent = segment.text;
+      span.dataset.aiDiffWordRole = segment.kind;
+      if (segment.kind === 'delete') span.className = styles.inlineDelete;
+      if (segment.kind === 'insert') span.className = styles.inlineAdd;
+      hunkRoot.appendChild(span);
+    }
+    root.appendChild(hunkRoot);
+  }
+  return root;
 }
 
 export const plainTextInlineAiDiff: NoteInlineAiDiff = {
@@ -84,6 +120,13 @@ export const richTextBlockAiDiff: NoteBlockAiDiff = {
     const root = document.createElement('span');
     root.appendChild(renderInlineChildren(candidate.content, registry));
     return root;
+  },
+  renderComparison: renderRichTextComparison,
+  shouldRenderComparison(current, candidate, registry) {
+    return (
+      projectInlinePlainText(current.content, registry) !==
+      projectInlinePlainText(candidate.content, registry)
+    );
   },
   apply(_block, aiContent, action) {
     return resolveNoteAiDiffBlockAction(aiContent, action, 'inline');

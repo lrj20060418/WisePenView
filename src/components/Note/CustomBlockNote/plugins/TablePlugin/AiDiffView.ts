@@ -1,0 +1,148 @@
+import type { NotePluginRegistry } from '../../content/types';
+
+interface TableCellLike {
+  content: unknown[];
+  props: Record<string, unknown>;
+}
+
+export interface TableContentLike {
+  rows: Array<{ cells: unknown[] }>;
+  columnWidths: Array<number | undefined>;
+  headerRows?: number;
+  headerCols?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function readTableContent(block: Record<string, unknown>): TableContentLike | null {
+  if (!isRecord(block.content)) return null;
+  const content = block.content;
+  if (!Array.isArray(content.rows) || !Array.isArray(content.columnWidths)) return null;
+  return content as unknown as TableContentLike;
+}
+
+function readCell(cell: unknown): TableCellLike {
+  if (Array.isArray(cell)) return { content: cell, props: {} };
+  if (!isRecord(cell)) return { content: [], props: {} };
+  return {
+    content: Array.isArray(cell.content) ? cell.content : [],
+    props: isRecord(cell.props) ? cell.props : {},
+  };
+}
+
+function readSpan(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 1;
+}
+
+function readHeaderCount(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0;
+}
+
+function applyColorAttribute(
+  element: HTMLElement,
+  attribute: 'backgroundColor' | 'textColor',
+  value: unknown
+): void {
+  if (typeof value !== 'string' || !value || value === 'default') return;
+  element.dataset[attribute] = value;
+}
+
+function renderTableCellContent(
+  element: HTMLTableCellElement,
+  content: readonly unknown[],
+  registry: NotePluginRegistry
+): void {
+  const paragraph = document.createElement('p');
+  for (const inline of content) {
+    if (!isRecord(inline) || typeof inline.type !== 'string') continue;
+    const owner = registry.inlinePlugins.get(inline.type);
+    if (!owner) throw new Error(`AI Diff 表格候选缺少 inline owner：${inline.type}`);
+    paragraph.appendChild(owner.aiDiff.renderCandidate(inline, registry));
+  }
+  element.appendChild(paragraph);
+}
+
+function createColumnGroup(columnWidths: readonly (number | undefined)[]): HTMLTableColElement {
+  const columnGroup = document.createElement('colgroup');
+  for (const width of columnWidths) {
+    const column = document.createElement('col');
+    if (typeof width === 'number' && width > 0) column.style.width = `${width}px`;
+    columnGroup.appendChild(column);
+  }
+  return columnGroup;
+}
+
+/** 使用表格原生结构渲染只读 AI 候选，并保留表头、合并单元格与列宽。 */
+export function TableAiDiffView(
+  candidate: Record<string, unknown>,
+  registry: NotePluginRegistry
+): HTMLElement {
+  const root = document.createElement('div');
+  root.className = 'bn-block-content';
+  root.dataset.contentType = 'table';
+
+  const blockProps = isRecord(candidate.props) ? candidate.props : {};
+  applyColorAttribute(root, 'textColor', blockProps.textColor);
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'tableWrapper';
+  const tableWrapperInner = document.createElement('div');
+  tableWrapperInner.className = 'tableWrapper-inner';
+  const table = document.createElement('table');
+  const content = readTableContent(candidate);
+  if (!content) {
+    tableWrapperInner.appendChild(table);
+    tableWrapper.appendChild(tableWrapperInner);
+    root.appendChild(tableWrapper);
+    return root;
+  }
+
+  table.appendChild(createColumnGroup(content.columnWidths));
+  const body = document.createElement('tbody');
+  const occupiedUntilRow: number[] = [];
+  const headerRows = readHeaderCount(content.headerRows);
+  const headerCols = readHeaderCount(content.headerCols);
+
+  content.rows.forEach((row, rowIndex) => {
+    const tableRow = document.createElement('tr');
+    let columnIndex = 0;
+    row.cells.forEach((cell) => {
+      while ((occupiedUntilRow[columnIndex] ?? 0) > rowIndex) columnIndex += 1;
+
+      const { content: cellContent, props } = readCell(cell);
+      const colspan = readSpan(props.colspan);
+      const rowspan = readSpan(props.rowspan);
+      const isHeader = rowIndex < headerRows || columnIndex < headerCols;
+      const tableCell = document.createElement(isHeader ? 'th' : 'td');
+      tableCell.colSpan = colspan;
+      tableCell.rowSpan = rowspan;
+      const columnWidth = content.columnWidths.slice(columnIndex, columnIndex + colspan);
+      if (columnWidth.some((width) => typeof width === 'number' && width > 0)) {
+        tableCell.setAttribute('colwidth', columnWidth.map((width) => width ?? '').join(','));
+      }
+      applyColorAttribute(tableCell, 'backgroundColor', props.backgroundColor);
+      applyColorAttribute(tableCell, 'textColor', props.textColor);
+      if (typeof props.textAlignment === 'string') {
+        tableCell.dataset.textAlignment = props.textAlignment;
+      }
+      renderTableCellContent(tableCell, cellContent, registry);
+      tableRow.appendChild(tableCell);
+
+      if (rowspan > 1) {
+        for (let index = columnIndex; index < columnIndex + colspan; index += 1) {
+          occupiedUntilRow[index] = rowIndex + rowspan;
+        }
+      }
+      columnIndex += colspan;
+    });
+    body.appendChild(tableRow);
+  });
+
+  table.appendChild(body);
+  tableWrapperInner.appendChild(table);
+  tableWrapper.appendChild(tableWrapperInner);
+  root.appendChild(tableWrapper);
+  return root;
+}

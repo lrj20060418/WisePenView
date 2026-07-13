@@ -54,4 +54,51 @@ describe('DefaultContentPlugin AI Diff', () => {
     expect(preview?.textContent).toBe('访问 文档');
     expect(preview?.querySelector('a')?.getAttribute('href')).toContain('/docs');
   });
+
+  it('普通自然段以词句粒度渲染局部修改', () => {
+    const comparison = notePluginRegistry.blockPlugins.get('paragraph')?.aiDiff?.renderComparison?.(
+      {
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: '团队将在月底完成首次复盘。', styles: {} }],
+      },
+      {
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: '团队仍将在月底完成最终复盘。', styles: {} }],
+      },
+      notePluginRegistry
+    );
+
+    expect(comparison?.dataset.aiDiffGranularity).toBe('word');
+    expect(comparison?.querySelector('[data-ai-diff-word-role="delete"]')?.textContent).toBe(
+      '首次'
+    );
+    expect(
+      [...(comparison?.querySelectorAll('[data-ai-diff-word-role="insert"]') ?? [])]
+        .map((element) => element.textContent)
+        .join('')
+    ).toContain('最终');
+    expect(comparison?.textContent).toContain('团队');
+    expect(comparison?.querySelectorAll('[data-ai-diff-hunk="true"]')).toHaveLength(2);
+  });
+
+  it('只有 block 属性变化时不启用词级对比', () => {
+    const aiDiff = notePluginRegistry.blockPlugins.get('paragraph')?.aiDiff;
+    expect(
+      aiDiff?.shouldRenderComparison?.(
+        {
+          type: 'paragraph',
+          props: { textAlignment: 'left' },
+          content: [{ type: 'text', text: '正文不变', styles: {} }],
+        },
+        {
+          type: 'paragraph',
+          props: { textAlignment: 'center' },
+          content: [{ type: 'text', text: '正文不变', styles: {} }],
+        },
+        notePluginRegistry
+      )
+    ).toBe(false);
+  });
 });

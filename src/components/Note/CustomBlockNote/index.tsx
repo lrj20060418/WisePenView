@@ -19,6 +19,7 @@ import { useLatest, useMemoizedFn, useMount, useUnmount, useUpdateEffect } from 
 import { useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { buildOutlineProjection, resolveActiveHeadingId } from './content/outline';
 import { AiDiffBulkActions } from './engines/aiDiff/BulkActions';
+import { initializeAiDiffPreview } from './engines/aiDiff/preview';
 import { AI_DIFF_ACTION_ORIGIN, getAiContentStore } from './engines/aiDiff/store';
 import { useAiDiffSidecarRuntime } from './engines/aiDiff/useAiDiffSidecarRuntime';
 import { useNoteCaptureKeyEvent } from './engines/collaboration/useNoteCaptureKeyEvent';
@@ -93,6 +94,7 @@ function CustomBlockNote({
   resourceId,
   collaboration: { doc, provider, user: collaborationUser, ready: collaborationReady },
   state: { aiDiffDisplayMode, readOnly, blockLocalDocWrites },
+  aiDiffPreview,
   onOutlineChange,
   onActiveHeadingChange,
   onAiDiffPresenceChange,
@@ -404,6 +406,22 @@ function CustomBlockNote({
   useUpdateEffect(() => {
     applyPendingMarkdownImport();
   }, [collaborationReady, resourceId]);
+
+  const applyAiDiffPreview = useMemoizedFn(() => {
+    if (!collaborationReady || !aiDiffPreview) return;
+    if (initializeAiDiffPreview({ doc, editor, preview: aiDiffPreview })) {
+      undoManager.clear();
+      scheduleAiDiffBodyContentHashRefresh();
+    }
+  });
+
+  useMount(() => {
+    applyAiDiffPreview();
+  });
+
+  useUpdateEffect(() => {
+    applyAiDiffPreview();
+  }, [aiDiffPreview, collaborationReady, resourceId]);
 
   useUpdateEffect(() => {
     if (!blockLocalDocWrites) {

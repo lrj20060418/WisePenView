@@ -146,6 +146,17 @@ export interface NoteBlockAiDiff {
     candidate: Record<string, unknown>,
     registry: NotePluginRegistry
   ) => HTMLElement;
+  /** update 对比模式的细粒度渲染；未提供时使用整块新旧对比。 */
+  renderComparison?: (
+    current: Record<string, unknown>,
+    candidate: Record<string, unknown>,
+    registry: NotePluginRegistry
+  ) => HTMLElement;
+  shouldRenderComparison?: (
+    current: Record<string, unknown>,
+    candidate: Record<string, unknown>,
+    registry: NotePluginRegistry
+  ) => boolean;
   apply: (
     block: Record<string, unknown>,
     aiContent: NoteAiContentPayload,

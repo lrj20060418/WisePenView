@@ -1,4 +1,10 @@
-export type { Block } from './entity/note';
+export type {
+  Block,
+  NoteAiDiffPreviewBlock,
+  NoteAiDiffPreviewCandidate,
+  NoteAiDiffPreviewData,
+  NoteAiDiffPreviewItem,
+} from './entity/note';
 export type { NoteSelectionSnapshot, SelectedNoteScope } from './entity/noteSelection';
 export { AI_DIFF_DISPLAY_MODE, AI_DIFF_DISPLAY_MODE_LABELS } from './enum';
 export type { AiDiffDisplayMode } from './enum';

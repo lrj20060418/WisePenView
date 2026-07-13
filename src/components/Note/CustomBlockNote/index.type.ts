@@ -2,6 +2,7 @@ import type { Doc } from 'yjs';
 
 import type {
   AiDiffDisplayMode,
+  NoteAiDiffPreviewData,
   NoteCommentUserDisplayRecord,
   NoteSelectionSnapshot,
   WisepenProvider,
@@ -86,6 +87,7 @@ export interface CustomBlockNoteProps {
   resourceId: string;
   collaboration: NoteCollaborationBinding;
   state: NoteEditorState;
+  aiDiffPreview?: NoteAiDiffPreviewData;
   comments: NoteCommentsConfig;
   portalContainers: NotePortalContainers;
   onOutlineChange?: (items: NoteOutlineItem[]) => void;

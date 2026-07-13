@@ -191,6 +191,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const { status, saveStatus, doc, provider, reconnect, idbSynced } = useNoteSession(resourceId, {
     actorUserId: currentUser?.id,
     enabled: !shouldWaitCurrentUser,
+    localOnly: Boolean(noteInfoDisplay.aiDiffPreview),
   });
   const asideMode = useNoteAsideStore(
     (state) => state.modeByResourceId[resourceId] ?? DEFAULT_NOTE_ASIDE_MODE
@@ -557,6 +558,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
                       key={`${resourceId}-${noteInfoDisplay.canCollaborativeEdit}-${noteInfoDisplay.canEditComments}`}
                       ref={bodyEditorRef}
                       resourceId={resourceId}
+                      aiDiffPreview={noteInfoDisplay.aiDiffPreview}
                       collaboration={{
                         doc,
                         provider,

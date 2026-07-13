@@ -62,22 +62,29 @@ function buildActionButton(
 function createReviewWidget(params: {
   blockId: string;
   payload: NoteAiContentPayload;
+  current: Record<string, unknown> | null;
   candidate: Record<string, unknown> | null;
   stale: boolean;
   displayMode: AiDiffDisplayMode;
   actionsEnabled: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
   renderCandidate: (candidate: Record<string, unknown>) => HTMLElement;
+  renderComparison?: (
+    current: Record<string, unknown>,
+    candidate: Record<string, unknown>
+  ) => HTMLElement;
 }): HTMLElement {
   const {
     blockId,
     payload,
+    current,
     candidate,
     stale,
     displayMode,
     actionsEnabled,
     onAction,
     renderCandidate,
+    renderComparison,
   } = params;
   const root = document.createElement('div');
   root.className = styles.review;
@@ -86,9 +93,16 @@ function createReviewWidget(params: {
 
   if (candidate) {
     const candidateRoot = document.createElement('div');
-    candidateRoot.className =
-      displayMode === AI_DIFF_DISPLAY_MODE.COMPARE ? styles.candidate : styles.candidatePlain;
-    candidateRoot.appendChild(renderCandidate(candidate));
+    const granularComparison =
+      displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && current && renderComparison;
+    candidateRoot.className = granularComparison
+      ? styles.comparison
+      : displayMode === AI_DIFF_DISPLAY_MODE.COMPARE
+        ? styles.candidate
+        : styles.candidatePlain;
+    candidateRoot.appendChild(
+      granularComparison ? renderComparison(current, candidate) : renderCandidate(candidate)
+    );
     root.appendChild(candidateRoot);
   }
 
@@ -167,8 +181,9 @@ function buildDecorations(params: {
     }
 
     const owner = registry.blockPlugins.get(block.type);
-    const projection = owner?.aiDiff?.resolve(block, payload, registry);
-    if (!owner?.aiDiff || !projection) return true;
+    const aiDiff = owner?.aiDiff;
+    const projection = aiDiff?.resolve(block, payload, registry);
+    if (!aiDiff || !projection) return true;
 
     let contentFrom = pos;
     let contentTo = pos + node.nodeSize;
@@ -191,8 +206,17 @@ function buildDecorations(params: {
       return false;
     }
 
+    const hasGranularComparison = Boolean(
+      runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE &&
+      projection.current &&
+      projection.candidate &&
+      aiDiff.renderComparison &&
+      (aiDiff.shouldRenderComparison?.(projection.current, projection.candidate, registry) ?? true)
+    );
     const hideCurrent =
-      projection.current === null || runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY;
+      projection.current === null ||
+      runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY ||
+      hasGranularComparison;
     if (hideCurrent) {
       decorations.push(
         Decoration.node(contentFrom, contentTo, {
@@ -221,12 +245,17 @@ function buildDecorations(params: {
             createReviewWidget({
               blockId,
               payload,
+              current: projection.current,
               candidate: projection.candidate,
               stale: projection.stale,
               displayMode: runtime.displayMode,
               actionsEnabled: runtime.actionsEnabled,
               onAction: runtime.onAction,
-              renderCandidate: (candidate) => owner.aiDiff!.renderCandidate(candidate, registry),
+              renderCandidate: (candidate) => aiDiff.renderCandidate(candidate, registry),
+              renderComparison:
+                hasGranularComparison && aiDiff.renderComparison
+                  ? (current, candidate) => aiDiff.renderComparison!(current, candidate, registry)
+                  : undefined,
             }),
           {
             key: `ai-diff:${blockId}:${payload.revision}:${runtime.displayMode}`,
