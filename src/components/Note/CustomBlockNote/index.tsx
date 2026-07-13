@@ -118,33 +118,33 @@ function buildSelectedNoteScope(editor: CustomBlockNoteEditor): SelectedNoteScop
 
 function CustomBlockNoteEditor({
   resourceId,
-  doc,
-  provider,
-  collaborationUser,
-  aiDiffDisplayMode,
-  collaborationReady,
-  readOnly = false,
-  blockLocalDocWrites = false,
+  collaboration: { doc, provider, user: collaborationUser, ready: collaborationReady },
+  state: { aiDiffDisplayMode, readOnly, blockLocalDocWrites },
   onOutlineChange,
   onActiveHeadingChange,
   onAiDiffPresenceChange,
   onAskAi,
-  commentsEnabled = false,
-  commentsUiEnabled,
-  commentsAuthorizable = false,
-  commentsWritable = false,
-  commentUserId,
-  commentUsersById,
-  commentDocumentRole = 'editor',
-  isCommentVisibilityPrivileged = false,
-  collaboratorVisibility = 'all',
-  commentsSidebarCollapsed = false,
-  commentsSidebarWidth = 300,
-  onCommentsSidebarWidthChange,
-  commentsSidebarPortalContainer,
-  commentHistoryOpen = false,
-  onCommentHistoryOpenChange,
-  aiBulkActionsPortalContainer,
+  comments: {
+    enabled: commentsEnabled,
+    uiEnabled: commentsUiEnabled,
+    authorizable: commentsAuthorizable,
+    writable: commentsWritable,
+    userId: commentUserId,
+    usersById: commentUsersById,
+    documentRole: commentDocumentRole = 'editor',
+    visibilityPrivileged: isCommentVisibilityPrivileged,
+    collaboratorVisibility,
+    sidebar: {
+      collapsed: commentsSidebarCollapsed,
+      width: commentsSidebarWidth,
+      onWidthChange: onCommentsSidebarWidthChange,
+    },
+    history: { open: commentHistoryOpen, onOpenChange: onCommentHistoryOpenChange },
+  },
+  portalContainers: {
+    commentsSidebar: commentsSidebarPortalContainer,
+    aiBulkActions: aiBulkActionsPortalContainer,
+  },
   onAiDiffBodyContentHashChange,
   commentUser,
   ref,
@@ -844,10 +844,10 @@ function CustomBlockNoteEditor({
                   collaboratorVisibility={collaboratorVisibility}
                   sidebarCollapsed={commentsSidebarCollapsed}
                   sidebarWidth={commentsSidebarWidth}
-                  onSidebarWidthChange={onCommentsSidebarWidthChange ?? (() => undefined)}
+                  onSidebarWidthChange={onCommentsSidebarWidthChange}
                   sidebarPortalContainer={commentsSidebarPortalContainer}
                   commentHistoryOpen={commentHistoryOpen}
-                  onCommentHistoryOpenChange={onCommentHistoryOpenChange ?? (() => undefined)}
+                  onCommentHistoryOpenChange={onCommentHistoryOpenChange}
                   localThreadReferenceTexts={visibleThreadReferenceTexts}
                   formulaThreadPositions={formulaThreadPositions}
                   onBumpThreadsSidebar={bumpFormulaState}
@@ -862,14 +862,14 @@ function CustomBlockNoteEditor({
 }
 
 function CustomBlockNote(props: CustomBlockNoteProps & { ref?: Ref<NoteBodyEditorHandle> }) {
-  const { ref, commentsEnabled = false, ...rest } = props;
-  const commentUser = useActiveCommentUser(commentsEnabled);
+  const { ref, comments, ...rest } = props;
+  const commentUser = useActiveCommentUser(comments.enabled);
 
   return (
     <CustomBlockNoteEditor
       key={rest.resourceId}
       {...rest}
-      commentsEnabled={commentsEnabled}
+      comments={comments}
       ref={ref}
       commentUser={commentUser}
     />

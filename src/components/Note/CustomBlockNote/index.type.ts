@@ -25,50 +25,70 @@ export interface NoteCollaborationUser {
   color: string;
 }
 
-export interface CustomBlockNoteProps {
-  resourceId: string;
+export interface NoteCollaborationBinding {
   doc: Doc;
   provider: WisepenProvider;
-  collaborationUser: NoteCollaborationUser;
-  aiDiffDisplayMode: AiDiffDisplayMode;
+  user: NoteCollaborationUser;
   /** 协同 provider 已完成首次服务端同步，此后才允许写入待导入正文 */
-  collaborationReady: boolean;
+  ready: boolean;
+}
+
+export interface NoteEditorState {
+  aiDiffDisplayMode: AiDiffDisplayMode;
   /** UI/editable：连接中或无 EDIT 时为 true */
-  readOnly?: boolean;
+  readOnly: boolean;
   /**
    * PM 层拦截本地改 doc：仅「已连接且无协同编辑权」时为 true。
    * 连接中须为 false，否则 filter 会拦 BlockNote 初始化（Block doesn't have id）。
    */
-  blockLocalDocWrites?: boolean;
-  onOutlineChange?: (items: NoteOutlineItem[]) => void;
-  onActiveHeadingChange?: (activeId: string | undefined) => void;
-  onAiDiffPresenceChange?: (hasAiDiffContent: boolean) => void;
-  onAskAi: (context: NoteSelectionSnapshot) => void;
+  blockLocalDocWrites: boolean;
+}
+
+export interface NoteCommentsConfig {
   /**
    * 是否挂载批注 schema/扩展（与笔记是否开启批注能力一致，不受连接状态影响）。
    * 连接中也必须为 true，否则 y-prosemirror 无法解析 Yjs 中的 comment mark，会删除正文。
    */
-  commentsEnabled?: boolean;
+  enabled: boolean;
   /** 是否展示批注 UI（侧栏、历史等）；通常仅在协同已连接时为 true */
-  commentsUiEnabled?: boolean;
+  uiEnabled: boolean;
   /**
    * 用户是否具备批注编辑权限（来自服务端，不受连接状态影响）。
    * 用于初始化 threadStoreAuth，避免连接前挂载编辑器后权限被锁死在只读。
    */
-  commentsAuthorizable?: boolean;
+  authorizable: boolean;
   /** 当前是否允许创建/回复/解决批注（通常需已连接且具备权限） */
-  commentsWritable?: boolean;
-  commentUserId?: string;
-  commentUsersById?: NoteCommentUserDisplayRecord;
-  commentDocumentRole?: BlockNoteCommentDocumentRole;
-  isCommentVisibilityPrivileged?: boolean;
-  collaboratorVisibility?: CollaboratorCommentVisibility;
-  commentsSidebarCollapsed?: boolean;
-  commentsSidebarWidth?: number;
-  onCommentsSidebarWidthChange?: (width: number) => void;
-  commentsSidebarPortalContainer?: HTMLElement | null;
-  commentHistoryOpen?: boolean;
-  onCommentHistoryOpenChange?: (open: boolean) => void;
-  aiBulkActionsPortalContainer?: HTMLElement | null;
+  writable: boolean;
+  userId?: string;
+  usersById?: NoteCommentUserDisplayRecord;
+  documentRole?: BlockNoteCommentDocumentRole;
+  visibilityPrivileged: boolean;
+  collaboratorVisibility: CollaboratorCommentVisibility;
+  sidebar: {
+    collapsed: boolean;
+    width: number;
+    onWidthChange: (width: number) => void;
+  };
+  history: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  };
+}
+
+export interface NotePortalContainers {
+  commentsSidebar: HTMLElement | null;
+  aiBulkActions: HTMLElement | null;
+}
+
+export interface CustomBlockNoteProps {
+  resourceId: string;
+  collaboration: NoteCollaborationBinding;
+  state: NoteEditorState;
+  comments: NoteCommentsConfig;
+  portalContainers: NotePortalContainers;
+  onOutlineChange?: (items: NoteOutlineItem[]) => void;
+  onActiveHeadingChange?: (activeId: string | undefined) => void;
+  onAiDiffPresenceChange?: (hasAiDiffContent: boolean) => void;
+  onAskAi: (context: NoteSelectionSnapshot) => void;
   onAiDiffBodyContentHashChange?: (hash: string | undefined) => void;
 }

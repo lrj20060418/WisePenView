@@ -554,34 +554,44 @@ function NoteViewConnected({
                       key={`${resourceId}-${noteInfoDisplay.canCollaborativeEdit}-${collaborationUser.name}-${collaborationUser.color}`}
                       ref={bodyEditorRef}
                       resourceId={resourceId}
-                      doc={doc}
-                      provider={provider}
-                      collaborationUser={collaborationUser}
-                      aiDiffDisplayMode={aiDiffDisplayMode}
-                      collaborationReady={isConnected}
-                      readOnly={isEditorReadOnly}
-                      blockLocalDocWrites={blockLocalDocWrites}
+                      collaboration={{
+                        doc,
+                        provider,
+                        user: collaborationUser,
+                        ready: isConnected,
+                      }}
+                      state={{
+                        aiDiffDisplayMode,
+                        readOnly: isEditorReadOnly,
+                        blockLocalDocWrites,
+                      }}
                       onOutlineChange={setOutlineItems}
                       onActiveHeadingChange={setActiveHeadingId}
                       onAiDiffPresenceChange={handleAiDiffPresenceChange}
                       onAskAi={handleAskAi}
-                      commentsEnabled={noteInfoDisplay.commentsEnabled}
-                      commentsUiEnabled={isConnected && noteInfoDisplay.commentsEnabled}
-                      commentsAuthorizable={noteInfoDisplay.canEditComments}
-                      commentsWritable={isConnected && noteInfoDisplay.canEditComments}
-                      commentUserId={currentUser?.id}
-                      commentUsersById={noteInfoDisplay.authorsById}
-                      isCommentVisibilityPrivileged={canManageCommentVisibility}
-                      collaboratorVisibility={commentSettings.collaboratorVisibility}
-                      commentsSidebarCollapsed={!annotationAsideOpen}
-                      commentsSidebarWidth={resourceAsideWidth}
-                      onCommentsSidebarWidthChange={(width) =>
-                        setResourceAsideWidth(resourceId, width)
-                      }
-                      commentsSidebarPortalContainer={commentsSidebarHostElement}
-                      commentHistoryOpen={isCommentHistoryOpen}
-                      onCommentHistoryOpenChange={setIsCommentHistoryOpen}
-                      aiBulkActionsPortalContainer={aiBulkActionsPortalContainer}
+                      comments={{
+                        enabled: noteInfoDisplay.commentsEnabled,
+                        uiEnabled: isConnected && noteInfoDisplay.commentsEnabled,
+                        authorizable: noteInfoDisplay.canEditComments,
+                        writable: isConnected && noteInfoDisplay.canEditComments,
+                        userId: currentUser?.id,
+                        usersById: noteInfoDisplay.authorsById,
+                        visibilityPrivileged: canManageCommentVisibility,
+                        collaboratorVisibility: commentSettings.collaboratorVisibility,
+                        sidebar: {
+                          collapsed: !annotationAsideOpen,
+                          width: resourceAsideWidth,
+                          onWidthChange: (width) => setResourceAsideWidth(resourceId, width),
+                        },
+                        history: {
+                          open: isCommentHistoryOpen,
+                          onOpenChange: setIsCommentHistoryOpen,
+                        },
+                      }}
+                      portalContainers={{
+                        commentsSidebar: commentsSidebarHostElement,
+                        aiBulkActions: aiBulkActionsPortalContainer,
+                      }}
                       onAiDiffBodyContentHashChange={handleAiDiffBodyContentHashChange}
                     />
                   ) : null}
