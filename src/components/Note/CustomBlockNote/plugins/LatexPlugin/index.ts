@@ -31,7 +31,17 @@ export const mathBlockPlugin = {
     },
   },
   markdownImport: mathBlockMarkdownImport,
-  markdownExport: atomicAiDiffMarkdownExport,
+  markdownExport: {
+    ...atomicAiDiffMarkdownExport,
+    renderMarkdown(block) {
+      const props =
+        typeof block.props === 'object' && block.props !== null
+          ? (block.props as Record<string, unknown>)
+          : {};
+      const expression = typeof props.expression === 'string' ? props.expression.trim() : '';
+      return `$$\n${expression}\n$$`;
+    },
+  },
   aiDiff: mathBlockAiDiff,
 } satisfies NoteBlockPlugin;
 

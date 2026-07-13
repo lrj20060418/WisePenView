@@ -81,14 +81,14 @@ describe('importNoteMarkdown', () => {
       },
       {
         type: 'math',
-        props: { expression: 'a^2 + b^2' },
+        props: { expression: 'a^2 +\nb^2' },
       },
     ] as unknown as Parameters<typeof editor.replaceBlocks>[1];
     editor.replaceBlocks(editor.document, sourceBlocks);
 
     const markdown = exportNoteMarkdown(editor, notePluginRegistry);
     expect(markdown).toContain('$x + y$');
-    expect(markdown).toContain('$$ a^2 + b^2 $$');
+    expect(markdown).toContain('$$\na^2 +\nb^2\n$$');
 
     const imported = importNoteMarkdown(editor, notePluginRegistry, markdown);
     const paragraph = imported.find((block) => block.type === 'paragraph');
@@ -104,6 +104,6 @@ describe('importNoteMarkdown', () => {
         aiDiffReplace: '',
       },
     });
-    expect(propsOf(math?.props).expression).toBe('a^2 + b^2');
+    expect(propsOf(math?.props).expression).toBe('a^2 +\nb^2');
   });
 });

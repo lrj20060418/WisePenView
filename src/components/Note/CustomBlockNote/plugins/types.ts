@@ -50,6 +50,8 @@ export interface NoteMarkdownExportProjection {
     node: Record<string, unknown>,
     context: NoteMarkdownExportContext
   ) => Record<string, unknown> | null;
+  /** 仅用于 BlockNote 默认 serializer 无法保真的叶子 block。 */
+  renderMarkdown?: (node: Record<string, unknown>, context: NoteMarkdownExportContext) => string;
 }
 
 export interface NoteAiDiffGeneratedBlockInput {

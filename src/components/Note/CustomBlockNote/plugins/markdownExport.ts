@@ -102,7 +102,29 @@ export function exportNoteMarkdown<
   aiDiffDisplayMode: AiDiffDisplayMode = AI_DIFF_DISPLAY_MODE.OLD_ONLY
 ): string {
   const projected = projectNoteBlocksForMarkdown(blocks, registry, aiDiffDisplayMode);
-  return editor.blocksToMarkdownLossy(projected as typeof editor.document);
+  const sections: string[] = [];
+  let defaultBlocks: unknown[] = [];
+
+  const flushDefaultBlocks = () => {
+    if (defaultBlocks.length === 0) return;
+    sections.push(editor.blocksToMarkdownLossy(defaultBlocks as typeof editor.document).trim());
+    defaultBlocks = [];
+  };
+
+  for (const block of projected) {
+    if (!isRecord(block)) continue;
+    const type = typeof block.type === 'string' ? block.type : '';
+    const renderer = registry.blockPlugins.get(type)?.markdownExport?.renderMarkdown;
+    const hasChildren = Array.isArray(block.children) && block.children.length > 0;
+    if (!renderer || hasChildren) {
+      defaultBlocks.push(block);
+      continue;
+    }
+    flushDefaultBlocks();
+    sections.push(renderer(block, { aiDiffDisplayMode }).trim());
+  }
+  flushDefaultBlocks();
+  return sections.filter(Boolean).join('\n\n');
 }
 
 export function exportNoteFullHtml<
