@@ -17,10 +17,10 @@ export const mathBlockPlugin = {
     markdownImport: { support: 'custom' },
     markdownExport: { support: 'custom' },
     aiDiff: { support: 'custom' },
-    comments: { support: 'custom' },
     projection: { support: 'custom' },
     print: { support: 'custom' },
   },
+  comments: { documentThreads: 'dedicated', hideFormattingToolbar: true },
   print: {
     styles: [
       `.note-print-body .bn-block-content[data-content-type='math'] {
@@ -72,7 +72,6 @@ export const inlineMathPlugin = {
     markdownImport: { support: 'custom' },
     markdownExport: { support: 'custom' },
     aiDiff: { support: 'custom' },
-    comments: { support: 'custom' },
     projection: { support: 'custom' },
     print: { support: 'default' },
   },
@@ -89,7 +88,7 @@ export const inlineMathPlugin = {
   markdownImport: inlineMathMarkdownImport,
   markdownExport: atomicAiDiffMarkdownExport,
   aiDiff: atomicInlineAiDiff,
-  comments: { canCreateDocumentThread: true },
+  comments: { documentThreads: 'dedicated', hideFormattingToolbar: true },
 } satisfies NoteInlinePlugin;
 
 export const latexPlugin = {

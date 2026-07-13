@@ -15,7 +15,6 @@ const defaultCapabilities: NoteContentCapabilityDeclarations = {
   markdownImport: { support: 'default' },
   markdownExport: { support: 'default' },
   aiDiff: { support: 'unsupported', reason: '测试内容不支持' },
-  comments: { support: 'unsupported', reason: '测试内容不支持' },
   projection: { support: 'default' },
   print: { support: 'default' },
 };
@@ -28,6 +27,7 @@ function blockPlugin(id: string, type: string, dependencies?: readonly string[])
     dependencies,
     spec: defaultBlockSpecs.paragraph,
     capabilities: defaultCapabilities,
+    comments: { documentThreads: 'unsupported' },
   };
 }
 
@@ -39,7 +39,7 @@ function inlinePlugin(id: string, type: string): NoteInlinePlugin {
     spec: defaultInlineContentSpecs.text,
     capabilities: defaultCapabilities,
     aiDiff: { isPresent: () => false, isVisible: () => true, apply: () => undefined },
-    comments: { canCreateDocumentThread: true },
+    comments: { documentThreads: 'range' },
   };
 }
 
@@ -76,6 +76,15 @@ describe('createNotePluginRegistry', () => {
         bundle([blockPlugin('first', 'same'), blockPlugin('second', 'same')])
       )
     ).toThrow('Note block type same 存在多个 owner：first、second');
+  });
+
+  it('拒绝缺失 comments policy 的内容 owner', () => {
+    const missing = blockPlugin('missing-comments', 'missingComments');
+    delete (missing as Partial<NoteBlockPlugin>).comments;
+
+    expect(() => createNotePluginRegistry(bundle([missing]))).toThrow(
+      'Note 插件 missing-comments 未声明 comments policy'
+    );
   });
 
   it('拒绝缺失依赖和依赖环', () => {

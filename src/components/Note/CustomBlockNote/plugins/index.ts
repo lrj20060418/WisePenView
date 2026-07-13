@@ -24,6 +24,7 @@ export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
   aiDiffRuntimeExtension,
 ]);
 
+export { isCommentableSelection, shouldHideNoteFormattingToolbar } from './commentsPolicy';
 export { exportNoteFullHtml, exportNoteMarkdown } from './markdownExport';
 export { importNoteMarkdown } from './markdownImport';
 export { hasAiDiffContentFromEditor } from './presence';

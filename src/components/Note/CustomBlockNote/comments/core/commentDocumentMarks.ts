@@ -10,7 +10,9 @@ import {
 import * as Y from 'yjs';
 
 import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
+import { isDocumentThreadRangeAllowed } from '../../plugins/commentsPolicy';
 import { getRootDomSelection } from '../../plugins/editorProseMirrorRoot';
+import type { NotePluginRegistry } from '../../plugins/types';
 import {
   getBlockNoteThreadsYMap,
   isThreadActive,
@@ -213,6 +215,7 @@ export function orphanCommentMarksForThreadIds(
 
 export function applyCommentMarkToRange(
   editor: CustomBlockNoteEditor,
+  registry: NotePluginRegistry,
   threadId: string,
   from: number,
   to: number
@@ -222,21 +225,17 @@ export function applyCommentMarkToRange(
     return false;
   }
 
+  const rangeText = editor.prosemirrorView.state.doc.textBetween(from, to, '');
+  if (!rangeText || !isDocumentThreadRangeAllowed(editor, registry, from, to)) {
+    return false;
+  }
+
   if (commentMarkCoversThread(editor, threadId, from, to)) {
     return true;
   }
 
-  const rangeText = editor.prosemirrorView.state.doc.textBetween(from, to, '');
-  if (!rangeText) {
-    return false;
-  }
-
   editor.transact((tr) => {
     tr.setMeta(WISEPEN_COMMENT_MARK_SYNC_META, true);
-    const selectedNode = tr.doc.nodeAt(from);
-    if (selectedNode?.type.name === 'math' && to <= from + selectedNode.nodeSize) {
-      return;
-    }
     // 先清掉同 thread 的 orphan mark，再挂回可见高亮
     tr.doc.nodesBetween(from, to, (node, pos) => {
       if (!node.isText) {
@@ -287,6 +286,7 @@ export function pruneThreadDocumentSelections(
 
 export function syncPlainTextCommentDocumentMarks(
   editor: CustomBlockNoteEditor,
+  registry: NotePluginRegistry,
   doc: Y.Doc,
   formulaAnchorsYMap: Y.Map<FormulaThreadAnchor>,
   visibilityContext?: ThreadVisibilityContext
@@ -322,7 +322,7 @@ export function syncPlainTextCommentDocumentMarks(
       return;
     }
 
-    applyCommentMarkToRange(editor, id, range.from, range.to);
+    applyCommentMarkToRange(editor, registry, id, range.from, range.to);
   });
 }
 

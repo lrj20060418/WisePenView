@@ -38,7 +38,6 @@ import {
   commentStyles,
   getBlockNoteCommentUsersYMap,
   getBlockNoteThreadsYMap,
-  isCommentableSelection,
   LatexCommentProvider,
   NoteCommentsUi,
   resolveActiveCommentUserProfile,
@@ -68,6 +67,7 @@ import {
   exportNoteMarkdown,
   hasAiDiffContentFromEditor,
   importNoteMarkdown,
+  isCommentableSelection,
   notePluginRegistry,
 } from './plugins';
 import { syncAiDiffBlockFoldDisplayMode } from './plugins/AIDiffPlugin';
@@ -234,6 +234,7 @@ function CustomBlockNote({
       extensions.push(
         // eslint-disable-next-line react-hooks/refs -- 扩展初始化早于 editor 创建，以下 ref 只在扩展运行期回调读取。
         buildCommentsExtension({
+          registry: notePluginRegistry,
           resourceId,
           activeCommentUserId,
           getActiveCommentUserId: () => activeCommentUserIdLatest.current,
@@ -521,6 +522,7 @@ function CustomBlockNote({
 
   useSyncCommentDocumentMarks({
     editor,
+    registry: notePluginRegistry,
     doc,
     provider,
     commentsEnabled,

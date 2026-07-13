@@ -4,6 +4,8 @@ import type * as Y from 'yjs';
 import type { Doc } from 'yjs';
 
 import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
+import { isDocumentThreadRangeAllowed } from '../../plugins/commentsPolicy';
+import type { NotePluginRegistry } from '../../plugins/types';
 import type { BlockNoteCommentDocumentRole } from '../comments.types';
 import { bindDynamicCommentUserId } from '../core/bindDynamicCommentUserId';
 import {
@@ -34,6 +36,7 @@ type AddThreadToDocumentArgs = {
 
 function addCommentMarkToDocumentSelection(
   editor: CustomBlockNoteEditor,
+  registry: NotePluginRegistry,
   { threadId, selection }: AddThreadToDocumentArgs
 ): { from: number; to: number } | null {
   const anchor = selection?.prosemirror?.anchor;
@@ -53,8 +56,7 @@ function addCommentMarkToDocumentSelection(
     return null;
   }
 
-  const selectedNode = editor.prosemirrorView.state.doc.nodeAt(from);
-  if (selectedNode?.type.name === 'math' && to <= from + selectedNode.nodeSize) {
+  if (!isDocumentThreadRangeAllowed(editor, registry, from, to)) {
     return null;
   }
 
@@ -67,6 +69,7 @@ function addCommentMarkToDocumentSelection(
 }
 
 type BuildCommentsExtensionOptions = {
+  registry: NotePluginRegistry;
   resourceId: string;
   activeCommentUserId: string;
   getActiveCommentUserId: () => string;
@@ -204,6 +207,7 @@ export function buildCommentsExtension(
 ): ExtensionFactoryInstance {
   const {
     activeCommentUserId,
+    registry,
     resourceId,
     getActiveCommentUserId,
     commentsAuthorizable,
@@ -280,7 +284,7 @@ export function buildCommentsExtension(
       onThreadDocumentMarked?.(args.threadId);
       return;
     }
-    const appliedRange = addCommentMarkToDocumentSelection(editor, {
+    const appliedRange = addCommentMarkToDocumentSelection(editor, registry, {
       threadId: args.threadId,
       selection: resolvedSelection,
     });

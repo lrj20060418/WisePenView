@@ -16,7 +16,6 @@ const unsupportedCapabilities: NoteContentCapabilityDeclarations = {
   markdownImport: { support: 'unsupported', reason: '测试内容不支持' },
   markdownExport: { support: 'unsupported', reason: '测试内容不支持' },
   aiDiff: { support: 'unsupported', reason: '测试内容不支持' },
-  comments: { support: 'unsupported', reason: '测试内容不支持' },
   projection: { support: 'unsupported', reason: '测试内容不支持' },
   print: { support: 'unsupported', reason: '测试内容不支持' },
 };
@@ -84,6 +83,7 @@ describe('Note AI Diff presence', () => {
       type: 'paragraph',
       spec: defaultBlockSpecs.paragraph,
       capabilities: unsupportedCapabilities,
+      comments: { documentThreads: 'unsupported' },
     } satisfies NoteBlockPlugin;
     const customInlineOwner = {
       kind: 'inline',
@@ -99,7 +99,7 @@ describe('Note AI Diff presence', () => {
         isVisible: () => true,
         apply: () => undefined,
       },
-      comments: { canCreateDocumentThread: false },
+      comments: { documentThreads: 'unsupported' },
     } satisfies NoteInlinePlugin;
     const root = {
       kind: 'bundle',
@@ -126,14 +126,12 @@ describe('Note AI Diff presence', () => {
       expect(owner.comments).toBeDefined();
     }
 
-    expect(notePluginRegistry.inlinePlugins.get('text')?.comments.canCreateDocumentThread).toBe(
-      true
+    expect(notePluginRegistry.inlinePlugins.get('text')?.comments.documentThreads).toBe('range');
+    expect(notePluginRegistry.inlinePlugins.get('inlineMath')?.comments.documentThreads).toBe(
+      'dedicated'
     );
-    expect(
-      notePluginRegistry.inlinePlugins.get('inlineMath')?.comments.canCreateDocumentThread
-    ).toBe(true);
-    expect(notePluginRegistry.inlinePlugins.get('ai-diff')?.comments.canCreateDocumentThread).toBe(
-      false
+    expect(notePluginRegistry.inlinePlugins.get('ai-diff')?.comments.documentThreads).toBe(
+      'unsupported'
     );
   });
 

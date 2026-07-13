@@ -87,6 +87,9 @@ export function createNotePluginRegistry(
   let aiDiffText: NotePluginRegistry['aiDiffText'];
 
   for (const plugin of sortedContentPlugins) {
+    if (!plugin.comments) {
+      throw new Error(`Note 插件 ${plugin.id} 未声明 comments policy`);
+    }
     const executableCapabilities = [
       ['Markdown 导入', plugin.capabilities.markdownImport, plugin.markdownImport],
       ['Markdown 导出', plugin.capabilities.markdownExport, plugin.markdownExport],

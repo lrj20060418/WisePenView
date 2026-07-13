@@ -28,7 +28,6 @@ export interface NoteContentCapabilityDeclarations {
   markdownImport: NoteCapabilityDeclaration;
   markdownExport: NoteCapabilityDeclaration;
   aiDiff: NoteCapabilityDeclaration;
-  comments: NoteCapabilityDeclaration;
   projection: NoteCapabilityDeclaration;
   print: NoteCapabilityDeclaration;
 }
@@ -101,8 +100,9 @@ export interface NoteInlineAiDiff {
   generatedText?: NoteAiDiffTextAdapter;
 }
 
-export interface NoteInlineComments {
-  canCreateDocumentThread: boolean;
+export interface NoteContentComments {
+  documentThreads: 'range' | 'dedicated' | 'unsupported';
+  hideFormattingToolbar?: boolean;
 }
 
 export interface NotePrintContribution {
@@ -193,6 +193,7 @@ interface NotePluginNodeBase {
 interface NoteContentPluginBase extends NotePluginNodeBase {
   type: string;
   capabilities: NoteContentCapabilityDeclarations;
+  comments: NoteContentComments;
   print?: NotePrintContribution;
   extensions?: (context: NotePluginRuntimeContext) => ExtensionFactoryInstance[];
   editorProps?: () => Partial<EditorProps>;
@@ -216,7 +217,6 @@ export interface NoteInlinePlugin extends NoteContentPluginBase {
   markdownImport?: NoteMarkdownInlineImport;
   markdownExport?: NoteMarkdownExportProjection;
   aiDiff: NoteInlineAiDiff;
-  comments: NoteInlineComments;
 }
 
 export interface NotePluginBundle extends NotePluginNodeBase {

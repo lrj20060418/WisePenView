@@ -7,8 +7,6 @@ export {
   getBlockNoteThreadsYMap,
 } from './core/commentThreadConstants';
 
-export { isCommentableSelection } from './core/isCommentableSelection';
-
 export {
   resolveActiveCommentUserProfile,
   resolveBlockNoteCommentUsers,

@@ -418,7 +418,6 @@ function createAiDiffInlinePlugin(params: {
       markdownImport: { support: 'unsupported', reason: 'AI Diff 语法节点不从 Markdown 导入' },
       markdownExport: { support: 'custom' },
       aiDiff: { support: 'custom' },
-      comments: { support: 'unsupported', reason: 'AI Diff 内容不可创建批注' },
       projection: { support: 'custom' },
       print: { support: 'custom' },
     },
@@ -446,7 +445,7 @@ function createAiDiffInlinePlugin(params: {
     },
     markdownExport: createAiDiffSyntaxMarkdownExport(params.type),
     aiDiff: createSyntaxInlineAiDiff(params.type),
-    comments: { canCreateDocumentThread: false },
+    comments: { documentThreads: 'unsupported' },
   };
 }
 

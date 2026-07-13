@@ -59,10 +59,10 @@ export const tablePlugin = {
     markdownImport: { support: 'default' },
     markdownExport: { support: 'default' },
     aiDiff: { support: 'unsupported', reason: '结构化表格当前不承担 AI Diff 语义' },
-    comments: { support: 'unsupported', reason: '表格批注 selection 尚未建模' },
     projection: { support: 'default' },
     print: { support: 'custom' },
   },
+  comments: { documentThreads: 'unsupported' },
   print: {
     styles: [
       `.note-print-body .bn-block-content[data-content-type='table'],

@@ -1,6 +1,9 @@
 import { blockNoteSchema } from '@/components/Note/CustomBlockNote/blockNoteSchema';
-import { shouldHideFormattingToolbarForMathBlock } from '@/components/Note/CustomBlockNote/comments/core/isCommentableSelection';
 import { useNoteEditorReadOnlyContext } from '@/components/Note/CustomBlockNote/editorReadOnly';
+import {
+  notePluginRegistry,
+  shouldHideNoteFormattingToolbar,
+} from '@/components/Note/CustomBlockNote/plugins';
 import {
   blockMatchesBlockTypeItem,
   getAvailableBlockTypeItems,
@@ -144,7 +147,11 @@ function TextSelectionFormattingToolbar({
   const editor = useBlockNoteEditor();
   const toolbarState = useFloatingToolbarState(editor);
 
-  if (hidden || !toolbarState.visible || shouldHideFormattingToolbarForMathBlock(editor)) {
+  if (
+    hidden ||
+    !toolbarState.visible ||
+    shouldHideNoteFormattingToolbar(editor, notePluginRegistry)
+  ) {
     return null;
   }
 

@@ -128,10 +128,10 @@ export const codeBlockPlugin = {
     markdownImport: { support: 'default' },
     markdownExport: { support: 'default' },
     aiDiff: { support: 'unsupported', reason: '当前 AI Diff 映射明确排除代码块' },
-    comments: { support: 'inherited', profile: 'textSelection' },
     projection: { support: 'inherited', profile: 'inlineContent' },
     print: { support: 'custom' },
   },
+  comments: { documentThreads: 'range' },
   print: {
     styles: [
       `.note-print-body .bn-block-content[data-content-type='codeBlock'] {

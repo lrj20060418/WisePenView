@@ -4,6 +4,7 @@ import type { Doc } from 'yjs';
 
 import type { WisepenProvider } from '@/domains/Note';
 import type { CustomBlockNoteEditor } from '../../blockNoteSchema';
+import type { NotePluginRegistry } from '../../plugins/types';
 import {
   getBlockNoteThreadDocumentSelectionsYMap,
   hasCommentDocumentYjsBinding,
@@ -19,6 +20,7 @@ import type { ThreadVisibilityContext } from '../core/threadVisibility';
 
 type UseSyncCommentDocumentMarksOptions = {
   editor: CustomBlockNoteEditor;
+  registry: NotePluginRegistry;
   doc: Doc;
   provider: WisepenProvider;
   commentsEnabled: boolean;
@@ -33,6 +35,7 @@ const BINDING_RETRY_LIMIT = 20;
 
 export function useSyncCommentDocumentMarks({
   editor,
+  registry,
   doc,
   provider,
   commentsEnabled,
@@ -83,7 +86,7 @@ export function useSyncCommentDocumentMarks({
 
     cancelBindingRetry();
     const visibilityContext = buildVisibilityContext();
-    syncPlainTextCommentDocumentMarks(editor, doc, formulaAnchorsYMap, visibilityContext);
+    syncPlainTextCommentDocumentMarks(editor, registry, doc, formulaAnchorsYMap, visibilityContext);
     onAfterDocumentMarksSync?.();
   };
 
@@ -189,6 +192,7 @@ export function useSyncCommentDocumentMarks({
     editor,
     isCommentVisibilityPrivileged,
     provider,
+    registry,
   ]);
 
   useUpdateEffect(() => {

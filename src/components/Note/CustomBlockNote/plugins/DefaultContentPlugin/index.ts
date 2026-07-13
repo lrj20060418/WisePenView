@@ -16,6 +16,7 @@ import type {
   NoteBlockPlugin,
   NoteCapabilityDeclaration,
   NoteContentCapabilityDeclarations,
+  NoteContentComments,
   NoteInlinePlugin,
   NotePluginBundle,
   NotePrintContribution,
@@ -26,17 +27,11 @@ const UNSUPPORTED_AI_DIFF: NoteCapabilityDeclaration = {
   support: 'unsupported',
   reason: '当前内容类型不承担 AI Diff 语义',
 };
-const UNSUPPORTED_COMMENTS: NoteCapabilityDeclaration = {
-  support: 'unsupported',
-  reason: '当前内容类型没有可批注文本范围',
-};
-
 function richTextCapabilities(): NoteContentCapabilityDeclarations {
   return {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff: { support: 'inherited', profile: 'richTextBlock' },
-    comments: { support: 'inherited', profile: 'textSelection' },
     projection: { support: 'inherited', profile: 'inlineContent' },
     print: DEFAULT_CAPABILITY,
   };
@@ -49,7 +44,6 @@ function atomicCapabilities(
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff,
-    comments: UNSUPPORTED_COMMENTS,
     projection: DEFAULT_CAPABILITY,
     print: DEFAULT_CAPABILITY,
   };
@@ -61,6 +55,7 @@ function createDefaultBlockPlugin(
   options: {
     outline?: boolean;
     aiDiff?: NoteBlockPlugin['aiDiff'];
+    comments?: NoteContentComments;
     print?: NotePrintContribution;
     sideMenu?: NoteBlockPlugin['sideMenu'];
   } = {}
@@ -78,6 +73,7 @@ function createDefaultBlockPlugin(
     ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
     ...(options.print ? { print: options.print } : {}),
     ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
+    comments: options.comments ?? { documentThreads: 'unsupported' },
     projection: {
       plainText: (block, registry) => projectInlinePlainText(block.content, registry),
       ...(options.outline
@@ -107,7 +103,6 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       markdownImport: DEFAULT_CAPABILITY,
       markdownExport: DEFAULT_CAPABILITY,
       aiDiff: { support: 'inherited', profile: type === 'text' ? 'textDiff' : 'linkDiff' },
-      comments: { support: 'inherited', profile: 'textSelection' },
       projection: { support: 'inherited', profile: type === 'text' ? 'text' : 'link' },
       print: DEFAULT_CAPABILITY,
     },
@@ -120,7 +115,7 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       },
     },
     aiDiff: type === 'text' ? plainTextInlineAiDiff : plainLinkInlineAiDiff,
-    comments: { canCreateDocumentThread: true },
+    comments: { documentThreads: 'range' },
   } satisfies NoteInlinePlugin;
 }
 
@@ -200,6 +195,7 @@ export const defaultContentPlugin = {
         {
           outline: type === 'heading',
           aiDiff: type === 'toggleListItem' ? toggleListItemAiDiff : richTextBlockAiDiff,
+          comments: { documentThreads: 'range' },
           ...(type === 'heading' ? { print: headingPrint } : {}),
           ...(type === 'quote' ? { print: quotePrint } : {}),
           ...(type === 'heading'
