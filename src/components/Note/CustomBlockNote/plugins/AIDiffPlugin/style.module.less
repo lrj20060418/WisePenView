@@ -172,3 +172,23 @@
     color: var(--foreground);
   }
 }
+
+.aiBulkActions {
+  position: absolute;
+  right: var(--space-lg);
+  bottom: var(--space-lg);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--overlay) 88%, var(--surface-secondary));
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.aiBulkActionBtn {
+  pointer-events: auto;
+}

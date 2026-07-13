@@ -26,7 +26,6 @@ import {
   type CSSProperties,
   type Ref,
 } from 'react';
-import { createPortal } from 'react-dom';
 import NoteSideMenu from '../NoteSideMenu';
 import NoteSlashMenu from '../NoteSlashMenu';
 import NoteTableHandles from '../NoteTableHandles';
@@ -71,11 +70,10 @@ import {
   notePluginRegistry,
 } from './plugins';
 import { syncAiDiffBlockFoldDisplayMode } from './plugins/AIDiffPlugin';
+import { AiDiffBulkActions } from './plugins/AIDiffPlugin/BulkActions';
 import { AiDiffDisplayModeProvider } from './plugins/AIDiffPlugin/displayModeContext';
-import aiDiffStyles from './plugins/AIDiffPlugin/style.module.less';
 import { useAiDiffNormalization } from './plugins/AIDiffPlugin/useAiDiffNormalization';
 import { printNotePdfViaBrowser, waitForEditorPaint } from './plugins/noteBrowserPrint';
-import type { NoteAiDiffAction } from './plugins/types';
 import styles from './style.module.less';
 
 type CreateBlockNoteOptions = NonNullable<Parameters<typeof useCreateBlockNote>[0]>;
@@ -90,10 +88,6 @@ type YCursorExtensionHandle = {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
-}
-
-function blockHasNestedChildren(block: { children?: readonly unknown[] }): boolean {
-  return Array.isArray(block.children) && block.children.length > 0;
 }
 
 function buildSelectedNoteScope(editor: CustomBlockNoteEditor): SelectedNoteScope | null {
@@ -667,76 +661,6 @@ function CustomBlockNote({
     });
   };
 
-  const applyAllAiDiffActions = useCallback(
-    (mode: NoteAiDiffAction) => {
-      if (readOnly) {
-        return;
-      }
-
-      const blocks: Parameters<Parameters<typeof editor.forEachBlock>[0]>[0][] = [];
-      editor.forEachBlock((block) => {
-        blocks.push(block);
-        return true;
-      });
-
-      const updates: Array<{
-        block: (typeof blocks)[number];
-        update: Parameters<typeof editor.updateBlock>[1];
-      }> = [];
-      const blocksToRemove: Parameters<typeof editor.removeBlocks>[0] = [];
-
-      for (const block of blocks) {
-        const owner = notePluginRegistry.blockPlugins.get(block.type);
-        const action = owner?.aiDiff?.applyAll(
-          block as unknown as Record<string, unknown>,
-          mode,
-          notePluginRegistry
-        );
-        if (!action || action.kind === 'none') continue;
-
-        if (action.kind === 'remove') {
-          blocksToRemove.push(block);
-          continue;
-        }
-
-        if (action.removeWhenChildless && !blockHasNestedChildren(block)) {
-          blocksToRemove.push(block);
-          continue;
-        }
-
-        updates.push({
-          block,
-          update: {
-            ...('content' in action ? { content: action.content } : {}),
-            ...('props' in action ? { props: action.props } : {}),
-          } as Parameters<typeof editor.updateBlock>[1],
-        });
-      }
-
-      for (const item of updates) {
-        try {
-          editor.updateBlock(item.block, item.update);
-        } catch {
-          void 0;
-        }
-      }
-
-      for (let i = blocksToRemove.length - 1; i >= 0; i -= 1) {
-        try {
-          const block = blocksToRemove[i];
-          if (block) {
-            editor.removeBlocks([block]);
-          }
-        } catch {
-          void 0;
-        }
-      }
-
-      editor.focus();
-      syncAiDiffPresence();
-    },
-    [editor, readOnly, syncAiDiffPresence]
-  );
   const showAiBulkActions =
     hasAiDiffContent && !readOnly && aiDiffDisplayMode === AI_DIFF_DISPLAY_MODE.COMPARE;
 
@@ -745,43 +669,6 @@ function CustomBlockNote({
   const editorShellStyle = hasInlineCommentsSidebar
     ? ({ ['--comments-sidebar-width' as string]: `${commentsSidebarWidth}px` } as CSSProperties)
     : undefined;
-  const aiBulkActionsNode = showAiBulkActions ? (
-    <div className={styles.aiBulkActions} contentEditable={false}>
-      <button
-        type="button"
-        aria-label="Keep all AI changes"
-        className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionAccept} ${styles.aiBulkActionBtn}`}
-        onMouseDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          applyAllAiDiffActions('accept');
-        }}
-      >
-        Keep all
-      </button>
-      <button
-        type="button"
-        aria-label="Undo all AI changes"
-        className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionDiscard} ${styles.aiBulkActionBtn}`}
-        onMouseDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          applyAllAiDiffActions('discard');
-        }}
-      >
-        Undo all
-      </button>
-    </div>
-  ) : null;
-
   return (
     <div
       className={clsx(
@@ -792,9 +679,13 @@ function CustomBlockNote({
       style={editorShellStyle}
       onKeyDownCapture={onKeyDownCapture}
     >
-      {aiBulkActionsPortalContainer && aiBulkActionsNode
-        ? createPortal(aiBulkActionsNode, aiBulkActionsPortalContainer)
-        : aiBulkActionsNode}
+      <AiDiffBulkActions
+        editor={editor}
+        registry={notePluginRegistry}
+        visible={showAiBulkActions}
+        portalContainer={aiBulkActionsPortalContainer}
+        onApplied={syncAiDiffPresence}
+      />
       <NoteEditorReadOnlyProvider value={readOnly}>
         <AiDiffDisplayModeProvider value={effectiveAiDiffDisplayMode}>
           <LatexCommentProvider {...latexCommentProviderProps}>
