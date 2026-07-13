@@ -6,6 +6,7 @@ import {
   type InlineContentSpec,
 } from '@blocknote/core';
 
+import { projectInlinePlainText } from '../projection';
 import type {
   NoteBlockPlugin,
   NoteCapabilityDeclaration,
@@ -46,7 +47,11 @@ function atomicCapabilities(): NoteContentCapabilityDeclarations {
   };
 }
 
-function createDefaultBlockPlugin(type: string, capabilities: NoteContentCapabilityDeclarations) {
+function createDefaultBlockPlugin(
+  type: string,
+  capabilities: NoteContentCapabilityDeclarations,
+  outline = false
+) {
   const spec = (defaultBlockSpecs as BlockSpecs)[type];
   if (!spec) {
     throw new Error(`BlockNote 默认 block spec 不存在：${type}`);
@@ -57,6 +62,21 @@ function createDefaultBlockPlugin(type: string, capabilities: NoteContentCapabil
     type,
     spec,
     capabilities,
+    projection: {
+      plainText: (block, registry) => projectInlinePlainText(block.content, registry),
+      ...(outline
+        ? {
+            outlineLevel: (block: Record<string, unknown>) => {
+              const props =
+                typeof block.props === 'object' && block.props !== null
+                  ? (block.props as Record<string, unknown>)
+                  : {};
+              const level = Number(props.level ?? 1);
+              return Number.isFinite(level) && level > 0 ? level : 1;
+            },
+          }
+        : {}),
+    },
   } satisfies NoteBlockPlugin;
 }
 
@@ -74,6 +94,14 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       comments: { support: 'inherited', profile: 'textSelection' },
       projection: { support: 'inherited', profile: type === 'text' ? 'text' : 'link' },
       print: DEFAULT_CAPABILITY,
+    },
+    projection: {
+      plainText: (inline, registry) => {
+        if (type === 'text') {
+          return typeof inline.text === 'string' ? inline.text : '';
+        }
+        return projectInlinePlainText(inline.content, registry);
+      },
     },
   } satisfies NoteInlinePlugin;
 }
@@ -96,7 +124,9 @@ export const defaultContentPlugin = {
   children: [
     createDefaultInlinePlugin('text'),
     createDefaultInlinePlugin('link'),
-    ...richTextBlockTypes.map((type) => createDefaultBlockPlugin(type, richTextCapabilities())),
+    ...richTextBlockTypes.map((type) =>
+      createDefaultBlockPlugin(type, richTextCapabilities(), type === 'heading')
+    ),
     ...atomicBlockTypes.map((type) => createDefaultBlockPlugin(type, atomicCapabilities())),
   ],
 } satisfies NotePluginBundle;

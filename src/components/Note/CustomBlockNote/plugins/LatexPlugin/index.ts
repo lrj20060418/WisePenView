@@ -18,6 +18,15 @@ export const mathBlockPlugin = {
     print: { support: 'custom' },
   },
   slashMenu: ({ editor }) => [createMathSlashMenuItem(editor)],
+  projection: {
+    plainText: (block) => {
+      const props =
+        typeof block.props === 'object' && block.props !== null
+          ? (block.props as Record<string, unknown>)
+          : {};
+      return typeof props.expression === 'string' ? props.expression : '';
+    },
+  },
 } satisfies NoteBlockPlugin;
 
 export const inlineMathPlugin = {
@@ -34,6 +43,15 @@ export const inlineMathPlugin = {
     print: { support: 'custom' },
   },
   extensions: () => [inlineMathDollarExtension()],
+  projection: {
+    plainText: (inline) => {
+      const props =
+        typeof inline.props === 'object' && inline.props !== null
+          ? (inline.props as Record<string, unknown>)
+          : {};
+      return typeof props.expression === 'string' ? props.expression : '';
+    },
+  },
 } satisfies NoteInlinePlugin;
 
 export const latexPlugin = {

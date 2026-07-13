@@ -408,6 +408,7 @@ function createAiDiffInlinePlugin(params: {
   id: string;
   type: string;
   spec: NoteInlinePlugin['spec'];
+  plainText: (props: Record<string, unknown>) => string;
 }): NoteInlinePlugin {
   return {
     kind: 'inline',
@@ -422,6 +423,15 @@ function createAiDiffInlinePlugin(params: {
       projection: { support: 'custom' },
       print: { support: 'custom' },
     },
+    projection: {
+      plainText: (inline) => {
+        const props =
+          typeof inline.props === 'object' && inline.props !== null
+            ? (inline.props as Record<string, unknown>)
+            : {};
+        return params.plainText(props);
+      },
+    },
   };
 }
 
@@ -433,26 +443,36 @@ export const aiDiffPlugin = {
       id: 'ai-diff.inline.diff',
       type: 'ai-diff',
       spec: aiDiffInlineContentSpec,
+      plainText: (props) =>
+        typeof props.replace === 'string'
+          ? props.replace
+          : typeof props.origin === 'string'
+            ? props.origin
+            : '',
     }),
     createAiDiffInlinePlugin({
       id: 'ai-diff.inline.add',
       type: 'ai-add',
       spec: aiAddInlineContentSpec,
+      plainText: (props) => (typeof props.text === 'string' ? props.text : ''),
     }),
     createAiDiffInlinePlugin({
       id: 'ai-diff.inline.delete',
       type: 'ai-delete',
       spec: aiDeleteInlineContentSpec,
+      plainText: (props) => (typeof props.text === 'string' ? props.text : ''),
     }),
     createAiDiffInlinePlugin({
       id: 'ai-diff.inline.link-add',
       type: 'ai-link-add',
       spec: aiLinkAddInlineContentSpec,
+      plainText: (props) => (typeof props.text === 'string' ? props.text : ''),
     }),
     createAiDiffInlinePlugin({
       id: 'ai-diff.inline.link-delete',
       type: 'ai-link-delete',
       spec: aiLinkDeleteInlineContentSpec,
+      plainText: (props) => (typeof props.text === 'string' ? props.text : ''),
     }),
   ],
 } satisfies NotePluginBundle;

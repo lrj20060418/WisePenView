@@ -30,6 +30,15 @@ export interface NoteContentCapabilityDeclarations {
   print: NoteCapabilityDeclaration;
 }
 
+export interface NoteBlockProjection {
+  plainText?: (block: Record<string, unknown>, registry: NotePluginRegistry) => string;
+  outlineLevel?: (block: Record<string, unknown>) => number | undefined;
+}
+
+export interface NoteInlineProjection {
+  plainText: (inline: Record<string, unknown>, registry: NotePluginRegistry) => string;
+}
+
 interface NotePluginNodeBase {
   id: string;
   dependencies?: readonly string[];
@@ -46,11 +55,13 @@ interface NoteContentPluginBase extends NotePluginNodeBase {
 export interface NoteBlockPlugin extends NoteContentPluginBase {
   kind: 'block';
   spec: BlockSpecs[string];
+  projection?: NoteBlockProjection;
 }
 
 export interface NoteInlinePlugin extends NoteContentPluginBase {
   kind: 'inline';
   spec: InlineContentSpec<InlineContentConfig>;
+  projection?: NoteInlineProjection;
 }
 
 export interface NotePluginBundle extends NotePluginNodeBase {

@@ -6,50 +6,16 @@ import type {
 } from '@blocknote/core';
 
 import type { NoteOutlineItem } from '@/components/Note/NoteOutline/index.type';
-
-type UnknownInlineContent = {
-  type?: unknown;
-  text?: unknown;
-  content?: unknown;
-};
+import { notePluginRegistry } from './plugins';
+import { projectBlockPlainText } from './plugins/projection';
 
 export type FlatBlockSnapshot = {
   id: string;
-  type: string;
+  outline: boolean;
 };
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null;
-}
-
-function toInlineText(v: unknown): string {
-  if (typeof v === 'string') {
-    return v;
-  }
-  if (!isRecord(v)) {
-    return '';
-  }
-  const node = v as UnknownInlineContent;
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return node.text;
-  }
-  // link / 自定义行内节点：其内容可能嵌套在 `content` 中
-  const child = node.content;
-  if (Array.isArray(child)) {
-    return child.map(toInlineText).join('');
-  }
-  return '';
-}
-
-function extractPlainTextFromInlineContent(content: unknown): string {
-  if (typeof content === 'string') {
-    return content.trim();
-  }
-  if (Array.isArray(content)) {
-    const text = content.map(toInlineText).join('');
-    return text.replace(/\s+/g, ' ').trim();
-  }
-  return '';
+function toBlockRecord(block: unknown): Record<string, unknown> {
+  return typeof block === 'object' && block !== null ? (block as Record<string, unknown>) : {};
 }
 
 export function buildOutlineItemsFromEditor<
@@ -59,17 +25,14 @@ export function buildOutlineItemsFromEditor<
 >(editor: BlockNoteEditor<BSchema, ISchema, SSchema>): NoteOutlineItem[] {
   const items: NoteOutlineItem[] = [];
   editor.forEachBlock((block) => {
-    if (block.type !== 'heading') {
-      return true;
-    }
-    const props = isRecord(block.props) ? block.props : undefined;
-    const rawLevel = props ? (props['level'] as unknown) : undefined;
-    const level = typeof rawLevel === 'number' ? rawLevel : Number(rawLevel ?? 1);
-    const text = extractPlainTextFromInlineContent(block.content);
+    const owner = notePluginRegistry.blockPlugins.get(block.type);
+    const level = owner?.projection?.outlineLevel?.(toBlockRecord(block));
+    if (level === undefined) return true;
+
     items.push({
       id: block.id,
-      level: Number.isFinite(level) && level > 0 ? level : 1,
-      text,
+      level,
+      text: projectBlockPlainText(block, notePluginRegistry).replace(/\s+/g, ' ').trim(),
     });
     return true;
   });
@@ -83,7 +46,8 @@ export function buildFlatBlocksFromEditor<
 >(editor: BlockNoteEditor<BSchema, ISchema, SSchema>): FlatBlockSnapshot[] {
   const flat: FlatBlockSnapshot[] = [];
   editor.forEachBlock((block) => {
-    flat.push({ id: block.id, type: block.type });
+    const owner = notePluginRegistry.blockPlugins.get(block.type);
+    flat.push({ id: block.id, outline: Boolean(owner?.projection?.outlineLevel) });
     return true;
   });
   return flat;
@@ -93,12 +57,10 @@ export function resolveActiveHeadingId(
   flat: FlatBlockSnapshot[],
   currentId: string
 ): string | undefined {
-  const idx = flat.findIndex((b) => b.id === currentId);
-  if (idx < 0) return undefined;
-  for (let i = idx; i >= 0; i -= 1) {
-    if (flat[i]?.type === 'heading') {
-      return flat[i]?.id;
-    }
+  const index = flat.findIndex((block) => block.id === currentId);
+  if (index < 0) return undefined;
+  for (let currentIndex = index; currentIndex >= 0; currentIndex -= 1) {
+    if (flat[currentIndex]?.outline) return flat[currentIndex]?.id;
   }
   return undefined;
 }

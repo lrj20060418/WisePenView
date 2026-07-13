@@ -165,7 +165,7 @@ function CustomBlockNoteEditor({
     (state) => state.currentSelectionByResourceId[resourceId]
   );
   const newNoteBodyOnChangeCleanupRef = useRef<(() => void) | null>(null);
-  const flatBlocksRef = useRef<{ id: string; type: string }[]>([]);
+  const flatBlocksRef = useRef<ReturnType<typeof buildFlatBlocksFromEditor>>([]);
   const [pmWriteGuardReady, setPmWriteGuardReady] = useState(false);
   const effectiveBlockLocalDocWrites = blockLocalDocWrites && pmWriteGuardReady;
   const shouldBlockLocalDocWrites = useMemoizedFn(() => blockLocalDocWrites && pmWriteGuardReady);
