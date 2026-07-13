@@ -41,7 +41,7 @@ import styles from './WorkspaceLayout.module.less';
 const WORKSPACE_LEFT_SIDEBAR_MIN_WIDTH = 240;
 const WORKSPACE_LEFT_SIDEBAR_MAX_WIDTH = 420;
 const WORKSPACE_MAIN_MIN_WIDTH = 360;
-const CHAT_PANEL_MIN_WIDTH = 320;
+const CHAT_PANEL_MIN_WIDTH = 480;
 const CHAT_PANEL_MAX_WIDTH = 1020;
 const RESIZE_TARGET_MINIMUM_SIZE = { fine: 16, coarse: 32 };
 
