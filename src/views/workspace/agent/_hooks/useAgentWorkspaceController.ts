@@ -8,20 +8,22 @@ export interface AgentDraft {
   spec: AgentSpec;
 }
 const snapshot = (draft: AgentDraft) => JSON.stringify(draft);
+const buildDraftFromAgent = (agent: AgentDetail): AgentDraft => ({
+  name: agent.name,
+  description: agent.description,
+  spec: structuredClone(agent.spec),
+});
 
 export function useAgentWorkspaceController() {
   const [draft, setDraftState] = useState<AgentDraft | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState('');
   const [savePhase, setSavePhase] = useState<AgentSavePhase>('clean');
-  const initialize = (agent: AgentDetail) => {
-    const next = {
-      name: agent.name,
-      description: agent.description,
-      spec: structuredClone(agent.spec),
-    };
+  const initialize = (agent: AgentDetail, options?: { savedDraft?: AgentDraft }) => {
+    const next = buildDraftFromAgent(agent);
+    const saved = options?.savedDraft ?? next;
     setDraftState(next);
-    setSavedSnapshot(snapshot(next));
-    setSavePhase('clean');
+    setSavedSnapshot(snapshot(saved));
+    setSavePhase(snapshot(next) === snapshot(saved) ? 'clean' : 'dirty');
   };
   const setDraft = (updater: (current: AgentDraft) => AgentDraft) =>
     setDraftState((current) => {

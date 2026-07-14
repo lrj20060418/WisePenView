@@ -158,7 +158,13 @@ function ChatPanel({
 
   const resolveSessionAgentParams = (opts?: SendOptions): CreateSessionRequest | undefined => {
     const selectedAgent = opts?.selectedAgent;
-    if (!selectedAgent?.resourceId) return undefined;
+    if (!selectedAgent) return undefined;
+    if (!selectedAgent.resourceId) {
+      if (selectedAgent.isDefault || selectedAgent.source === 'DEFAULT') {
+        return { agentId: null, agentVersion: null };
+      }
+      return undefined;
+    }
     return {
       agentId: selectedAgent.resourceId,
       agentVersion: selectedAgent.agentVersion,
@@ -166,7 +172,8 @@ function ChatPanel({
   };
 
   const isCurrentSessionAgentMatched = (agentParams?: CreateSessionRequest): boolean => {
-    if (!agentParams?.agentId) return true;
+    if (!agentParams) return true;
+    if (agentParams.agentId == null) return currentSessionAgentId == null;
     return (
       currentSessionAgentId === agentParams.agentId &&
       (agentParams.agentVersion == null || currentSessionAgentVersion === agentParams.agentVersion)

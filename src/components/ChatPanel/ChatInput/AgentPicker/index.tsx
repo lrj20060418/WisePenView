@@ -1,7 +1,11 @@
 import { Popover } from '@/components/Overlay';
 import { useChatService } from '@/domains';
 import type { ChatAgentOption } from '@/domains/Chat';
-import { buildChatInputAgentOptions, resolveChatInputSelectedAgent } from '@/domains/Chat';
+import {
+  buildChatInputAgentOptions,
+  buildDefaultPersonalAgent,
+  resolveChatInputSelectedAgent,
+} from '@/domains/Chat';
 import { parseErrorMessage } from '@/utils/error';
 import { Button, ListBox, ListBoxItem, toast } from '@heroui/react';
 import { useMount, useRequest, useUpdateEffect } from 'ahooks';
@@ -50,17 +54,37 @@ function AgentPicker({ injectedAgents, preferredAgent }: AgentPickerProps) {
     () => buildChatInputAgentOptions(mergeAgentOptions(agents, injectedAgents), selectedAgent),
     [agents, injectedAgents, selectedAgent]
   );
+  const injectedAgentKey = useMemo(
+    () =>
+      (injectedAgents ?? [])
+        .map((agent) => `${agent.agentId}:${agent.agentVersion ?? ''}`)
+        .join('|'),
+    [injectedAgents]
+  );
+  const injectedAgentIds = useMemo(
+    () => new Set((injectedAgents ?? []).map((agent) => agent.agentId)),
+    [injectedAgents]
+  );
 
   const syncPreferredAgent = () => {
-    if (!preferredAgent) return;
     const currentAgent = store.getState().selectedAgent;
+    if (currentAgent.source === 'CURRENT_DRAFT' && !injectedAgentIds.has(currentAgent.agentId)) {
+      setSelectedAgent(buildDefaultPersonalAgent());
+      return;
+    }
+    if (!preferredAgent) return;
     if (!currentAgent.isDefault && currentAgent.source !== 'CURRENT_DRAFT') return;
-    if (currentAgent.agentId === preferredAgent.agentId) return;
+    if (currentAgent.agentId === preferredAgent.agentId) {
+      if (currentAgent.source === 'CURRENT_DRAFT' && currentAgent !== preferredAgent) {
+        setSelectedAgent(preferredAgent);
+      }
+      return;
+    }
     setSelectedAgent(preferredAgent);
   };
 
   useMount(syncPreferredAgent);
-  useUpdateEffect(syncPreferredAgent, [preferredAgent?.agentId]);
+  useUpdateEffect(syncPreferredAgent, [injectedAgentKey, preferredAgent?.agentId]);
 
   const handleSelect = (agent: ChatAgentOption) => {
     setSelectedAgent(agent);

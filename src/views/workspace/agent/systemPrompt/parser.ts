@@ -64,7 +64,7 @@ function scanHeadings(markdown: string): HeadingSection[] {
       fenceLength = open[1].length;
       return;
     }
-    const match = line.match(/^(#{1,3})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
+    const match = line.match(/^(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
     if (!match) return;
     const level = match[1].length;
     while (stack.length && stack[stack.length - 1].level >= level) stack.pop();

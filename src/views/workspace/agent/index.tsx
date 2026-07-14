@@ -4,7 +4,7 @@ import { UnsavedChangesDialog } from '@/components/Overlay';
 import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
 import VersionDropdown from '@/components/VersionDropdown';
 import { useAgentService, useChatService, useSkillService } from '@/domains';
-import type { AgentSpec } from '@/domains/Agent';
+import type { AgentAsset, AgentSpec } from '@/domains/Agent';
 import type { ChatAgentOption } from '@/domains/Chat';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
@@ -26,7 +26,7 @@ import CapabilitiesSection from './_components/CapabilitiesSection';
 import MemorySection from './_components/MemorySection';
 import ModelSection from './_components/ModelSection';
 import SystemPromptSection, { type PromptMode } from './_components/SystemPromptSection';
-import { useAgentWorkspaceController } from './_hooks/useAgentWorkspaceController';
+import { useAgentWorkspaceController, type AgentDraft } from './_hooks/useAgentWorkspaceController';
 import styles from './style.module.less';
 import { buildGuidedPrompt, DEFAULT_GUIDED_PROMPT_FIELDS, parseGuidedPrompt } from './systemPrompt';
 
@@ -62,6 +62,7 @@ export default function AgentView({ resourceId }: Props) {
   const [promptMode, setPromptMode] = useState<PromptMode>('guided');
   const [promptResetOpen, setPromptResetOpen] = useState(false);
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
+  const [assetOverride, setAssetOverride] = useState<AgentAsset[] | null>(null);
   const load = useRequest(
     async () => {
       if (!resourceId) return null;
@@ -71,16 +72,29 @@ export default function AgentView({ resourceId }: Props) {
         chatService.getTools(),
         skillService.getSkillSummaries(),
       ]);
-      if (!agent.spec.systemPrompt)
+      const savedDraft: AgentDraft = {
+        name: agent.name,
+        description: agent.description,
+        spec: structuredClone(agent.spec),
+      };
+      const usesDefaultPrompt = !agent.spec.systemPrompt;
+      if (usesDefaultPrompt)
         agent.spec.systemPrompt = buildGuidedPrompt(DEFAULT_GUIDED_PROMPT_FIELDS, true);
-      return { agent, models, tools, skills };
+      return {
+        agent,
+        models,
+        tools,
+        skills,
+        savedDraft: usesDefaultPrompt ? savedDraft : undefined,
+      };
     },
     {
       ready: Boolean(resourceId),
       refreshDeps: [resourceId],
       onSuccess: (data) => {
         if (!data) return;
-        controller.initialize(data.agent);
+        setAssetOverride(null);
+        controller.initialize(data.agent, { savedDraft: data.savedDraft });
         setPromptMode(
           parseGuidedPrompt(data.agent.spec.systemPrompt).compatible ? 'guided' : 'free'
         );
@@ -132,6 +146,15 @@ export default function AgentView({ resourceId }: Props) {
       onError: (error) => toast.danger(parseErrorMessage(error)),
     }
   );
+  const refreshAssetsOnly = async () => {
+    if (!resourceId) return;
+    try {
+      const latest = await agentService.getAgentDetail(resourceId);
+      setAssetOverride(latest.assets);
+    } catch (error) {
+      toast.danger(parseErrorMessage(error));
+    }
+  };
   const upload = useRequest(
     async (files: File[]) => {
       if (!resourceId || !load.data) return;
@@ -142,7 +165,7 @@ export default function AgentView({ resourceId }: Props) {
       manual: true,
       onSuccess: () => {
         toast.success('附件已上传');
-        load.refresh();
+        void refreshAssetsOnly();
       },
       onError: (error) => toast.danger(parseErrorMessage(error)),
     }
@@ -157,7 +180,7 @@ export default function AgentView({ resourceId }: Props) {
       onSuccess: () => {
         setDeleteAssetId(null);
         toast.success('附件已删除');
-        load.refresh();
+        void refreshAssetsOnly();
       },
       onError: (error) => toast.danger(parseErrorMessage(error)),
     }
@@ -363,7 +386,7 @@ export default function AgentView({ resourceId }: Props) {
         />
         <MemorySection spec={controller.draft.spec} disabled={disabled} onChange={setSpec} />
         <AssetsSection
-          assets={load.data.agent.assets}
+          assets={assetOverride ?? load.data.agent.assets}
           disabled={disabled}
           uploading={upload.loading}
           onUpload={(files) => upload.run(files)}
