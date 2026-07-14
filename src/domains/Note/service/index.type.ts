@@ -3,7 +3,7 @@
  * 与 blocknote/docs/API.md 对齐
  */
 
-import type { Block } from '@/domains/Note';
+import type { Block, NoteAiDiffPreviewData } from '@/domains/Note';
 import type { ResourceItem } from '@/domains/Resource';
 
 /** NoteService 接口：供依赖注入使用 */
@@ -51,6 +51,8 @@ export interface NoteInfoDisplayData {
   canEditComments: boolean;
   /** 批注用户展示信息，key 为 authorId */
   authorsById?: NoteCommentUserDisplayRecord;
+  /** 仅 Mock service 提供，用真实编辑器与 sidecar 链路展示 AI Diff。 */
+  aiDiffPreview?: NoteAiDiffPreviewData;
 }
 
 /** 与 docs/apis/note-api.md「新建文档接口」请求体一致 */

@@ -29,10 +29,6 @@ type NoteSelectedScopeStateValue =
       include_partial?: boolean;
     };
 
-type NoteClientStateVectorChatState = ChatFrontendState<'note_client_state_vector', string> & {
-  disabled: true;
-};
-
 type NoteClientContentSignatureChatState = ChatFrontendState<
   'note_client_content_signature',
   string
@@ -40,9 +36,8 @@ type NoteClientContentSignatureChatState = ChatFrontendState<
   disabled: true;
 };
 
-export type NoteChatFrontendState =
+type NoteChatFrontendState =
   | ResourceOpenChatState
-  | NoteClientStateVectorChatState
   | NoteClientContentSignatureChatState
   | ChatFrontendState<'selected_text', string>
   | ChatFrontendState<'selected_note_scope', NoteSelectedScopeStateValue>;
@@ -77,7 +72,6 @@ function mapSelectedNoteScope(scope: SelectedNoteScope): NoteSelectedScopeStateV
 export function createNoteChatStateProvider(params: {
   resourceId: string;
   syncStatus: NoteSessionStatus;
-  getClientStateVector: () => string | undefined;
   isClientContentSignaturePending?: boolean;
   clientContentSignature?: string;
 }): ResourceChatStateProvider<NoteChatFrontendState> {
@@ -95,13 +89,9 @@ export function createNoteChatStateProvider(params: {
       return undefined;
     },
     getStates: () => {
-      const stateVector = params.getClientStateVector();
       const contentSignature = params.clientContentSignature;
       const states: NoteChatFrontendState[] = [
         buildResourceOpenState(resource),
-        ...(stateVector
-          ? [{ key: 'note_client_state_vector', value: stateVector, disabled: true } as const]
-          : []),
         ...(contentSignature
           ? [
               {

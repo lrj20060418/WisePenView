@@ -1,0 +1,259 @@
+.hidden {
+  display: none !important;
+}
+
+.current {
+  background: var(--error-soft);
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.review {
+  position: relative;
+  display: flex;
+  align-self: flex-start;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  margin: 2px 0;
+}
+
+.aiContent,
+.aiContentPlain {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.aiContent {
+  box-sizing: border-box;
+  width: fit-content;
+  padding: 1px 3px;
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+}
+
+.comparison {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review[data-ai-diff-content-type='codeBlock'],
+.review[data-ai-diff-content-type='math'],
+.review[data-ai-diff-content-type='table'] {
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-width: 100%;
+}
+
+.review[data-ai-diff-content-type='codeBlock'] {
+  width: 100%;
+}
+
+.review[data-ai-diff-content-type='math'] {
+  width: 100%;
+}
+
+.review[data-ai-diff-content-type='codeBlock'] .comparison,
+.review[data-ai-diff-content-type='codeBlock'] .aiContentPlain {
+  width: 100%;
+}
+
+.review[data-ai-diff-content-type='math'] .aiContent,
+.review[data-ai-diff-content-type='math'] .aiContentPlain {
+  flex: none;
+  width: 100%;
+}
+
+.review[data-ai-diff-content-type='math'] .aiContent {
+  padding: 0;
+}
+
+.review[data-ai-diff-content-type='table'] {
+  align-items: flex-end;
+  width: fit-content;
+}
+
+.review[data-ai-diff-change-kind='delete'] {
+  align-self: stretch;
+  width: auto;
+}
+
+.review[data-ai-diff-content-type='table'] .aiContent,
+.review[data-ai-diff-content-type='table'] .aiContentPlain {
+  flex: none;
+  width: fit-content;
+}
+
+.current[data-content-type='table'] {
+  width: fit-content;
+  max-width: 100%;
+  background: transparent;
+  color: inherit;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.current[data-content-type='math'] {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.current[data-content-type='table'] :global(.table-widgets-container),
+.current[data-content-type='table'] :global(.bn-table-handle),
+.current[data-content-type='table'] :global(.bn-table-cell-handle),
+.current[data-content-type='table'] :global(.column-resize-handle),
+.current[data-content-type='table'] :global(.bn-table-drop-cursor) {
+  display: none !important;
+}
+
+.current[data-content-type='table'] :global(.tableWrapper) {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+}
+
+.current[data-content-type='table'] :global(.tableWrapper-inner) {
+  box-sizing: border-box;
+  width: fit-content;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--error-soft);
+}
+
+.inlineComparison,
+.inlineHunk {
+  display: inline;
+}
+
+.styledText code {
+  font-family: monospace;
+}
+
+.inlineHunk {
+  position: relative;
+}
+
+.inlineDelete,
+.inlineAdd {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.inlineDelete {
+  background: var(--error-soft);
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.inlineAdd {
+  background: var(--success-soft);
+  color: inherit;
+}
+
+.actions {
+  bottom: 0;
+  left: 100%;
+}
+
+.actionButton {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.actions,
+.inlineHunkActions {
+  position: absolute;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--overlay);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.inlineHunkActions {
+  bottom: 0;
+  left: 100%;
+}
+
+.review:hover > .actions,
+.review:focus-within > .actions,
+.current:hover + .review > .actions,
+.current:focus-within + .review > .actions,
+:global(.bn-block):has(> .review[data-ai-diff-review]):hover
+  > .review[data-ai-diff-review]
+  > .actions,
+.inlineHunk:hover > .inlineHunkActions,
+.inlineHunk:focus-within > .inlineHunkActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reviewAction {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.reviewAccept {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.reviewDiscard {
+  border-color: var(--error);
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.accept {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+.discard {
+  background: var(--surface-tertiary);
+  color: var(--foreground);
+}
+
+.bulkActions {
+  position: absolute;
+  right: var(--space-lg);
+  bottom: var(--space-lg);
+  z-index: 30;
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--overlay);
+  box-shadow: var(--shadow-md);
+}

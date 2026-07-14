@@ -1,36 +1,3 @@
-/**
- * Note 同步相关类型定义
- * 与 blocknote/docs/API.md、design-editor-final 对齐
- */
-
-export type DeltaOp = 'insert' | 'update' | 'delete' | 'move';
-
-export interface JsonDelta {
-  op: DeltaOp;
-  blockId: string;
-  data?: unknown;
-  timestamp: number;
-  seqId: number;
-  /** 首次操作，用于判断块是否本地创建。 */
-  firstOp?: DeltaOp;
-}
-
-export interface SyncPayload {
-  base_version?: number;
-  send_timestamp: number;
-  deltas: JsonDelta[];
-}
-
-export interface SendPayload {
-  sendTimestamp: number;
-  deltas: JsonDelta[];
-}
-
-export interface NoteChange {
-  type: 'insert' | 'update' | 'delete' | 'move';
-  block: { id: string } & Record<string, unknown>;
-}
-
 export interface Block {
   id: string;
   type: string;
@@ -60,3 +27,17 @@ export interface CustomInlineContent {
 }
 
 export type TableContent = unknown;
+
+/** Mock 环境写入 BlockNote content 的原生 block 快照。 */
+export interface NoteBlockSnapshot {
+  id: string;
+  type: string;
+  props: Record<string, unknown>;
+  content?: unknown;
+  'ai-content'?: unknown;
+  children: NoteBlockSnapshot[];
+}
+
+export interface NoteAiDiffPreviewData {
+  content: NoteBlockSnapshot[];
+}

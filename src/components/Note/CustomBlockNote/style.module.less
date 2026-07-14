@@ -122,25 +122,6 @@
     padding-bottom: 60vh;
   }
 
-  /* 显示策略为 hidden 时，整块区块不占布局（外层 block-outer 或内层标记触发） */
-  :global(.bn-editor .bn-block-outer:has([data-math-ai-diff-display-hidden='true'])),
-  :global(.bn-editor .bn-block-outer[data-ai-diff-block-display-hidden='true']),
-  :global(.bn-editor .bn-block-outer:has(> .bn-block-content [data-ai-diff-block-display-hidden='true'])) {
-    display: none;
-  }
-
-  :global(.bn-editor button.bn-toggle-add-block-button[data-ai-diff-toggle-add-placeholder='true']) {
-    display: none;
-  }
-
-  :global(
-      .bn-editor
-        .bn-block-outer:has(.bn-toggle-wrapper[data-show-children='true'])
-        button.bn-toggle-add-block-button[data-ai-diff-toggle-add-placeholder='true']
-    ) {
-    display: block;
-  }
-
   :global(.bn-editor .bn-block-content) {
     margin-top: 0;
   }
@@ -767,24 +748,4 @@
 
 :global(.bn-drag-preview .bn-block-content[data-content-type='codeBlock'] .shiki) {
   background: transparent !important;
-}
-
-.aiBulkActions {
-  position: absolute;
-  right: var(--space-lg);
-  bottom: var(--space-lg);
-  z-index: 30;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--overlay) 88%, var(--surface-secondary));
-  box-shadow: var(--shadow-md);
-  pointer-events: none;
-}
-
-.aiBulkActionBtn {
-  pointer-events: auto;
 }

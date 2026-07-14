@@ -7,18 +7,18 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
-import { AI_DIFF_DISPLAY_MODE, type AiDiffDisplayMode } from '@/domains/Note/enum';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import 'katex/dist/katex.min.css';
+import type { NoteCommentAnchor } from '../../../content/types';
+import { useNoteCommentRuntime } from '../../../engines/comments/runtime/CommentRuntime';
+import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
 import {
+  INLINE_MATH_COMMENT_OWNER_ID,
   INLINE_MATH_PM_TYPE,
   type FormulaThreadAnchor,
-} from '../../../comments/core/commentThreadConstants';
-import { useNoteEditorReadOnlyContext } from '../../../editorReadOnly';
-import { useAiDiffDisplayModeContext } from '../../AIDiffPlugin/displayModeContext';
-import aiDiffStyles from '../../AIDiffPlugin/style.module.less';
-import { useLatexComment } from '../comments/latexCommentContext';
-import { captureInlineMathAnchor } from '../comments/latexCommentSupport';
+} from '../comments/anchor';
+import { captureInlineMathAnchor } from '../comments/formulaAnchor';
+import { formatFormulaReferenceText } from '../comments/formulaReference';
 import { LatexFormulaCommentButton } from '../comments/LatexFormulaCommentButton';
 import { renderKatexInto } from '../katexRender';
 import { LatexEditPopover } from '../LatexEditPopover';
@@ -39,36 +39,9 @@ const inlineMathConfig = {
     autoOpenEdit: {
       default: false,
     },
-    aiDiffType: {
-      default: '',
-    },
-    aiDiffKey: {
-      default: '',
-    },
-    aiDiffOrigin: {
-      default: '',
-    },
-    aiDiffReplace: {
-      default: '',
-    },
   },
   content: 'none',
 } as const;
-
-type InlineMathActionMode = 'accept' | 'discard';
-type InlineMathAiDiffViewMode = 'hidden' | 'plain' | 'compare';
-type InlineMathProps = ReactCustomInlineContentRenderProps<
-  typeof inlineMathConfig,
-  DefaultStyleSchema
->['inlineContent']['props'];
-
-type InlineMathAiDiffResolvedView = {
-  mode: InlineMathAiDiffViewMode;
-  plainExpression: string;
-  origin: string;
-  replace: string;
-  hasDiff: boolean;
-};
 
 /** 仅依赖 PM 视图与 transact，避免与 BlockNote 泛型编辑器类型冲突 */
 type EditorForPmCaret = {
@@ -93,167 +66,6 @@ function InlineMathFormulaPreview({
   }, [expression]);
 
   return <span ref={mathRef} className={className} />;
-}
-
-function resolveInlineMathAiDiffViewState(params: {
-  displayMode: AiDiffDisplayMode;
-  expression: string;
-  aiDiffType: string;
-  origin: string;
-  replace: string;
-}): InlineMathAiDiffResolvedView {
-  const { displayMode, expression, aiDiffType, origin, replace } = params;
-  const hasDiff = aiDiffType === 'edit' || aiDiffType === 'create' || aiDiffType === 'delete';
-
-  if (!hasDiff) {
-    return {
-      mode: 'plain',
-      plainExpression: expression,
-      origin: '',
-      replace: '',
-      hasDiff: false,
-    };
-  }
-
-  if (displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY) {
-    const plainExpression = aiDiffType === 'create' ? '' : origin;
-    return {
-      mode: plainExpression ? 'plain' : 'hidden',
-      plainExpression,
-      origin,
-      replace,
-      hasDiff: true,
-    };
-  }
-
-  if (displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY) {
-    const plainExpression = aiDiffType === 'delete' ? '' : replace;
-    return {
-      mode: plainExpression ? 'plain' : 'hidden',
-      plainExpression,
-      origin,
-      replace,
-      hasDiff: true,
-    };
-  }
-
-  return {
-    mode: origin || replace ? 'compare' : 'hidden',
-    plainExpression: '',
-    origin,
-    replace,
-    hasDiff: true,
-  };
-}
-
-function clearInlineMathAiDiffProps(props: InlineMathProps): InlineMathProps {
-  return {
-    ...props,
-    aiDiffType: '',
-    aiDiffKey: '',
-    aiDiffOrigin: '',
-    aiDiffReplace: '',
-  };
-}
-
-function removeInlineMathNode(editor: EditorForPmCaret, shell: HTMLElement | null): void {
-  if (!shell) {
-    return;
-  }
-
-  const view = editor.prosemirrorView;
-  const { state } = view;
-  let from: number | null = null;
-  let to: number | null = null;
-  let anchor = 0;
-
-  try {
-    const start = view.posAtDOM(shell, 0);
-    const $pos = state.doc.resolve(start);
-    const next = $pos.nodeAfter;
-    if (next?.type.name === INLINE_MATH_PM_TYPE) {
-      from = start;
-      to = start + next.nodeSize;
-      anchor = start;
-    } else {
-      const prev = $pos.nodeBefore;
-      if (prev?.type.name === INLINE_MATH_PM_TYPE) {
-        from = start - prev.nodeSize;
-        to = start;
-        anchor = Math.max(0, from);
-      }
-    }
-  } catch {
-    from = null;
-    to = null;
-  }
-
-  if (from == null || to == null) {
-    return;
-  }
-
-  editor.transact((tr) => {
-    const maxPos = tr.doc.content.size;
-    const safeFrom = Math.max(0, Math.min(from, maxPos));
-    const safeTo = Math.max(safeFrom, Math.min(to, maxPos));
-    tr.delete(safeFrom, safeTo);
-    const nextAnchor = Math.max(0, Math.min(anchor, tr.doc.content.size));
-    return tr.setSelection(TextSelection.create(tr.doc, nextAnchor));
-  });
-  editor.focus();
-}
-
-function InlineMathDiffActionButtons({
-  onApply,
-}: {
-  onApply: (mode: InlineMathActionMode) => void;
-}) {
-  return (
-    <span
-      className={`${aiDiffStyles.aiActionsAnchor} ${popoverStyles.inlineMathDiffActions}`}
-      contentEditable={false}
-      aria-hidden="true"
-    >
-      <span
-        className={`${aiDiffStyles.aiActionsRoot} ${popoverStyles.inlineMathDiffActionsRoot}`}
-        contentEditable={false}
-        aria-hidden="true"
-      >
-        <button
-          type="button"
-          aria-label="保留"
-          className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionAccept}`}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onApply('accept');
-          }}
-        >
-          Keep
-        </button>
-        <button
-          type="button"
-          aria-label="撤销"
-          className={`${aiDiffStyles.aiActionBtn} ${aiDiffStyles.aiActionDiscard}`}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onApply('discard');
-          }}
-        >
-          Undo
-        </button>
-      </span>
-    </span>
-  );
 }
 
 /**
@@ -298,15 +110,11 @@ function placeCaretAfterInlineMathNode(editor: EditorForPmCaret, shell: HTMLElem
 function InlineMathView(
   props: ReactCustomInlineContentRenderProps<typeof inlineMathConfig, DefaultStyleSchema>
 ) {
-  const aiDiffDisplayMode = useAiDiffDisplayModeContext();
   const { contentRef, updateInlineContent, inlineContent, editor } = props;
   const readOnly = useNoteEditorReadOnlyContext();
-  const latexComment = useLatexComment();
+  const comments = useNoteCommentRuntime();
   const expression = inlineContent.props.expression as string;
   const autoOpenEdit = inlineContent.props.autoOpenEdit as boolean;
-  const aiDiffType = String(inlineContent.props.aiDiffType ?? '');
-  const aiDiffOrigin = String(inlineContent.props.aiDiffOrigin ?? '');
-  const aiDiffReplace = String(inlineContent.props.aiDiffReplace ?? '');
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(expression);
@@ -342,10 +150,12 @@ function InlineMathView(
     if (!anchor) {
       return;
     }
-    latexComment?.updateFormulaCommentReference({
-      anchor,
-      expression: nextExpression,
-      kind: 'inline',
+    const referenceText = formatFormulaReferenceText(nextExpression, 'inline');
+    if (!referenceText) return;
+    comments?.updateContentCommentReference({
+      ownerId: INLINE_MATH_COMMENT_OWNER_ID,
+      anchor: anchor as unknown as NoteCommentAnchor,
+      referenceText,
       persist,
     });
   };
@@ -372,15 +182,7 @@ function InlineMathView(
 
   useLatexPopoverAnchorSync(isEditing, shellRef, measurePopoverPosition, clearPopoverPos);
 
-  const viewState = resolveInlineMathAiDiffViewState({
-    displayMode: aiDiffDisplayMode,
-    expression,
-    aiDiffType,
-    origin: aiDiffOrigin,
-    replace: aiDiffReplace,
-  });
-  const hasPendingAiDiff = viewState.hasDiff;
-  const canEnterEdit = !readOnly && !hasPendingAiDiff && !isEditing;
+  const canEnterEdit = !readOnly && !isEditing;
 
   // TODO: 重构，不使用useEffect，使用更合适的语义以增加可读性，但是latexSupport有完全重构的可能，因此暂时保留
   useEffectForce(() => {
@@ -397,7 +199,7 @@ function InlineMathView(
     updateInlineContent({
       type: 'inlineMath',
       props: {
-        ...clearInlineMathAiDiffProps(inlineContent.props),
+        ...inlineContent.props,
         expression: openExpr,
         autoOpenEdit: false,
       },
@@ -419,7 +221,10 @@ function InlineMathView(
     const anchor = getInlineFormulaAnchor();
     if (anchor) {
       window.setTimeout(() => {
-        latexComment?.clearFormulaCommentReferenceOverride(anchor);
+        comments?.clearContentCommentReferenceOverride({
+          ownerId: INLINE_MATH_COMMENT_OWNER_ID,
+          anchor: anchor as unknown as NoteCommentAnchor,
+        });
       }, 0);
     }
     setIsEditing(false);
@@ -433,7 +238,7 @@ function InlineMathView(
     updateInlineContent({
       type: 'inlineMath',
       props: {
-        ...clearInlineMathAiDiffProps(inlineContent.props),
+        ...inlineContent.props,
         expression: value.trim(),
         autoOpenEdit: false,
       },
@@ -469,55 +274,6 @@ function InlineMathView(
     [contentRef]
   );
 
-  const applyAiDiffAction = useCallback(
-    (mode: InlineMathActionMode) => {
-      const baseProps = clearInlineMathAiDiffProps(inlineContent.props);
-
-      if (aiDiffType === 'create') {
-        if (mode === 'accept') {
-          updateInlineContent({
-            type: 'inlineMath',
-            props: {
-              ...baseProps,
-              expression: aiDiffReplace,
-              autoOpenEdit: false,
-            },
-          });
-        } else {
-          removeInlineMathNode(editor, shellRef.current);
-        }
-        return;
-      }
-
-      if (aiDiffType === 'delete') {
-        if (mode === 'accept') {
-          removeInlineMathNode(editor, shellRef.current);
-        } else {
-          updateInlineContent({
-            type: 'inlineMath',
-            props: {
-              ...baseProps,
-              expression: aiDiffOrigin,
-              autoOpenEdit: false,
-            },
-          });
-        }
-        return;
-      }
-
-      const nextExpression = mode === 'accept' ? aiDiffReplace : aiDiffOrigin;
-      updateInlineContent({
-        type: 'inlineMath',
-        props: {
-          ...baseProps,
-          expression: nextExpression,
-          autoOpenEdit: false,
-        },
-      });
-    },
-    [aiDiffOrigin, aiDiffReplace, aiDiffType, editor, inlineContent.props, updateInlineContent]
-  );
-
   const editPopover = (
     <LatexEditPopover
       visible={Boolean(isEditing && popoverPos)}
@@ -540,88 +296,43 @@ function InlineMathView(
     />
   );
 
-  if (viewState.mode === 'hidden') {
-    return (
-      <span
-        ref={setShellRef}
-        className={aiDiffStyles.aiDiffInlineStrategyHidden}
-        contentEditable={false}
-        aria-hidden="true"
-      >
-        {'\u200B'}
-      </span>
-    );
-  }
-
   return (
     <span
       ref={setShellRef}
       className={`${popoverStyles.mathShellInline} bn-inline-math-root`}
       contentEditable={false}
     >
-      {!isEditing && !hasPendingAiDiff ? (
+      {!isEditing ? (
         <LatexFormulaCommentButton expression={expression} kind="inline" shellRef={shellRef} />
       ) : null}
-      {viewState.mode === 'plain' ? (
-        <span
-          className={
-            canEnterEdit
-              ? popoverStyles.mathRootInline
-              : `${popoverStyles.mathRootInline} ${popoverStyles.mathRootInlineReadonly}`
+      <span
+        className={
+          canEnterEdit
+            ? popoverStyles.mathRootInline
+            : `${popoverStyles.mathRootInline} ${popoverStyles.mathRootInlineReadonly}`
+        }
+        role={canEnterEdit ? 'button' : undefined}
+        tabIndex={canEnterEdit ? 0 : -1}
+        aria-readonly={readOnly || undefined}
+        aria-label={canEnterEdit ? '编辑行内公式' : undefined}
+        onClick={() => {
+          if (canEnterEdit) enterEdit();
+        }}
+        onKeyDown={(e) => {
+          if (!canEnterEdit) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            enterEdit();
           }
-          role={canEnterEdit ? 'button' : undefined}
-          tabIndex={canEnterEdit ? 0 : -1}
-          aria-readonly={readOnly || undefined}
-          aria-label={canEnterEdit ? '编辑行内公式' : undefined}
-          onClick={() => {
-            if (canEnterEdit) enterEdit();
-          }}
-          onKeyDown={(e) => {
-            if (!canEnterEdit) return;
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              enterEdit();
-            }
-          }}
-        >
-          <InlineMathFormulaPreview
-            expression={isEditing ? value : viewState.plainExpression || displayLatex}
-            className={popoverStyles.mathPreviewInline}
-          />
-        </span>
-      ) : null}
-      {viewState.mode === 'compare' ? (
-        <span
-          className={`${popoverStyles.inlineMathDiffRoot} ${aiDiffStyles.aiDiffRoot}`}
-          contentEditable={false}
-        >
-          {viewState.origin ? (
-            <span
-              className={`${popoverStyles.inlineMathDiffCard} ${popoverStyles.inlineMathDiffDelete}`}
-            >
-              <InlineMathFormulaPreview
-                expression={viewState.origin}
-                className={popoverStyles.mathPreviewInline}
-              />
-            </span>
-          ) : null}
-          {viewState.replace ? (
-            <span
-              className={`${popoverStyles.inlineMathDiffCard} ${popoverStyles.inlineMathDiffAdd}`}
-            >
-              <InlineMathFormulaPreview
-                expression={viewState.replace}
-                className={popoverStyles.mathPreviewInline}
-              />
-            </span>
-          ) : null}
-          <span className={popoverStyles.inlineMathDiffActionLayer}>
-            <InlineMathDiffActionButtons onApply={applyAiDiffAction} />
-          </span>
-        </span>
-      ) : null}
-      {!hasPendingAiDiff ? editPopover : null}
+        }}
+      >
+        <InlineMathFormulaPreview
+          expression={displayLatex}
+          className={popoverStyles.mathPreviewInline}
+        />
+      </span>
+      {editPopover}
     </span>
   );
 }

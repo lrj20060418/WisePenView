@@ -24,7 +24,11 @@ class NoteIndexeddbSyncObserver {
   private readonly _subscribers = new Set<() => void>();
   private _detach: (() => void) | null = null;
 
-  constructor(idb: IndexeddbPersistence) {
+  constructor(idb: IndexeddbPersistence | null) {
+    if (!idb) {
+      this._synced = true;
+      return;
+    }
     const observable = idb as IndexeddbPersistence & IndexeddbSyncedObservable;
     this._synced = observable.synced;
 
@@ -59,14 +63,16 @@ class NoteIndexeddbSyncObserver {
 export interface UseNoteSessionOptions {
   actorUserId?: string;
   enabled?: boolean;
+  /** Mock 预览使用本地 Y.Doc，不连接协同服务。 */
+  localOnly?: boolean;
 }
 
 export function useNoteSession(resourceId: string, options: UseNoteSessionOptions = {}) {
-  const { actorUserId, enabled = true } = options;
+  const { actorUserId, enabled = true, localOnly = false } = options;
   const session = useMemo(() => {
     const doc = new Y.Doc();
     const provider = new WisepenProvider(resourceId, doc, { connect: false, actorUserId });
-    const idb = new IndexeddbPersistence(noteYjsIdbRoomName(resourceId), doc);
+    const idb = localOnly ? null : new IndexeddbPersistence(noteYjsIdbRoomName(resourceId), doc);
     const observer = new NoteStatusObserver();
     const saveObserver = new NoteSaveStatusObserver();
     const idbObserver = new NoteIndexeddbSyncObserver(idb);
@@ -84,12 +90,12 @@ export function useNoteSession(resourceId: string, options: UseNoteSessionOption
       saveObserver.detach();
       idbObserver.detach();
       provider.destroy();
-      void idb.destroy();
+      void idb?.destroy();
       doc.destroy();
     };
 
     return { doc, provider, observer, saveObserver, idbObserver, reconnect, destroy };
-  }, [actorUserId, resourceId]);
+  }, [actorUserId, localOnly, resourceId]);
 
   const status = useSyncExternalStore(session.observer.subscribe, session.observer.getSnapshot);
   const saveStatus = useSyncExternalStore(
@@ -107,20 +113,20 @@ export function useNoteSession(resourceId: string, options: UseNoteSessionOption
    * cleanup：断开 provider、销毁 IndexedDB persistence、observer 与 Y.Doc，避免同一笔记残留连接。
    */
   useEffectForce(() => {
-    if (enabled) {
+    if (enabled && !localOnly) {
       session.provider.connect();
     }
     return () => {
       session.destroy();
     };
-  }, [enabled, session]);
+  }, [enabled, localOnly, session]);
 
   return {
-    status,
-    saveStatus,
+    status: localOnly ? ('connected' as const) : status,
+    saveStatus: localOnly ? ('saved' as const) : saveStatus,
     doc: session.doc,
     provider: session.provider,
     reconnect: session.reconnect,
-    idbSynced,
+    idbSynced: localOnly || idbSynced,
   };
 }

@@ -9,6 +9,7 @@ import type {
   SyncTitleRequest,
 } from '@/domains/Note';
 import { useResourceDisplayNameStore } from '@/domains/Resource/store/useResourceDisplayNameStore';
+import { NOTE_AI_DIFF_PREVIEW_MOCK } from './aiDiffPreview.mockdata';
 
 /** Mock 占位：与实现层一致，同步更新展示名 store */
 const syncTitle = async (params: SyncTitleRequest): Promise<void> => {
@@ -22,7 +23,7 @@ const createNote = async (_params: CreateNoteRequest): Promise<CreateNoteRespons
 
 const getNoteInfoDisplay = async (_params: GetNoteInfoRequest): Promise<NoteInfoDisplayData> => {
   return {
-    noteTitle: '未命名笔记',
+    noteTitle: 'AI Diff 样式预览',
     authors: [],
     lastEditedAtText: '暂无',
     version: 0,
@@ -30,6 +31,7 @@ const getNoteInfoDisplay = async (_params: GetNoteInfoRequest): Promise<NoteInfo
     commentsEnabled: true,
     canEditComments: true,
     authorsById: {},
+    aiDiffPreview: NOTE_AI_DIFF_PREVIEW_MOCK,
   };
 };
 
