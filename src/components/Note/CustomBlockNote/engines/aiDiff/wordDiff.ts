@@ -12,6 +12,14 @@ export type AiDiffTextHunk = {
   replacementTo: number;
 };
 
+export interface AiDiffTextAnalysis {
+  hunks: AiDiffTextHunk[];
+  changeRatio: number;
+  largestHunkChangeRatio: number;
+  largestHunkChangedCharacters: number;
+  usesLinearFallback: boolean;
+}
+
 type Token = { value: string };
 type InternalSegment = AiDiffTextSegment & { tokenCount: number };
 
@@ -287,16 +295,18 @@ function changedTokenRatio(segments: readonly InternalSegment[]): number {
  * 生成词级差异，并以句号、分号、逗号和换行为边界合并相邻改动。
  * 大面积重写或超长文本会退化为公共前后缀 + 单个中段 hunk，避免碎片化和二次方计算。
  */
-export function buildAiDiffTextHunks(origin: string, replacement: string): AiDiffTextHunk[] {
+export function analyzeAiDiffText(origin: string, replacement: string): AiDiffTextAnalysis {
   const oldTokens = tokenizeAiDiffText(origin).map((value) => ({ value }));
   const newTokens = tokenizeAiDiffText(replacement).map((value) => ({ value }));
   let segments = diffTokens(oldTokens, newTokens);
-  if (changedTokenRatio(segments) > HIGH_CHANGE_RATIO) {
+  const exceedsLcsLimit = oldTokens.length * newTokens.length > MAX_LCS_CELLS;
+  const hasHighChangeRatio = changedTokenRatio(segments) > HIGH_CHANGE_RATIO;
+  if (hasHighChangeRatio) {
     segments = buildLinearFallback(oldTokens, newTokens);
   }
   let originOffset = 0;
   let replacementOffset = 0;
-  return mergeNearbyChanges(segments, DEFAULT_MERGE_OPTIONS).map((hunk) => {
+  const hunks = mergeNearbyChanges(segments, DEFAULT_MERGE_OPTIONS).map((hunk) => {
     const originFrom = originOffset;
     const replacementFrom = replacementOffset;
     for (const current of hunk.segments) {
@@ -312,4 +322,33 @@ export function buildAiDiffTextHunks(origin: string, replacement: string): AiDif
       replacementTo: replacementOffset,
     };
   });
+  const granularHunks = hunks.filter((hunk) => hunk.mode === 'hunk');
+  const totalCharacters = origin.length + replacement.length;
+  const changedCharacters = segments.reduce(
+    (total, current) => total + (current.kind === 'equal' ? 0 : current.text.length),
+    0
+  );
+  const largestHunkChangedCharacters = granularHunks.reduce(
+    (largest, hunk) =>
+      Math.max(
+        largest,
+        hunk.segments.reduce(
+          (total, current) => total + (current.kind === 'equal' ? 0 : current.text.length),
+          0
+        )
+      ),
+    0
+  );
+  return {
+    hunks,
+    changeRatio: totalCharacters === 0 ? 0 : changedCharacters / totalCharacters,
+    largestHunkChangeRatio:
+      totalCharacters === 0 ? 0 : largestHunkChangedCharacters / totalCharacters,
+    largestHunkChangedCharacters,
+    usesLinearFallback: exceedsLcsLimit || hasHighChangeRatio,
+  };
+}
+
+export function buildAiDiffTextHunks(origin: string, replacement: string): AiDiffTextHunk[] {
+  return analyzeAiDiffText(origin, replacement).hunks;
 }

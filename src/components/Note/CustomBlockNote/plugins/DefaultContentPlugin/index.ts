@@ -17,12 +17,7 @@ import type {
   NotePluginBundle,
   NotePrintContribution,
 } from '../../content/types';
-import {
-  atomicPropsBlockAiDiff,
-  plainLinkInlineAiDiff,
-  plainTextInlineAiDiff,
-  richTextBlockAiDiff,
-} from './aiDiff';
+import { plainLinkInlineAiDiff, plainTextInlineAiDiff, richTextBlockAiDiff } from './aiDiff';
 
 const DEFAULT_CAPABILITY: NoteCapabilityDeclaration = { support: 'default' };
 const UNSUPPORTED_AI_DIFF: NoteCapabilityDeclaration = {
@@ -39,13 +34,11 @@ function richTextCapabilities(): NoteContentCapabilityDeclarations {
   };
 }
 
-function atomicCapabilities(
-  aiDiff: NoteCapabilityDeclaration = UNSUPPORTED_AI_DIFF
-): NoteContentCapabilityDeclarations {
+function atomicCapabilities(): NoteContentCapabilityDeclarations {
   return {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
-    aiDiff,
+    aiDiff: UNSUPPORTED_AI_DIFF,
     projection: { support: 'inherited' },
     print: DEFAULT_CAPABILITY,
   };
@@ -218,13 +211,12 @@ export const defaultContentPlugin = {
       createDefaultBlockPlugin(
         type,
         {
-          ...atomicCapabilities({ support: 'inherited' }),
+          ...atomicCapabilities(),
           ...(type === 'audio' || type === 'image' || type === 'video'
             ? { print: { support: 'custom' as const } }
             : {}),
         },
         {
-          aiDiff: atomicPropsBlockAiDiff,
           contentModel: 'none',
           ...(type === 'audio' || type === 'image' || type === 'video'
             ? { print: atomicMediaPrint }

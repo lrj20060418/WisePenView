@@ -28,31 +28,16 @@ export interface CustomInlineContent {
 
 export type TableContent = unknown;
 
-/** Mock 环境用于驱动 AI Diff 真实渲染链路的块快照。 */
-export interface NoteAiDiffPreviewBlock {
+/** Mock 环境写入 BlockNote content 的原生 block 快照。 */
+export interface NoteBlockSnapshot {
   id: string;
   type: string;
-  props?: Record<string, unknown>;
-  content?: unknown;
-  children?: NoteAiDiffPreviewBlock[];
-}
-
-export interface NoteAiDiffPreviewCandidate {
   props: Record<string, unknown>;
-  content: unknown;
-}
-
-export interface NoteAiDiffPreviewItem {
-  block: NoteAiDiffPreviewBlock;
-  revision: string;
-  operation: 'create' | 'update' | 'delete';
-  candidate: NoteAiDiffPreviewCandidate | null;
-  /** 用于覆盖“正文已变化”的失效态样式。 */
-  stale?: boolean;
+  content?: unknown;
+  'ai-content'?: unknown;
+  children: NoteBlockSnapshot[];
 }
 
 export interface NoteAiDiffPreviewData {
-  /** 场景版本变化时重新初始化；单次页面会话内保留用户已执行的保留/撤销结果。 */
-  sceneId: string;
-  items: NoteAiDiffPreviewItem[];
+  content: NoteBlockSnapshot[];
 }

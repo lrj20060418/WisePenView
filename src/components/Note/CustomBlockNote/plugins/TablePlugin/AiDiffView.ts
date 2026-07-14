@@ -71,7 +71,7 @@ function renderTableCellContent(
     if (!isRecord(inline) || typeof inline.type !== 'string') continue;
     const owner = registry.inlinePlugins.get(inline.type);
     if (!owner) throw new Error(`AI Diff 表格候选缺少 inline owner：${inline.type}`);
-    paragraph.appendChild(owner.aiDiff.renderCandidate(inline, registry));
+    paragraph.appendChild(owner.aiDiff.renderAiContent(inline, registry));
   }
   element.appendChild(paragraph);
 }
@@ -115,15 +115,15 @@ function makeTableReadOnly(root: HTMLElement): HTMLElement {
 }
 
 /** 使用表格原生结构渲染只读 AI 候选，并保留表头、合并单元格与列宽。 */
-export function TableAiDiffView(
-  candidate: Record<string, unknown>,
+export function TableAiContentView(
+  aiBlock: Record<string, unknown>,
   registry: NotePluginRegistry
 ): HTMLElement {
   const root = document.createElement('div');
   root.className = `bn-block-content ${styles.tableView}`;
   root.dataset.contentType = 'table';
 
-  const blockProps = isRecord(candidate.props) ? candidate.props : {};
+  const blockProps = isRecord(aiBlock.props) ? aiBlock.props : {};
   applyColorAttribute(root, 'textColor', blockProps.textColor);
 
   const tableWrapper = document.createElement('div');
@@ -132,7 +132,7 @@ export function TableAiDiffView(
   tableWrapperInner.className = 'tableWrapper-inner';
   const table = document.createElement('table');
   table.className = styles.table;
-  const content = readTableContent(candidate);
+  const content = readTableContent(aiBlock);
   if (!content) {
     tableWrapperInner.appendChild(table);
     tableWrapper.appendChild(tableWrapperInner);

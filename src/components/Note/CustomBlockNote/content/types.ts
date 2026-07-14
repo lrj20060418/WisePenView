@@ -60,36 +60,12 @@ export type NoteAiDiffAction = 'accept' | 'discard';
 export type NoteAiDiffActionTarget = { kind: 'text-hunk'; index: number };
 
 export interface NoteAiDiffComparisonContext {
-  renderAcceptAction: (target: NoteAiDiffActionTarget) => HTMLElement;
+  renderAction: (action: NoteAiDiffAction, target: NoteAiDiffActionTarget) => HTMLElement;
 }
-
-interface NoteAiContentCandidate {
-  props: Record<string, unknown>;
-  content: unknown;
-}
-
-export interface NoteAiContentPayload {
-  revision: string;
-  baseHash: string;
-  operation: 'create' | 'update' | 'delete';
-  candidate: NoteAiContentCandidate | null;
-}
-
-export interface NoteAiDiffBlockProjection {
-  current: Record<string, unknown> | null;
-  candidate: Record<string, unknown> | null;
-  stale: boolean;
-}
-
-export type NoteAiDiffBlockMutation =
-  | { kind: 'none' }
-  | { kind: 'remove' }
-  | { kind: 'update'; props: Record<string, unknown>; content?: unknown };
 
 export interface NoteInlineAiDiff {
-  equals: (current: Record<string, unknown>, candidate: Record<string, unknown>) => boolean;
-  renderCandidate: (
-    candidate: Record<string, unknown>,
+  renderAiContent: (
+    aiContent: Record<string, unknown>,
     registry: NotePluginRegistry
   ) => HTMLElement;
 }
@@ -143,40 +119,27 @@ export interface NotePrintContribution {
 }
 
 export interface NoteBlockAiDiff {
-  resolve: (
-    block: Record<string, unknown>,
-    aiContent: NoteAiContentPayload,
-    registry: NotePluginRegistry
-  ) => NoteAiDiffBlockProjection | null;
-  renderCandidate: (
-    candidate: Record<string, unknown>,
-    registry: NotePluginRegistry
-  ) => HTMLElement;
-  /** update 对比模式的细粒度渲染；未提供时使用整块新旧对比。 */
-  renderComparison?: (
-    current: Record<string, unknown>,
-    candidate: Record<string, unknown>,
-    registry: NotePluginRegistry,
-    context?: NoteAiDiffComparisonContext
-  ) => HTMLElement;
-  shouldRenderComparison?: (
-    current: Record<string, unknown>,
-    candidate: Record<string, unknown>,
-    registry: NotePluginRegistry
-  ) => boolean;
-  apply: (
-    block: Record<string, unknown>,
-    aiContent: NoteAiContentPayload,
-    action: NoteAiDiffAction,
-    registry: NotePluginRegistry
-  ) => NoteAiDiffBlockMutation;
+  renderAiContent: (aiBlock: Record<string, unknown>, registry: NotePluginRegistry) => HTMLElement;
+  comparison?: {
+    resolveMode: (
+      current: Record<string, unknown>,
+      aiBlock: Record<string, unknown>,
+      registry: NotePluginRegistry
+    ) => 'block' | 'granular';
+    render: (
+      current: Record<string, unknown>,
+      aiBlock: Record<string, unknown>,
+      registry: NotePluginRegistry,
+      context?: NoteAiDiffComparisonContext
+    ) => HTMLElement;
+  };
   applyGranular?: (
     block: Record<string, unknown>,
-    aiContent: NoteAiContentPayload,
+    aiContent: unknown,
     action: NoteAiDiffAction,
     target: NoteAiDiffActionTarget,
     registry: NotePluginRegistry
-  ) => NoteAiDiffBlockMutation | null;
+  ) => unknown | null;
 }
 
 export type NoteMarkdownImportSegment =

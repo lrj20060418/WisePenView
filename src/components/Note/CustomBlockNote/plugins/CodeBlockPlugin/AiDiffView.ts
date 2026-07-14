@@ -9,13 +9,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function readLanguage(candidate: Record<string, unknown>): string {
-  const props = isRecord(candidate.props) ? candidate.props : {};
+function readLanguage(aiBlock: Record<string, unknown>): string {
+  const props = isRecord(aiBlock.props) ? aiBlock.props : {};
   return typeof props.language === 'string' && props.language ? props.language : 'text';
 }
 
-function readCode(candidate: Record<string, unknown>, registry: NotePluginRegistry): string {
-  return projectInlinePlainText(candidate.content, registry);
+function readCode(aiBlock: Record<string, unknown>, registry: NotePluginRegistry): string {
+  return projectInlinePlainText(aiBlock.content, registry);
 }
 
 function createCodeBlockShell(params: {
@@ -88,14 +88,14 @@ function createDiffLine(entry: CodeLineDiffEntry): HTMLSpanElement {
 }
 
 /** 使用代码块原生 DOM 契约渲染只读 AI 候选。 */
-export function CodeBlockAiDiffView(
-  candidate: Record<string, unknown>,
+export function CodeBlockAiContentView(
+  aiBlock: Record<string, unknown>,
   registry: NotePluginRegistry
 ): HTMLElement {
-  const language = readLanguage(candidate);
+  const language = readLanguage(aiBlock);
   const code = document.createElement('code');
   code.className = styles.plainCode;
-  code.textContent = readCode(candidate, registry);
+  code.textContent = readCode(aiBlock, registry);
   return createCodeBlockShell({
     language,
     languageLabel: getCodeBlockLanguageLabel(language),
@@ -106,18 +106,18 @@ export function CodeBlockAiDiffView(
 /** 对比模式隐藏原代码块，改为在同一个代码块内逐行展示新旧差异。 */
 export function CodeBlockAiDiffComparisonView(
   current: Record<string, unknown>,
-  candidate: Record<string, unknown>,
+  aiBlock: Record<string, unknown>,
   registry: NotePluginRegistry
 ): HTMLElement {
-  const candidateLanguage = readLanguage(candidate);
+  const aiLanguage = readLanguage(aiBlock);
   const code = document.createElement('code');
   code.className = styles.lineList;
-  buildCodeLineDiff(readCode(current, registry), readCode(candidate, registry)).forEach((entry) => {
+  buildCodeLineDiff(readCode(current, registry), readCode(aiBlock, registry)).forEach((entry) => {
     code.appendChild(createDiffLine(entry));
   });
   return createCodeBlockShell({
-    language: candidateLanguage,
-    languageLabel: getCodeBlockLanguageLabel(candidateLanguage),
+    language: aiLanguage,
+    languageLabel: getCodeBlockLanguageLabel(aiLanguage),
     code,
   });
 }

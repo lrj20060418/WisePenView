@@ -7,33 +7,31 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
 import { AI_DIFF_DISPLAY_MODE, type AiDiffDisplayMode } from '@/domains/Note';
 import type {
-  NoteAiContentPayload,
   NoteAiDiffAction,
   NoteAiDiffActionTarget,
   NoteAiDiffComparisonContext,
   NotePluginRegistry,
   NoteRuntimeExtension,
 } from '../../content/types';
+import { resolveNoteAiDiffBlock } from './contentState';
 import styles from './style.module.less';
 
 export interface NoteAiDiffActionRequest {
   blockId: string;
-  revision: string;
-  baseHash: string;
   action: NoteAiDiffAction;
   target?: NoteAiDiffActionTarget;
 }
 
 interface AiDiffRuntimeMeta {
   displayMode?: AiDiffDisplayMode;
-  payloads?: ReadonlyMap<string, NoteAiContentPayload>;
+  aiContentByBlockId?: ReadonlyMap<string, unknown>;
   actionsEnabled?: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
 }
 
 interface AiDiffRuntimeState {
   displayMode: AiDiffDisplayMode;
-  payloads: ReadonlyMap<string, NoteAiContentPayload>;
+  aiContentByBlockId: ReadonlyMap<string, unknown>;
   actionsEnabled: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
   decorations: DecorationSet;
@@ -45,12 +43,15 @@ function buildActionButton(
   label: string,
   className: string,
   request: NoteAiDiffActionRequest,
-  onAction: (request: NoteAiDiffActionRequest) => void
+  onAction: (request: NoteAiDiffActionRequest) => void,
+  accessibleLabel = label
 ): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `${styles.actionButton} ${className}`;
   button.textContent = label;
+  button.title = accessibleLabel;
+  button.setAttribute('aria-label', accessibleLabel);
   button.addEventListener('mousedown', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -66,31 +67,33 @@ function buildActionButton(
 function createReviewWidget(params: {
   blockId: string;
   contentType: string;
-  payload: NoteAiContentPayload;
-  current: Record<string, unknown> | null;
-  candidate: Record<string, unknown> | null;
-  stale: boolean;
+  changeKind: 'create' | 'update' | 'delete';
+  current: Record<string, unknown>;
+  aiBlock: Record<string, unknown>;
+  aiContentEmpty: boolean;
   displayMode: AiDiffDisplayMode;
   actionsEnabled: boolean;
+  granularActions: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
-  renderCandidate: (candidate: Record<string, unknown>) => HTMLElement;
+  renderAiContent: (aiBlock: Record<string, unknown>) => HTMLElement;
   renderComparison?: (
     current: Record<string, unknown>,
-    candidate: Record<string, unknown>,
+    aiBlock: Record<string, unknown>,
     context?: NoteAiDiffComparisonContext
   ) => HTMLElement;
 }): HTMLElement {
   const {
     blockId,
     contentType,
-    payload,
+    changeKind,
     current,
-    candidate,
-    stale,
+    aiBlock,
+    aiContentEmpty,
     displayMode,
     actionsEnabled,
+    granularActions,
     onAction,
-    renderCandidate,
+    renderAiContent,
     renderComparison,
   } = params;
   const root = document.createElement('div');
@@ -98,93 +101,62 @@ function createReviewWidget(params: {
   root.contentEditable = 'false';
   root.dataset.aiDiffReview = blockId;
   root.dataset.aiDiffContentType = contentType;
+  root.dataset.aiDiffChangeKind = changeKind;
+  const granularComparison = Boolean(
+    displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && renderComparison
+  );
 
-  if (candidate) {
-    const candidateRoot = document.createElement('div');
-    const granularComparison =
-      displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && current && renderComparison;
-    candidateRoot.className = granularComparison
+  if (!aiContentEmpty) {
+    const aiContentRoot = document.createElement('div');
+    aiContentRoot.className = granularComparison
       ? styles.comparison
       : displayMode === AI_DIFF_DISPLAY_MODE.COMPARE
-        ? styles.candidate
-        : styles.candidatePlain;
+        ? styles.aiContent
+        : styles.aiContentPlain;
     const comparisonContext =
-      granularComparison && !stale && actionsEnabled && onAction
+      granularComparison && granularActions && actionsEnabled && onAction
         ? {
-            renderAcceptAction: (target: NoteAiDiffActionTarget) =>
+            renderAction: (action: NoteAiDiffAction, target: NoteAiDiffActionTarget) =>
               buildActionButton(
-                '接受',
-                `${styles.accept} ${styles.hunkAccept}`,
-                {
-                  blockId,
-                  revision: payload.revision,
-                  baseHash: payload.baseHash,
-                  action: 'accept',
-                  target,
-                },
-                onAction
+                action === 'accept' ? '✓' : '×',
+                `${styles.reviewAction} ${
+                  action === 'accept' ? styles.reviewAccept : styles.reviewDiscard
+                }`,
+                { blockId, action, target },
+                onAction,
+                action === 'accept' ? '接受此处修改' : '拒绝此处修改'
               ),
           }
         : undefined;
-    candidateRoot.appendChild(
-      granularComparison
-        ? renderComparison(current, candidate, comparisonContext)
-        : renderCandidate(candidate)
+    aiContentRoot.appendChild(
+      granularComparison && renderComparison
+        ? renderComparison(current, aiBlock, comparisonContext)
+        : renderAiContent(aiBlock)
     );
-    root.appendChild(candidateRoot);
+    root.appendChild(aiContentRoot);
   }
 
   if (displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && actionsEnabled && onAction) {
     const actions = document.createElement('div');
     actions.className = styles.actions;
-    if (stale) {
-      const staleLabel = document.createElement('span');
-      staleLabel.className = styles.stale;
-      staleLabel.textContent = '正文已变化';
-      actions.appendChild(staleLabel);
-      if (payload.operation !== 'create') {
-        actions.appendChild(
-          buildActionButton(
-            '撤销',
-            styles.discard,
-            {
-              blockId,
-              revision: payload.revision,
-              baseHash: payload.baseHash,
-              action: 'discard',
-            },
-            onAction
-          )
-        );
-      }
-    } else {
-      actions.appendChild(
-        buildActionButton(
-          '保留',
-          styles.accept,
-          {
-            blockId,
-            revision: payload.revision,
-            baseHash: payload.baseHash,
-            action: 'accept',
-          },
-          onAction
-        )
-      );
-      actions.appendChild(
-        buildActionButton(
-          '撤销',
-          styles.discard,
-          {
-            blockId,
-            revision: payload.revision,
-            baseHash: payload.baseHash,
-            action: 'discard',
-          },
-          onAction
-        )
-      );
-    }
+    actions.appendChild(
+      buildActionButton(
+        '×',
+        `${styles.reviewAction} ${styles.reviewDiscard}`,
+        { blockId, action: 'discard' },
+        onAction,
+        '拒绝此块修改'
+      )
+    );
+    actions.appendChild(
+      buildActionButton(
+        '✓',
+        `${styles.reviewAction} ${styles.reviewAccept}`,
+        { blockId, action: 'accept' },
+        onAction,
+        '接受此块修改'
+      )
+    );
     root.appendChild(actions);
   }
   return root;
@@ -207,8 +179,8 @@ function buildDecorations(params: {
   doc.descendants((node, pos) => {
     if (node.type.name !== 'blockContainer') return true;
     const blockId = typeof node.attrs.id === 'string' ? node.attrs.id : '';
-    const payload = runtime.payloads.get(blockId);
-    if (!payload) return true;
+    if (!runtime.aiContentByBlockId.has(blockId)) return true;
+    const aiContent = runtime.aiContentByBlockId.get(blockId);
 
     let block: Record<string, unknown> & { type: string };
     try {
@@ -223,9 +195,8 @@ function buildDecorations(params: {
       return true;
     }
 
-    const owner = registry.blockPlugins.get(block.type);
-    const aiDiff = owner?.aiDiff;
-    const projection = aiDiff?.resolve(block, payload, registry);
+    const aiDiff = registry.blockPlugins.get(block.type)?.aiDiff;
+    const projection = aiDiff ? resolveNoteAiDiffBlock(block, aiContent) : null;
     if (!aiDiff || !projection) return true;
 
     let contentFrom = pos;
@@ -237,8 +208,8 @@ function buildDecorations(params: {
     });
 
     const hideWholeBlock =
-      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY && projection.current === null) ||
-      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY && projection.candidate === null);
+      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY && projection.currentEmpty) ||
+      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY && projection.aiContentEmpty);
     if (hideWholeBlock) {
       decorations.push(
         Decoration.node(pos, pos + node.nodeSize, {
@@ -251,13 +222,13 @@ function buildDecorations(params: {
 
     const hasGranularComparison = Boolean(
       runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE &&
-      projection.current &&
-      projection.candidate &&
-      aiDiff.renderComparison &&
-      (aiDiff.shouldRenderComparison?.(projection.current, projection.candidate, registry) ?? true)
+      !projection.currentEmpty &&
+      !projection.aiContentEmpty &&
+      aiDiff.comparison?.resolveMode(projection.current, projection.aiBlock, registry) ===
+        'granular'
     );
     const hideCurrent =
-      projection.current === null ||
+      projection.currentEmpty ||
       runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY ||
       hasGranularComparison;
     if (hideCurrent) {
@@ -279,7 +250,7 @@ function buildDecorations(params: {
 
     const shouldRenderWidget =
       runtime.displayMode !== AI_DIFF_DISPLAY_MODE.OLD_ONLY &&
-      (projection.candidate !== null || runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE);
+      (!projection.aiContentEmpty || runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE);
     if (shouldRenderWidget) {
       decorations.push(
         Decoration.widget(
@@ -288,25 +259,22 @@ function buildDecorations(params: {
             createReviewWidget({
               blockId,
               contentType: block.type,
-              payload,
+              changeKind: projection.changeKind,
               current: projection.current,
-              candidate: projection.candidate,
-              stale: projection.stale,
+              aiBlock: projection.aiBlock,
+              aiContentEmpty: projection.aiContentEmpty,
               displayMode: runtime.displayMode,
               actionsEnabled: runtime.actionsEnabled,
+              granularActions: Boolean(hasGranularComparison && aiDiff.applyGranular),
               onAction: runtime.onAction,
-              renderCandidate: (candidate) => aiDiff.renderCandidate(candidate, registry),
+              renderAiContent: (aiBlock) => aiDiff.renderAiContent(aiBlock, registry),
               renderComparison:
-                hasGranularComparison && aiDiff.renderComparison
-                  ? (current, candidate, context) =>
-                      aiDiff.renderComparison!(current, candidate, registry, context)
+                hasGranularComparison && aiDiff.comparison
+                  ? (current, aiBlock, context) =>
+                      aiDiff.comparison!.render(current, aiBlock, registry, context)
                   : undefined,
             }),
-          {
-            key: `ai-diff:${blockId}:${payload.revision}:${payload.baseHash}:${runtime.displayMode}`,
-            side: 1,
-            stopEvent: () => true,
-          }
+          { side: 1, stopEvent: () => true }
         )
       );
     }
@@ -323,9 +291,9 @@ function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
       new Plugin<AiDiffRuntimeState>({
         key: aiDiffRuntimePluginKey,
         state: {
-          init: (_config, state) => ({
+          init: () => ({
             displayMode: AI_DIFF_DISPLAY_MODE.COMPARE,
-            payloads: new Map(),
+            aiContentByBlockId: new Map(),
             actionsEnabled: false,
             decorations: DecorationSet.empty,
           }),
@@ -333,7 +301,7 @@ function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
             const meta = tr.getMeta(aiDiffRuntimePluginKey) as AiDiffRuntimeMeta | undefined;
             const runtime = {
               displayMode: meta?.displayMode ?? previous.displayMode,
-              payloads: meta?.payloads ?? previous.payloads,
+              aiContentByBlockId: meta?.aiContentByBlockId ?? previous.aiContentByBlockId,
               actionsEnabled: meta?.actionsEnabled ?? previous.actionsEnabled,
               onAction: meta?.onAction ?? previous.onAction,
             };
@@ -366,10 +334,8 @@ export function syncAiDiffRuntimeState(view: EditorView, meta: AiDiffRuntimeMeta
   view.dispatch(view.state.tr.setMeta(aiDiffRuntimePluginKey, meta).setMeta('addToHistory', false));
 }
 
-export function readAiDiffPayloadsFromEditorState(
-  state: EditorState
-): ReadonlyMap<string, NoteAiContentPayload> {
-  return aiDiffRuntimePluginKey.getState(state)?.payloads ?? new Map();
+export function readAiContentFromEditorState(state: EditorState): ReadonlyMap<string, unknown> {
+  return aiDiffRuntimePluginKey.getState(state)?.aiContentByBlockId ?? new Map();
 }
 
 export function hasAiDiffForBlockInEditorState(
@@ -379,9 +345,11 @@ export function hasAiDiffForBlockInEditorState(
 ): boolean {
   const blockId = typeof block.id === 'string' ? block.id : '';
   const type = typeof block.type === 'string' ? block.type : '';
-  const payload = aiDiffRuntimePluginKey.getState(state)?.payloads.get(blockId);
+  const aiContentByBlockId = aiDiffRuntimePluginKey.getState(state)?.aiContentByBlockId;
   return Boolean(
-    payload && registry.blockPlugins.get(type)?.aiDiff?.resolve(block, payload, registry)
+    aiContentByBlockId?.has(blockId) &&
+    registry.blockPlugins.get(type)?.aiDiff &&
+    resolveNoteAiDiffBlock(block, aiContentByBlockId.get(blockId))
   );
 }
 

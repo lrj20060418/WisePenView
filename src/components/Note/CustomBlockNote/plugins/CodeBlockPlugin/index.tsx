@@ -4,11 +4,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import type { NoteBlockPlugin } from '../../content/types';
-import {
-  resolveNoteAiDiffBlock,
-  resolveNoteAiDiffBlockAction,
-} from '../../engines/aiDiff/projection';
-import { CodeBlockAiDiffComparisonView, CodeBlockAiDiffView } from './AiDiffView';
+import { CodeBlockAiContentView, CodeBlockAiDiffComparisonView } from './AiDiffView';
 import { CodeBlockToolbar } from './CodeBlockToolbar';
 import { getCodeBlockLanguageOptions } from './language';
 
@@ -129,11 +125,10 @@ export const codeBlockPlugin = {
   },
   comments: { mode: 'range' },
   aiDiff: {
-    resolve: resolveNoteAiDiffBlock,
-    renderCandidate: CodeBlockAiDiffView,
-    renderComparison: CodeBlockAiDiffComparisonView,
-    apply(_block, aiContent, action) {
-      return resolveNoteAiDiffBlockAction(aiContent, action, 'inline');
+    renderAiContent: CodeBlockAiContentView,
+    comparison: {
+      resolveMode: () => 'granular',
+      render: CodeBlockAiDiffComparisonView,
     },
   },
   print: {

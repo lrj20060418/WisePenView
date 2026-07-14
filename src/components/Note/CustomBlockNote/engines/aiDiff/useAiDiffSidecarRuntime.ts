@@ -7,6 +7,7 @@ import { useEffectForce } from '@/hooks/useEffectForce';
 import type { NotePluginRegistry } from '../../content/types';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
 import { applyNoteAiDiffAction } from './action';
+import { resolveNoteAiDiffBlock } from './contentState';
 import type { NoteAiDiffActionRequest } from './runtime';
 import { syncAiDiffRuntimeState } from './runtime';
 import { observeAiContent, readAllAiContent } from './store';
@@ -30,12 +31,12 @@ function findBlockById(blocks: readonly unknown[], id: string): Record<string, u
 function hasActiveAiDiff(
   editor: CustomBlockNoteEditor,
   registry: NotePluginRegistry,
-  payloads: ReturnType<typeof readAllAiContent>
+  aiContentByBlockId: ReturnType<typeof readAllAiContent>
 ): boolean {
-  for (const [blockId, payload] of payloads) {
+  for (const [blockId, aiContent] of aiContentByBlockId) {
     const block = findBlockById(editor.document, blockId);
     if (!block || typeof block.type !== 'string') continue;
-    if (registry.blockPlugins.get(block.type)?.aiDiff?.resolve(block, payload, registry)) {
+    if (registry.blockPlugins.get(block.type)?.aiDiff && resolveNoteAiDiffBlock(block, aiContent)) {
       return true;
     }
   }
@@ -73,14 +74,14 @@ export function useAiDiffSidecarRuntime(params: {
   });
 
   const sync = useMemoizedFn(() => {
-    const payloads = readAllAiContent(doc);
+    const aiContentByBlockId = readAllAiContent(doc);
     syncAiDiffRuntimeState(editor.prosemirrorView, {
       displayMode,
-      payloads,
+      aiContentByBlockId,
       actionsEnabled: !readOnly,
       onAction: applyAction,
     });
-    const nextPresence = hasActiveAiDiff(editor, registry, payloads);
+    const nextPresence = hasActiveAiDiff(editor, registry, aiContentByBlockId);
     if (lastPresenceRef.current === nextPresence) return;
     lastPresenceRef.current = nextPresence;
     setPresent(nextPresence);

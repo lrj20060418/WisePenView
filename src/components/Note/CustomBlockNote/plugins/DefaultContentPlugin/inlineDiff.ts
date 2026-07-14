@@ -1,7 +1,7 @@
 import { projectInlinePlainText } from '../../content/projection';
 import type { NotePluginRegistry } from '../../content/types';
 import { stableStringify } from '../../engines/aiDiff/stableValue';
-import { buildAiDiffTextHunks, type AiDiffTextHunk } from '../../engines/aiDiff/wordDiff';
+import type { AiDiffTextHunk } from '../../engines/aiDiff/wordDiff';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -104,45 +104,65 @@ function sliceInlineContent(
   return normalizeInlineContent(result);
 }
 
-export function acceptInlineTextRange(params: {
-  current: unknown;
-  candidate: unknown;
-  hunk: AiDiffTextHunk;
+function replaceInlineTextRange(params: {
+  base: unknown;
+  replacement: unknown;
+  baseFrom: number;
+  baseTo: number;
+  replacementFrom: number;
+  replacementTo: number;
   registry: NotePluginRegistry;
 }): Record<string, unknown>[] | null {
-  const { current, candidate, hunk, registry } = params;
-  const currentText = projectInlinePlainText(current, registry);
-  const candidateText = projectInlinePlainText(candidate, registry);
-  const prefix = sliceInlineContent(current, 0, hunk.originFrom, registry);
-  const accepted = sliceInlineContent(
-    candidate,
-    hunk.replacementFrom,
-    hunk.replacementTo,
-    registry
-  );
-  const suffix = sliceInlineContent(current, hunk.originTo, currentText.length, registry);
+  const { base, replacement, baseFrom, baseTo, replacementFrom, replacementTo, registry } = params;
+  const baseText = projectInlinePlainText(base, registry);
+  const replacementText = projectInlinePlainText(replacement, registry);
+  const prefix = sliceInlineContent(base, 0, baseFrom, registry);
+  const accepted = sliceInlineContent(replacement, replacementFrom, replacementTo, registry);
+  const suffix = sliceInlineContent(base, baseTo, baseText.length, registry);
   if (!prefix || !accepted || !suffix) return null;
 
   const result = normalizeInlineContent([...prefix, ...accepted, ...suffix]);
   const expectedText =
-    currentText.slice(0, hunk.originFrom) +
-    candidateText.slice(hunk.replacementFrom, hunk.replacementTo) +
-    currentText.slice(hunk.originTo);
+    baseText.slice(0, baseFrom) +
+    replacementText.slice(replacementFrom, replacementTo) +
+    baseText.slice(baseTo);
   return projectInlinePlainText(result, registry) === expectedText ? result : null;
 }
 
 /** 接受一个展示 hunk，并保留范围外已有的 inline 样式与链接结构。 */
 export function acceptInlineTextHunk(params: {
   current: unknown;
-  candidate: unknown;
-  hunkIndex: number;
+  aiContent: unknown;
+  hunk: AiDiffTextHunk;
   registry: NotePluginRegistry;
 }): Record<string, unknown>[] | null {
-  const { current, candidate, hunkIndex, registry } = params;
-  if (!Number.isInteger(hunkIndex) || hunkIndex < 0) return null;
-  const hunk = buildAiDiffTextHunks(
-    projectInlinePlainText(current, registry),
-    projectInlinePlainText(candidate, registry)
-  ).filter((item) => item.mode === 'hunk')[hunkIndex];
-  return hunk ? acceptInlineTextRange({ current, candidate, hunk, registry }) : null;
+  const { current, aiContent, hunk, registry } = params;
+  return replaceInlineTextRange({
+    base: current,
+    replacement: aiContent,
+    baseFrom: hunk.originFrom,
+    baseTo: hunk.originTo,
+    replacementFrom: hunk.replacementFrom,
+    replacementTo: hunk.replacementTo,
+    registry,
+  });
+}
+
+/** 拒绝一个展示 hunk，并保留候选中其它尚未处理的修改。 */
+export function discardInlineTextHunk(params: {
+  current: unknown;
+  aiContent: unknown;
+  hunk: AiDiffTextHunk;
+  registry: NotePluginRegistry;
+}): Record<string, unknown>[] | null {
+  const { current, aiContent, hunk, registry } = params;
+  return replaceInlineTextRange({
+    base: aiContent,
+    replacement: current,
+    baseFrom: hunk.replacementFrom,
+    baseTo: hunk.replacementTo,
+    replacementFrom: hunk.originFrom,
+    replacementTo: hunk.originTo,
+    registry,
+  });
 }

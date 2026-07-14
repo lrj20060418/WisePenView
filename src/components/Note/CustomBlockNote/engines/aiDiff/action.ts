@@ -3,22 +3,21 @@ import type * as Y from 'yjs';
 import type {
   NoteAiDiffAction,
   NoteAiDiffActionTarget,
-  NoteAiDiffBlockMutation,
   NotePluginRegistry,
 } from '../../content/types';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
-import { hashNoteBlockForAiDiff } from './projection';
-import { stableStringify } from './stableValue';
+import { isAiDiffContentEmpty, isAiDiffContentEqual, resolveNoteAiDiffBlock } from './contentState';
 import {
   AI_DIFF_ACTION_ORIGIN,
   clearAiContentEntries,
-  clearBlockAiContent,
+  deleteBlockAiContent,
+  hasBlockAiContent,
   readAllAiContent,
   readBlockAiContent,
-  rebaseBlockAiContent,
+  setBlockAiContent,
 } from './store';
 
-type ApplyAiDiffActionResult = 'applied' | 'missing' | 'stale' | 'unsupported';
+type ApplyAiDiffActionResult = 'applied' | 'missing' | 'unsupported';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -48,25 +47,29 @@ function collectBlockIds(block: Record<string, unknown>): string[] {
   return ids;
 }
 
-function assertMutationApplied(
+function removeBlockWithAiContent(params: {
+  doc: Y.Doc;
+  editor: CustomBlockNoteEditor;
+  block: Record<string, unknown>;
+}): void {
+  const { doc, editor, block } = params;
+  clearAiContentEntries(doc, collectBlockIds(block));
+  editor.removeBlocks([block as Parameters<CustomBlockNoteEditor['removeBlocks']>[0][number]]);
+}
+
+function updateBlockContent(
   editor: CustomBlockNoteEditor,
-  blockId: string,
-  mutation: NoteAiDiffBlockMutation
-): void {
-  if (mutation.kind === 'none') return;
-  const nextBlock = findBlockById(editor.document, blockId);
-  if (mutation.kind === 'remove') {
-    if (nextBlock) throw new Error(`AI Diff block 删除未生效：${blockId}`);
-    return;
+  block: Record<string, unknown>,
+  content: unknown
+): Record<string, unknown> {
+  const updated = editor.updateBlock(
+    block as Parameters<CustomBlockNoteEditor['updateBlock']>[0],
+    { content } as Parameters<CustomBlockNoteEditor['updateBlock']>[1]
+  ) as unknown as Record<string, unknown>;
+  if (!updated) {
+    throw new Error(`AI Diff block 更新未生效：${String(block.id ?? '')}`);
   }
-  if (!nextBlock) throw new Error(`AI Diff block 更新后不存在：${blockId}`);
-  const propsMatch = stableStringify(nextBlock.props) === stableStringify(mutation.props);
-  const contentMatch =
-    !('content' in mutation) ||
-    stableStringify(nextBlock.content) === stableStringify(mutation.content);
-  if (!propsMatch || !contentMatch) {
-    throw new Error(`AI Diff block 更新未生效：${blockId}`);
-  }
+  return updated;
 }
 
 export function applyNoteAiDiffAction(params: {
@@ -74,59 +77,70 @@ export function applyNoteAiDiffAction(params: {
   editor: CustomBlockNoteEditor;
   registry: NotePluginRegistry;
   blockId: string;
-  revision: string;
-  baseHash?: string;
   action: NoteAiDiffAction;
   target?: NoteAiDiffActionTarget;
 }): ApplyAiDiffActionResult {
-  const { doc, editor, registry, blockId, revision, baseHash, action, target } = params;
-  const payload = readBlockAiContent(doc, blockId);
-  if (!payload) return 'missing';
-  if (payload.revision !== revision || (baseHash && payload.baseHash !== baseHash)) return 'stale';
+  const { doc, editor, registry, blockId, action, target } = params;
+  if (!hasBlockAiContent(doc, blockId)) return 'missing';
 
+  const aiContent = readBlockAiContent(doc, blockId);
   const block = findBlockById(editor.document, blockId);
   if (!block || typeof block.type !== 'string') return 'missing';
-  const owner = registry.blockPlugins.get(block.type);
-  const aiDiff = owner?.aiDiff;
-  if (!aiDiff) return 'unsupported';
-  const projection = aiDiff.resolve(block, payload, registry);
-  if (!projection) return 'unsupported';
-  if (projection.stale && (action === 'accept' || payload.operation === 'create')) return 'stale';
-  const mutation = target
-    ? aiDiff.applyGranular?.(block, payload, action, target, registry)
-    : aiDiff.apply(block, payload, action, registry);
-  if (!mutation || (target && mutation.kind !== 'update')) return 'unsupported';
+  const aiDiff = registry.blockPlugins.get(block.type)?.aiDiff;
+  if (!aiDiff || !resolveNoteAiDiffBlock(block, aiContent)) return 'unsupported';
 
-  let result: ApplyAiDiffActionResult = 'applied';
+  const granularContent = target
+    ? aiDiff.applyGranular?.(block, aiContent, action, target, registry)
+    : undefined;
+  if (target && (granularContent === null || granularContent === undefined)) {
+    return 'unsupported';
+  }
+
   doc.transact(() => {
-    if (mutation.kind === 'remove') {
-      editor.removeBlocks([block as Parameters<typeof editor.removeBlocks>[0][number]]);
-    } else if (mutation.kind === 'update') {
-      editor.updateBlock(
-        block as Parameters<typeof editor.updateBlock>[0],
-        {
-          props: mutation.props,
-          ...('content' in mutation ? { content: mutation.content } : {}),
-        } as Parameters<typeof editor.updateBlock>[1]
-      );
+    if (!target) {
+      if (action === 'accept') {
+        if (isAiDiffContentEmpty(aiContent)) {
+          removeBlockWithAiContent({ doc, editor, block });
+        } else {
+          updateBlockContent(editor, block, aiContent);
+          deleteBlockAiContent(doc, blockId);
+        }
+      } else if (isAiDiffContentEmpty(block.content)) {
+        removeBlockWithAiContent({ doc, editor, block });
+      } else {
+        deleteBlockAiContent(doc, blockId);
+      }
+      return;
     }
 
-    assertMutationApplied(editor, blockId, mutation);
-    if (mutation.kind === 'remove') {
-      clearAiContentEntries(doc, collectBlockIds(block));
-    } else if (target) {
-      const nextBlock = findBlockById(editor.document, blockId);
-      if (!nextBlock) throw new Error(`AI Diff block 局部更新后不存在：${blockId}`);
-      const nextBaseHash = hashNoteBlockForAiDiff(nextBlock);
-      const rebasedPayload = { ...payload, baseHash: nextBaseHash };
-      result = aiDiff.resolve(nextBlock, rebasedPayload, registry)
-        ? rebaseBlockAiContent(doc, blockId, revision, payload.baseHash, nextBaseHash)
-        : clearBlockAiContent(doc, blockId, revision);
-    } else {
-      result = clearBlockAiContent(doc, blockId, revision);
+    if (action === 'accept') {
+      if (isAiDiffContentEqual(granularContent, aiContent)) {
+        if (isAiDiffContentEmpty(granularContent)) {
+          removeBlockWithAiContent({ doc, editor, block });
+          return;
+        }
+        updateBlockContent(editor, block, granularContent);
+        deleteBlockAiContent(doc, blockId);
+        return;
+      }
+      const updated = updateBlockContent(editor, block, granularContent);
+      if (isAiDiffContentEqual(updated.content, aiContent)) {
+        deleteBlockAiContent(doc, blockId);
+      }
+      return;
     }
+
+    if (isAiDiffContentEqual(block.content, granularContent)) {
+      if (isAiDiffContentEmpty(granularContent)) {
+        removeBlockWithAiContent({ doc, editor, block });
+      } else {
+        deleteBlockAiContent(doc, blockId);
+      }
+      return;
+    }
+    setBlockAiContent(doc, blockId, granularContent);
   }, AI_DIFF_ACTION_ORIGIN);
-  return result;
+  return 'applied';
 }
 
 export function applyAllNoteAiDiffActions(params: {
@@ -136,16 +150,11 @@ export function applyAllNoteAiDiffActions(params: {
   action: NoteAiDiffAction;
 }): ReadonlyMap<string, ApplyAiDiffActionResult> {
   const { doc, editor, registry, action } = params;
-  const payloads = new Map(
-    [...readAllAiContent(doc)].map(([blockId, payload]) => [blockId, payload.revision])
-  );
+  const blockIds = [...readAllAiContent(doc).keys()];
   const results = new Map<string, ApplyAiDiffActionResult>();
   doc.transact(() => {
-    for (const [blockId, revision] of payloads) {
-      results.set(
-        blockId,
-        applyNoteAiDiffAction({ doc, editor, registry, blockId, revision, action })
-      );
+    for (const blockId of blockIds) {
+      results.set(blockId, applyNoteAiDiffAction({ doc, editor, registry, blockId, action }));
     }
   }, AI_DIFF_ACTION_ORIGIN);
   editor.focus();

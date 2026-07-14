@@ -2,11 +2,7 @@ import { defaultBlockSpecs } from '@blocknote/core';
 import { PanelLeft, PanelTop, StretchHorizontal, Table2 } from 'lucide-react';
 
 import type { NoteBlockPlugin, NoteSideMenuAction } from '../../content/types';
-import {
-  resolveNoteAiDiffBlock,
-  resolveNoteAiDiffBlockAction,
-} from '../../engines/aiDiff/projection';
-import { readTableContent, TableAiDiffView, type TableContentLike } from './AiDiffView';
+import { readTableContent, TableAiContentView, type TableContentLike } from './AiDiffView';
 
 function tableActions(content: TableContentLike | null): NoteSideMenuAction[] {
   return [
@@ -52,11 +48,7 @@ export const tablePlugin = {
   },
   comments: { mode: 'unsupported' },
   aiDiff: {
-    resolve: resolveNoteAiDiffBlock,
-    renderCandidate: TableAiDiffView,
-    apply(_block, aiContent, action) {
-      return resolveNoteAiDiffBlockAction(aiContent, action, 'table');
-    },
+    renderAiContent: TableAiContentView,
   },
   print: {
     styles: [
