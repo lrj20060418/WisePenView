@@ -209,6 +209,8 @@ const createSession: IChatService['createSession'] = async (params) => {
     title: params?.title?.trim() ? params.title : 'New Chat',
     createdAt: now,
     updatedAt: now,
+    agentId: params?.agentId,
+    agentVersion: params?.agentVersion,
   };
   mockSessions = [session, ...mockSessions];
   mockHistoryMessagesBySessionId = {
@@ -216,6 +218,25 @@ const createSession: IChatService['createSession'] = async (params) => {
     [session.id]: [],
   };
   return session;
+};
+
+const setSessionAgent: IChatService['setSessionAgent'] = async (params) => {
+  const now = nowIso();
+  const target = mockSessions.find((session) => session.id === params.sessionId);
+  const updated: ChatSession = {
+    id: params.sessionId,
+    userId: target?.userId ?? 'mock-user',
+    title: target?.title ?? 'New Chat',
+    createdAt: target?.createdAt ?? now,
+    updatedAt: now,
+    agentId: params.agentId,
+    agentVersion: params.agentVersion,
+  };
+
+  mockSessions = mockSessions.map((session) =>
+    session.id === params.sessionId ? updated : session
+  );
+  return updated;
 };
 
 const renameSession: IChatService['renameSession'] = async (params) => {
@@ -227,6 +248,8 @@ const renameSession: IChatService['renameSession'] = async (params) => {
     title: params.newTitle?.trim() ? params.newTitle : 'New Chat',
     createdAt: target?.createdAt ?? now,
     updatedAt: now,
+    agentId: target?.agentId,
+    agentVersion: target?.agentVersion,
   };
 
   mockSessions = mockSessions.map((session) =>
@@ -371,6 +394,9 @@ const getWorkspace: IChatService['getWorkspace'] = async () => {
         agentId: 'agent-custom-translation',
         agentType: 'PERSONAL' as const,
         label: '翻译助手Agent',
+        source: 'RESOURCE' as const,
+        resourceId: 'custom-translation',
+        agentVersion: 1,
         isDefault: false,
         defaultSkillIds: ['skill-personal-translation', 'skill-personal-codereview'],
       },
@@ -378,6 +404,9 @@ const getWorkspace: IChatService['getWorkspace'] = async () => {
         agentId: 'agent-custom-writing',
         agentType: 'PERSONAL' as const,
         label: '写作Agent',
+        source: 'RESOURCE' as const,
+        resourceId: 'custom-writing',
+        agentVersion: 1,
         isDefault: false,
         defaultSkillIds: ['skill-personal-summary'],
       },
@@ -387,6 +416,9 @@ const getWorkspace: IChatService['getWorkspace'] = async () => {
         agentId: 'agent-group-1-design',
         agentType: 'GROUP' as const,
         label: '设计评审Agent',
+        source: 'RESOURCE' as const,
+        resourceId: 'group-1-design',
+        agentVersion: 1,
         groupId: '1',
         groupName: '示例小组',
         isDefault: false,
@@ -465,6 +497,7 @@ export const createChatServicesMock = (): IChatService => ({
   getChatInputAgents,
   getChatInputCapabilityOptions,
   createSession,
+  setSessionAgent,
   renameSession,
   deleteSession,
   listSessions,

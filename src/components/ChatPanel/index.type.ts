@@ -1,4 +1,4 @@
-import type { ChatModel, ChatModelTag } from '@/domains/Chat';
+import type { ChatAgentOption, ChatModel, ChatModelTag } from '@/domains/Chat';
 import type { ResourceChatProtocolPort } from './ResourceChatProtocol';
 
 export type ModelTag = ChatModelTag;
@@ -12,7 +12,15 @@ export interface ChatPanelProps {
   showHeader?: boolean;
   onNewChat?: () => void;
   resourceChat?: ResourceChatProtocolPort;
+  agentDebug?: ChatPanelAgentDebugConfig;
   showCollapseButton?: boolean;
+}
+
+export interface ChatPanelAgentDebugConfig {
+  agent: ChatAgentOption;
+  isDirty: boolean;
+  isSaving?: boolean;
+  onSaveDraft: () => boolean | Promise<boolean>;
 }
 
 export interface Message {

@@ -27,6 +27,7 @@ import type {
   ListSessionsRequest,
   PageResult,
   RenameSessionRequest,
+  SetSessionAgentRequest,
   ToolOption,
   UploadAttachmentParams,
   UploadAttachmentResult,
@@ -194,6 +195,15 @@ const createSession = async (params?: CreateSessionRequest): Promise<ChatSession
   return ChatServicesMap.mapCreateSessionFromApi(data);
 };
 
+const setSessionAgent = async (params: SetSessionAgentRequest): Promise<ChatSession> => {
+  const payload = ChatServicesMap.mapSetSessionAgentRequest(params);
+  const data = await ChatSessionApi.setSessionAgent(payload);
+  if (!data) {
+    throw createClientError(FRONTEND_CLIENT_ERROR.CHAT_CREATE_SESSION_FAILED);
+  }
+  return ChatServicesMap.mapSetSessionAgentFromApi(data);
+};
+
 const renameSession = async (params: RenameSessionRequest): Promise<ChatSession> => {
   const payload = ChatServicesMap.mapRenameSessionRequest(params);
   const data = await ChatSessionApi.renameSession(payload);
@@ -275,6 +285,7 @@ export const createChatServices = (deps?: ChatServiceDeps): IChatService => ({
       ? getChatInputCapabilityOptions(deps, params)
       : Promise.reject(createClientError(FRONTEND_CLIENT_ERROR.VALIDATION)),
   createSession,
+  setSessionAgent,
   renameSession,
   deleteSession,
   listSessions,

@@ -1,5 +1,4 @@
-import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
-import { Button } from '@heroui/react';
+import { UnsavedChangesDialog } from '@/components/Overlay';
 
 export type UnsavedSkillChangesMode =
   'publish' | 'leave' | 'switchFile' | 'switchConfig' | 'switchVersion';
@@ -57,35 +56,18 @@ function UnsavedSkillChangesModal({
   onConfirm,
 }: UnsavedSkillChangesModalProps) {
   const copy = modalCopy[mode];
-  const actions = onDiscard ? (
-    <>
-      <Button variant="secondary" isDisabled={isLoading} onPress={onCancel}>
-        取消
-      </Button>
-      <Button variant="secondary" isDisabled={isLoading} onPress={onDiscard}>
-        放弃更改
-      </Button>
-      <Button variant="primary" isDisabled={isLoading} aria-busy={isLoading} onPress={onConfirm}>
-        {copy.confirmText}
-      </Button>
-    </>
-  ) : undefined;
 
   return (
-    <AppAlertDialog
+    <UnsavedChangesDialog
       type="confirm"
       isOpen={isOpen}
-      onOpenChange={(open: boolean) => {
-        if (!open && !isLoading) onCancel();
-      }}
+      isLoading={isLoading}
       title={copy.title}
       description={copy.description}
       confirmText={copy.confirmText}
-      actions={actions}
       onCancel={onCancel}
+      onDiscard={onDiscard}
       onConfirm={onConfirm}
-      isConfirmLoading={isLoading}
-      isDismissable={!isLoading}
     />
   );
 }

@@ -409,6 +409,7 @@ function WorkspaceLayout() {
                   context: workspaceChatContext,
                   clearContext: clearWorkspaceChatContext,
                 }}
+                agentDebug={layoutConfig.chatAgentDebug}
               />
             ) : null}
           </SystemResizablePanel>

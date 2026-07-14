@@ -10,6 +10,8 @@ import type {
   ModelProviderMappingResponse,
   RenameSessionApiRequest,
   RenameSessionApiResponse,
+  SetSessionAgentApiRequest,
+  SetSessionAgentApiResponse,
 } from '../apis/ChatApi.type';
 import { MODEL_TYPE } from '../enum/model';
 import type {
@@ -23,6 +25,7 @@ import type {
   ListSessionsRequest,
   PageResult,
   RenameSessionRequest,
+  SetSessionAgentRequest,
 } from '../service/index.type';
 
 const PROVIDER_KEY_HINTS: Array<{ key: string; patterns: string[] }> = [
@@ -182,9 +185,13 @@ const mapGetModelsFromApi = (data: ListModelsApiResponse): ChatModel[] => {
 const mapCreateSessionRequest = (params?: CreateSessionRequest): CreateSessionApiRequest => {
   const title = params?.title;
   const hasTitle = title !== undefined;
+  const agentId = params?.agentId;
+  const agentVersion = params?.agentVersion;
 
   return {
     ...(hasTitle ? { title } : {}),
+    ...(agentId !== undefined ? { agent_id: agentId } : {}),
+    ...(agentVersion !== undefined ? { agent_version: agentVersion } : {}),
   };
 };
 
@@ -194,9 +201,20 @@ const mapSessionFromApi = (data: CreateSessionApiResponse): ChatSession => ({
   title: data.title,
   createdAt: data.created_at,
   updatedAt: data.updated_at,
+  agentId: data.agent_id,
+  agentVersion: data.agent_version,
 });
 
 const mapCreateSessionFromApi = (data: CreateSessionApiResponse): ChatSession =>
+  mapSessionFromApi(data);
+
+const mapSetSessionAgentRequest = (params: SetSessionAgentRequest): SetSessionAgentApiRequest => ({
+  session_id: params.sessionId,
+  ...(params.agentId !== undefined ? { agent_id: params.agentId } : {}),
+  ...(params.agentVersion !== undefined ? { agent_version: params.agentVersion } : {}),
+});
+
+const mapSetSessionAgentFromApi = (data: SetSessionAgentApiResponse): ChatSession =>
   mapSessionFromApi(data);
 
 const mapRenameSessionRequest = (params: RenameSessionRequest): RenameSessionApiRequest => {
@@ -274,6 +292,8 @@ export const ChatServicesMap = {
   mapGetModelsFromApi,
   mapCreateSessionRequest,
   mapCreateSessionFromApi,
+  mapSetSessionAgentRequest,
+  mapSetSessionAgentFromApi,
   mapRenameSessionRequest,
   mapRenameSessionFromApi,
   mapListSessionsRequest,

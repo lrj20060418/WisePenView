@@ -13,3 +13,5 @@ export { Modal } from './Modal';
 export type { ModalRootProps } from './Modal';
 export { Popover } from './Popover';
 export type { PopoverRootProps } from './Popover';
+export { default as UnsavedChangesDialog } from './UnsavedChangesDialog';
+export type * from './UnsavedChangesDialog/index.type';

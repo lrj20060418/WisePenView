@@ -1,13 +1,19 @@
 import type { Model } from '@/components/ChatPanel/index.type';
-import type { CapabilitySkillSelection, CapabilityToolOption } from '@/domains/Chat';
+import type {
+  CapabilitySkillSelection,
+  CapabilityToolOption,
+  ChatAgentOption,
+} from '@/domains/Chat';
 
 export interface ChatInputProps {
-  onSend: (text: string, opts?: SendOptions) => void | Promise<void>;
+  onSend: (text: string, opts?: SendOptions) => boolean | void | Promise<boolean | void>;
   getUploadSessionId: () => Promise<string>;
   sending: boolean;
   onStop?: () => void;
   contextPreview?: string;
   onClearContext?: () => void;
+  injectedAgents?: ChatAgentOption[];
+  preferredAgent?: ChatAgentOption | null;
 }
 
 export interface LocalAttachmentPayload {
@@ -38,6 +44,7 @@ export interface LocalAttachmentUpload {
 
 export interface SendOptions {
   model?: Model;
+  selectedAgent?: ChatAgentOption;
   activeDocRefs?: LocalResourcePayload[];
   activeAttachments?: LocalAttachmentPayload[];
   selectedSkills?: CapabilitySkillSelection[];

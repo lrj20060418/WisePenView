@@ -1,17 +1,19 @@
 import CreateAgentModal from '@/components/Agent/CreateAgentModal';
 import { ResultState, Spin } from '@/components/Feedback';
+import { UnsavedChangesDialog } from '@/components/Overlay';
 import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
 import VersionDropdown from '@/components/VersionDropdown';
 import { useAgentService, useChatService, useSkillService } from '@/domains';
 import type { AgentSpec } from '@/domains/Agent';
+import type { ChatAgentOption } from '@/domains/Chat';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
-import {
-  useWorkspaceLayoutConfig,
-  type WorkspaceLayoutConfig,
-} from '@/layouts/Workspace/WorkspaceOutletContext';
 import { parseErrorMessage } from '@/utils/error';
 import { RESOURCE_KIND } from '@/utils/navigation/resourceTarget';
+import {
+  useResourceHostLayoutConfig,
+  type ResourceHostLayoutConfig,
+} from '@/views/workspace/ResourceHostContext';
 import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { Save, Upload } from 'lucide-react';
@@ -164,6 +166,14 @@ export default function AgentView({ resourceId }: Props) {
   useBeforeUnload((event) => {
     if (controller.isDirty) event.preventDefault();
   });
+  const handleSaveAndLeave = async () => {
+    try {
+      await save.runAsync();
+      blocker.proceed?.();
+    } catch {
+      // 保存失败时 save request 的 onError 会展示错误提示；留在当前页面继续编辑。
+    }
+  };
   const setSpec = (spec: AgentSpec) => controller.setDraft((current) => ({ ...current, spec }));
   const requestMode = (mode: PromptMode) => {
     if (mode === promptMode) return;
@@ -177,9 +187,43 @@ export default function AgentView({ resourceId }: Props) {
     }
     setPromptResetOpen(true);
   };
-  const headerConfig = useMemo<WorkspaceLayoutConfig>(
+  const currentDraftAgent = useMemo<ChatAgentOption | null>(() => {
+    if (!load.data || !controller.draft) return null;
+    const skillPolicy = controller.draft.spec.toolAndSkillPolicy;
+    const defaultSkillIds = Array.from(
+      new Set([
+        ...(skillPolicy.onDemandSkillIds ?? []),
+        ...(skillPolicy.forceEnabledSkillIds ?? []),
+      ])
+    );
+    return {
+      agentId: `current-agent-draft-${load.data.agent.resourceId}`,
+      agentType: 'PERSONAL',
+      source: 'CURRENT_DRAFT',
+      resourceId: load.data.agent.resourceId,
+      agentVersion: load.data.agent.draftVersion,
+      label: load.data.agent.title || controller.draft.name || '当前 Agent',
+      defaultSkillIds,
+    };
+  }, [controller.draft, load.data]);
+  const headerConfig = useMemo<ResourceHostLayoutConfig>(
     () => ({
       className: styles.pageWrap,
+      chatAgentDebug: currentDraftAgent
+        ? {
+            agent: currentDraftAgent,
+            isDirty: controller.isDirty,
+            isSaving: save.loading,
+            onSaveDraft: async () => {
+              try {
+                await save.runAsync();
+                return true;
+              } catch {
+                return false;
+              }
+            },
+          }
+        : undefined,
       header: load.data
         ? {
             resource: {
@@ -227,9 +271,9 @@ export default function AgentView({ resourceId }: Props) {
           }
         : undefined,
     }),
-    [controller.isDirty, controller.savePhase, load.data, publish, save]
+    [controller.isDirty, controller.savePhase, currentDraftAgent, load.data, publish, save]
   );
-  useWorkspaceLayoutConfig(headerConfig);
+  useResourceHostLayoutConfig(headerConfig);
   if (!resourceId)
     return (
       <div className={styles.overlay}>
@@ -343,17 +387,18 @@ export default function AgentView({ resourceId }: Props) {
           setPromptResetOpen(false);
         }}
       />
-      <AppAlertDialog
-        type="warning"
+      <UnsavedChangesDialog
+        type="confirm"
         isOpen={blocker.state === 'blocked'}
-        onOpenChange={(open) => {
-          if (!open) blocker.reset?.();
-        }}
-        title="存在未保存修改"
-        description="离开当前页面将丢失尚未保存的 Agent 配置。"
-        cancelText="继续编辑"
-        confirmText="丢弃并离开"
-        onConfirm={() => blocker.proceed?.()}
+        isLoading={save.loading}
+        title="保存后离开页面？"
+        description="当前 Agent 有未保存修改。保存后再离开可避免丢失本次编辑。"
+        cancelText="取消"
+        discardText="放弃更改"
+        confirmText="保存并退出"
+        onCancel={() => blocker.reset?.()}
+        onDiscard={() => blocker.proceed?.()}
+        onConfirm={() => void handleSaveAndLeave()}
       />
       <AppAlertDialog
         type="danger"
