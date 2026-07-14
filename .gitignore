@@ -35,8 +35,6 @@ dist-ssr
 docs/*
 !docs/agent/
 !docs/agent/*.md
-!docs/design/
-!docs/design/*.md
 
 
 .env.development
