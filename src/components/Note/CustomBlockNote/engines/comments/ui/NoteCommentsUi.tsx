@@ -6,9 +6,11 @@ import { createPortal } from 'react-dom';
 import type * as Y from 'yjs';
 import type { Doc } from 'yjs';
 
-import type { WisePenCommentAuthorInfo } from '@/components/CommentsSidebar';
-import { ResizableCommentsSidebar } from '@/components/CommentsSidebar';
 import type { NoteCommentUserDisplayRecord } from '@/domains/Note';
+import {
+  ResizableCommentsSidebar,
+  type WisePenCommentAuthorInfo,
+} from '@/views/workspace/note/_components/CommentsSidebar';
 import type { NoteCommentPosition, NotePluginRegistry } from '../../../content/types';
 import type { CustomBlockNoteEditor } from '../../../noteEditorComposition';
 import {

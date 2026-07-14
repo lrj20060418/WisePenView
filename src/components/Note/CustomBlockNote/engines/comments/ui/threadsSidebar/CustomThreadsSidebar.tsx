@@ -10,7 +10,7 @@ import {
   WisePenCommentsSidebar,
   type WisePenCommentAuthorInfo,
   type WisePenSidebarThread,
-} from '@/components/CommentsSidebar';
+} from '@/views/workspace/note/_components/CommentsSidebar';
 import type { CustomBlockNoteEditor } from '../../../../noteEditorComposition';
 import {
   buildTextCommentBody,

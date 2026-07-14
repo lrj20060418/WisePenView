@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 
+import { registerStore } from '@/store/lifecycle';
 import {
   DEFAULT_COMMENTS_SIDEBAR_WIDTH,
   normalizeCommentsSidebarWidth,
-} from '@/components/CommentsSidebar/resize';
-import { registerStore } from '@/store/lifecycle';
+} from '../_components/CommentsSidebar/resize';
 
 const DEFAULT_NOTE_ASIDE_WIDTH = DEFAULT_COMMENTS_SIDEBAR_WIDTH;
 
