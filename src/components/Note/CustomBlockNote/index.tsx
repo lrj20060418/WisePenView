@@ -107,11 +107,6 @@ function CustomBlockNote({
     visibilityPrivileged: isCommentVisibilityPrivileged,
     collaboratorVisibility,
     onOpen: onOpenComments,
-    sidebar: {
-      collapsed: commentsSidebarCollapsed,
-      width: commentsSidebarWidth,
-      onWidthChange: onCommentsSidebarWidthChange,
-    },
     history: { open: commentHistoryOpen, onOpenChange: onCommentHistoryOpenChange },
   },
   portalContainers: {
@@ -624,9 +619,6 @@ function CustomBlockNote({
                 commentUsersById={commentUsersById}
                 isCommentVisibilityPrivileged={isCommentVisibilityPrivileged}
                 collaboratorVisibility={collaboratorVisibility}
-                sidebarCollapsed={commentsSidebarCollapsed}
-                sidebarWidth={commentsSidebarWidth}
-                onSidebarWidthChange={onCommentsSidebarWidthChange}
                 sidebarPortalContainer={commentsSidebarPortalContainer}
                 commentHistoryOpen={commentHistoryOpen}
                 onCommentHistoryOpenChange={onCommentHistoryOpenChange}

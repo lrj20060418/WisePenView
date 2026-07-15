@@ -67,11 +67,6 @@ interface NoteCommentsConfig {
   visibilityPrivileged: boolean;
   collaboratorVisibility: CollaboratorCommentVisibility;
   onOpen: () => void;
-  sidebar: {
-    collapsed: boolean;
-    width: number;
-    onWidthChange: (width: number) => void;
-  };
   history: {
     open: boolean;
     onOpenChange: (open: boolean) => void;

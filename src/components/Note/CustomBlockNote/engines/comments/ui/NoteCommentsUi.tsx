@@ -7,10 +7,7 @@ import type * as Y from 'yjs';
 import type { Doc } from 'yjs';
 
 import type { NoteCommentUserDisplayRecord } from '@/domains/Note';
-import {
-  ResizableCommentsSidebar,
-  type WisePenCommentAuthorInfo,
-} from '@/views/workspace/note/_components/CommentsSidebar';
+import type { WisePenCommentAuthorInfo } from '@/views/workspace/note/_components/CommentsSidebar';
 import type { NoteCommentPosition, NotePluginRegistry } from '../../../content/types';
 import type { CustomBlockNoteEditor } from '../../../noteEditorComposition';
 import {
@@ -72,9 +69,6 @@ type NoteCommentsUiProps = {
   commentUsersById?: NoteCommentUserDisplayRecord;
   isCommentVisibilityPrivileged: boolean;
   collaboratorVisibility: CollaboratorCommentVisibility;
-  sidebarCollapsed: boolean;
-  sidebarWidth: number;
-  onSidebarWidthChange: (width: number) => void;
   sidebarPortalContainer: HTMLElement | null;
   commentHistoryOpen: boolean;
   onCommentHistoryOpenChange: (open: boolean) => void;
@@ -94,9 +88,6 @@ export function NoteCommentsUi({
   commentUsersById,
   isCommentVisibilityPrivileged,
   collaboratorVisibility,
-  sidebarCollapsed,
-  sidebarWidth,
-  onSidebarWidthChange,
   sidebarPortalContainer,
   commentHistoryOpen,
   onCommentHistoryOpenChange,
@@ -210,26 +201,23 @@ export function NoteCommentsUi({
       resolveCommentAuthor={resolveCommentAuthor}
     />
   );
-  const sidebarPanel = !sidebarCollapsed ? (
-    <ResizableCommentsSidebar width={sidebarWidth} onWidthChange={onSidebarWidthChange}>
-      <CustomThreadsSidebar
-        editor={editor}
-        doc={doc}
-        localThreadReferenceTexts={localThreadReferenceTexts}
-        contentThreadPositions={contentThreadPositions}
-        visibilityScope={visibilityScope}
-        filter="open"
-        sort="position"
-        maxCommentsBeforeCollapse={5}
-        actionsEnabled={commentsWritable}
-        resolveCommentAuthor={resolveCommentAuthor}
-      />
-    </ResizableCommentsSidebar>
-  ) : null;
-  const renderedSidebarPanel =
-    sidebarPortalContainer && sidebarPanel
-      ? createPortal(sidebarPanel, sidebarPortalContainer)
-      : null;
+  const sidebarPanel = (
+    <CustomThreadsSidebar
+      editor={editor}
+      doc={doc}
+      localThreadReferenceTexts={localThreadReferenceTexts}
+      contentThreadPositions={contentThreadPositions}
+      visibilityScope={visibilityScope}
+      filter="open"
+      sort="position"
+      maxCommentsBeforeCollapse={5}
+      actionsEnabled={commentsWritable}
+      resolveCommentAuthor={resolveCommentAuthor}
+    />
+  );
+  const renderedSidebarPanel = sidebarPortalContainer
+    ? createPortal(sidebarPanel, sidebarPortalContainer)
+    : null;
 
   return (
     <>
