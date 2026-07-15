@@ -1,6 +1,7 @@
 import type { IResourceService } from '@/domains/Resource';
 import { RESOURCE_SORT_BY, RESOURCE_SORT_DIR } from '@/domains/Resource';
 import type { IUserService } from '@/domains/User';
+import type { AssetUploadTicketApiResponse } from '@/domains/_shared/apis/versionAssetApi.type';
 import { createOssStsClientManager } from '@/domains/_shared/ossStsClient';
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 import { putOssPresignedUrl } from '@/utils/oss/ossPresignedPut';
@@ -203,11 +204,7 @@ export const createSkillServices = (deps: SkillServicesDeps): ISkillService => {
 
     for (let start = 0; start < entries.length; start += DEFAULT_UPLOAD_INIT_BATCH_SIZE) {
       const batchEntries = entries.slice(start, start + DEFAULT_UPLOAD_INIT_BATCH_SIZE);
-      let tickets: NonNullable<
-        NonNullable<
-          Awaited<ReturnType<typeof SkillApi.initUploadSkillAssets>>
-        >['assetUploadTickets']
-      > = [];
+      let tickets: AssetUploadTicketApiResponse[] = [];
 
       try {
         const res = await SkillApi.initUploadSkillAssets({

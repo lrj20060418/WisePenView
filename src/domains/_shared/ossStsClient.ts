@@ -1,19 +1,10 @@
+import type { OssStsTokenApiResponse } from '@/apis/api.type';
 import { registerServiceCacheCleaner } from '@/domains/_shared/cacheRegistry';
 import { createClientError, FRONTEND_CLIENT_ERROR, isWisePenError } from '@/utils/error';
 import OSS from 'ali-oss';
 
-export interface OssStsToken {
-  accessKeyId?: string;
-  accessKeySecret?: string;
-  securityToken?: string;
-  bucket?: string;
-  region?: string;
-  endpoint?: string;
-  expiration?: string;
-}
-
 export interface OssStsClientManagerOptions<Key> {
-  loadToken: (key: Key) => Promise<OssStsToken | null | undefined>;
+  loadToken: (key: Key) => Promise<OssStsTokenApiResponse | null | undefined>;
   resolveCacheKey: (key: Key) => string;
   refreshBufferMs?: number;
   defaultExpiresInMs?: number;
@@ -39,7 +30,7 @@ const resolveExpiresAt = (expiration: string | undefined, defaultExpiresInMs: nu
   return Number.isFinite(expiresAt) ? expiresAt : Date.now() + defaultExpiresInMs;
 };
 
-const createOssClient = (token: OssStsToken): OSS => {
+const createOssClient = (token: OssStsTokenApiResponse): OSS => {
   if (
     !token.accessKeyId ||
     !token.accessKeySecret ||

@@ -1,18 +1,16 @@
-import type { JavaLongApiValue, PageR } from '@/apis/api.type';
+import type { JavaLongApiValue, NumericEnumApiValue, PageApiRequest, PageR } from '@/apis/api.type';
 import type { TagResourceActionKey } from '@/domains/Tag';
 import type { UserDisplayBase } from '@/domains/User';
 import type { UserIdentityTypeApiValue } from '@/domains/User/apis/UserApi.type';
 
 type GroupFileOrgLogicApiValue = 'FOLDER' | 'TAG';
-type GroupTypeApiValue = 1 | 2 | 3 | '1' | '2' | '3';
+type GroupTypeApiValue = NumericEnumApiValue<1 | 2 | 3>;
 type GroupRoleApiValue = '0' | '1' | '2' | '-1';
-type GroupResourceActionApiValue = TagResourceActionKey | number | `${number}`;
+type GroupResourceActionApiValue = TagResourceActionKey | NumericEnumApiValue;
 type GroupResourceActionApiList = GroupResourceActionApiValue[];
 
-export interface ListGroupApiRequest {
+export interface ListGroupApiRequest extends PageApiRequest {
   groupRoleFilter: 'JOINED' | 'MANAGED';
-  page: number;
-  size: number;
 }
 
 export interface GroupApiResponse {
@@ -97,10 +95,8 @@ export interface GroupMemberApiResponse {
 
 export type FetchGroupMembersApiResponse = PageR<GroupMemberApiResponse>;
 
-export interface ListMemberApiRequest {
+export interface ListMemberApiRequest extends PageApiRequest {
   groupId: string | number;
-  page: number;
-  size: number;
 }
 
 export type GroupRoleApiResponse = GroupRoleApiValue;
@@ -140,10 +136,7 @@ export interface ChangeTokenLimitApiRequest {
   newTokenLimit: number;
 }
 
-export interface GetAllMyGroupTokenInfoApiRequest {
-  page: number;
-  size: number;
-}
+export type GetAllMyGroupTokenInfoApiRequest = PageApiRequest;
 
 export interface GroupTokenInfoApiResponseItem {
   groupDisplayBase?: {
