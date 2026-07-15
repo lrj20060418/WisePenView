@@ -5,6 +5,9 @@ export interface ApiResponse<T = unknown> {
   data: T;
 }
 
+/** Java Long 经 JSON 序列化后可能返回数字或十进制字符串。 */
+export type JavaLongApiValue = number | `${number}`;
+
 /** 与 Java 后端 PageR<T> 一致的标准分页响应体 */
 export interface PageR<T> {
   list: T[];

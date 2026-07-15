@@ -1,4 +1,4 @@
-import type { PageR } from '@/apis/api.type';
+import type { JavaLongApiValue, PageR } from '@/apis/api.type';
 import type { TagResourceActionKey } from '@/domains/Tag';
 import type { UserDisplayBase } from '@/domains/User';
 import type { UserIdentityTypeApiValue } from '@/domains/User/apis/UserApi.type';
@@ -24,11 +24,11 @@ export interface GroupApiResponse {
   ownerId?: string | number | null;
   ownerInfo?:
     (Omit<UserDisplayBase, 'identityType'> & { identityType?: UserIdentityTypeApiValue }) | null;
-  memberCount?: number;
+  memberCount?: JavaLongApiValue;
   createTime?: string;
   inviteCode?: string | null;
-  tokenUsed?: number;
-  tokenBalance?: number;
+  tokenUsed?: JavaLongApiValue;
+  tokenBalance?: JavaLongApiValue;
 }
 
 export type ListGroupApiResponse = PageR<GroupApiResponse>;
@@ -88,8 +88,8 @@ export interface GroupMemberBaseInfoApiResponse {
 export interface GroupMemberApiResponse {
   role: GroupRoleApiValue;
   joinTime: string;
-  tokenLimit: number;
-  tokenUsed: number;
+  tokenLimit: JavaLongApiValue;
+  tokenUsed: JavaLongApiValue;
   groupId: string | number;
   memberId: string | number;
   memberInfo: GroupMemberBaseInfoApiResponse;
@@ -127,8 +127,8 @@ export interface GetMyGroupMemberInfoApiRequest {
 export interface GetMyGroupMemberInfoApiResponse {
   role?: GroupRoleApiValue;
   joinTime?: string;
-  tokenUsed?: number;
-  tokenLimit?: number;
+  tokenUsed?: JavaLongApiValue;
+  tokenLimit?: JavaLongApiValue;
   groupId?: string | number;
   memberId?: string | number;
   memberInfo?: GroupMemberBaseInfoApiResponse;
@@ -151,8 +151,8 @@ export interface GroupTokenInfoApiResponseItem {
     groupName?: string;
     groupType?: GroupTypeApiValue | null;
   };
-  tokenLimit?: number;
-  tokenUsed?: number;
+  tokenLimit?: JavaLongApiValue;
+  tokenUsed?: JavaLongApiValue;
 }
 
 export type GetAllMyGroupTokenInfoApiResponse = PageR<GroupTokenInfoApiResponseItem>;

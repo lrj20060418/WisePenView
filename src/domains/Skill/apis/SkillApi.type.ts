@@ -1,3 +1,4 @@
+import type { JavaLongApiValue } from '@/apis/api.type';
 import type { ResourceItemApiResponse } from '@/domains/Resource/apis/ResourceApi.type';
 
 export const AssetResourceTypeEnum = {
@@ -22,7 +23,7 @@ export interface SkillAssetApiInfo {
   objectKey?: string;
   assetResourceType?: AssetResourceTypeEnum;
   uploadStatus?: SkillUploadStatus;
-  size?: number;
+  size?: JavaLongApiValue;
 }
 
 export interface SkillInfoApiResponse {

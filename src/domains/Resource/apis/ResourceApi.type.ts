@@ -1,4 +1,4 @@
-import type { PageR } from '@/apis/api.type';
+import type { JavaLongApiValue, PageR } from '@/apis/api.type';
 import type { UserDisplayBaseApiResponse } from '@/domains/User/apis/UserApi.type';
 
 export type ResourceActionApiKey =
@@ -13,15 +13,13 @@ export type ResourceActionApiKey =
   | 'COMMENT';
 type ResourceActionApiValue = ResourceActionApiKey | number | `${number}`;
 export type ResourceActionApiList = ResourceActionApiValue[];
-type ResourceSizeApiValue = number | `${number}`;
-
 export interface ResourceInteractionInfoApiResponse {
-  readCount?: number;
-  likeCount?: number;
-  scoreCount?: number;
-  scoreTotal?: number;
-  favoriteCount?: number;
-  commentCount?: number;
+  readCount?: JavaLongApiValue | null;
+  likeCount?: JavaLongApiValue | null;
+  scoreCount?: JavaLongApiValue | null;
+  scoreTotal?: JavaLongApiValue | null;
+  favoriteCount?: JavaLongApiValue | null;
+  commentCount?: JavaLongApiValue | null;
 }
 
 interface ResourceTagInfoApiResponse {
@@ -64,7 +62,7 @@ export interface ResourceItemApiResponse {
   resourceId: string;
   resourceName: string;
   ownerId?: string;
-  size?: ResourceSizeApiValue | null;
+  size?: JavaLongApiValue | null;
   ownerInfo: UserDisplayBaseApiResponse;
   resourceType?: string;
   preview?: string;

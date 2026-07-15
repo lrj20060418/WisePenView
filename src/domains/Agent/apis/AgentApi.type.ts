@@ -1,3 +1,4 @@
+import type { JavaLongApiValue } from '@/apis/api.type';
 import type { ResourceItemApiResponse } from '@/domains/Resource/apis/ResourceApi.type';
 
 export type AgentVersionStatusApi = 'DRAFT' | 'PUBLISHED';
@@ -45,7 +46,7 @@ export interface AgentAssetApiInfo {
   objectKey?: string;
   assetResourceType?: string;
   uploadStatus?: AgentAssetUploadStatusApi;
-  size?: number;
+  size?: JavaLongApiValue;
 }
 
 export interface AgentInfoApiResponse {
