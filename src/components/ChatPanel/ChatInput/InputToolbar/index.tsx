@@ -13,6 +13,8 @@ function InputToolbar({
   sendDisabled,
   sending,
   voiceInputProps,
+  injectedAgents,
+  preferredAgent,
   onSend,
   onStop,
 }: InputToolbarProps) {
@@ -28,7 +30,7 @@ function InputToolbar({
     <div className={styles.actionToolbar}>
       <div className={styles.toolbarLeft}>
         <UploadMenu />
-        <AgentPicker />
+        <AgentPicker injectedAgents={injectedAgents} preferredAgent={preferredAgent} />
         <SkillMenu />
       </div>
 

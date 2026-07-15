@@ -11,14 +11,21 @@ import type {
   ListModelsApiResponse,
   ListSessionsApiRequest,
   ListSessionsApiResponse,
+  ListToolsApiResponse,
   RenameSessionApiRequest,
   RenameSessionApiResponse,
+  SetSessionAgentApiRequest,
+  SetSessionAgentApiResponse,
 } from './ChatApi.type';
 
 /** Chat API: /chat/* */
 
 function listModels(): Promise<ListModelsApiResponse> {
   return apiGet('/chat/model/listAvailableModels');
+}
+
+function listTools(): Promise<ListToolsApiResponse> {
+  return apiGet('/chat/tool/listUserTools');
 }
 
 function initTemporaryAttachmentUpload(
@@ -29,6 +36,7 @@ function initTemporaryAttachmentUpload(
 
 export const ChatApi = {
   listModels,
+  listTools,
   initTemporaryAttachmentUpload,
 };
 
@@ -36,6 +44,19 @@ export const ChatApi = {
 
 function createSession(req: CreateSessionApiRequest): Promise<CreateSessionApiResponse> {
   return apiPost('/chat/session/createSession', req);
+}
+
+function setSessionAgent(req: SetSessionAgentApiRequest): Promise<SetSessionAgentApiResponse> {
+  return apiPost(
+    '/chat/session/setSessionAgent',
+    {
+      agent_id: req.agent_id,
+      agent_version: req.agent_version,
+    },
+    {
+      params: { session_id: req.session_id },
+    }
+  );
 }
 
 function renameSession(req: RenameSessionApiRequest): Promise<RenameSessionApiResponse> {
@@ -68,6 +89,7 @@ function listHistoryMessages(
 
 export const ChatSessionApi = {
   createSession,
+  setSessionAgent,
   renameSession,
   deleteSession,
   listSessions,

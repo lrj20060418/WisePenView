@@ -4,6 +4,8 @@ export interface ChatSession {
   title: string;
   created_at: string;
   updated_at: string;
+  agent_id?: string | null;
+  agent_version?: number | null;
 }
 
 export interface MessageResponse {
@@ -39,6 +41,19 @@ export interface ListModelsApiResponse {
   user_models: ModelResponse[];
 }
 
+export interface ToolApiResponse {
+  name: string;
+  description: string;
+  requires_config: boolean;
+  configured: boolean;
+  enabled: boolean;
+  missing_config_keys?: string[];
+}
+
+export interface ListToolsApiResponse {
+  tools: ToolApiResponse[];
+}
+
 export interface ModelProviderMappingResponse {
   model_id: string;
   provider_id: string;
@@ -65,8 +80,18 @@ interface ModelResponse {
   is_active: boolean;
   mappings?: ModelProviderMappingResponse[] | null;
 }
-export type CreateSessionApiRequest = { title?: string | null; agent_id?: string | null };
+export type CreateSessionApiRequest = {
+  title?: string | null;
+  agent_id?: string | null;
+  agent_version?: number | null;
+};
 export type CreateSessionApiResponse = ChatSession;
+export type SetSessionAgentApiRequest = {
+  session_id: string;
+  agent_id?: string | null;
+  agent_version?: number | null;
+};
+export type SetSessionAgentApiResponse = ChatSession;
 export type RenameSessionApiRequest = { session_id: string; new_title?: string | null };
 export type RenameSessionApiResponse = ChatSession;
 export type DeleteSessionApiRequest = { session_id: string };

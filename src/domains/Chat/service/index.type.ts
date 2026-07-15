@@ -7,6 +7,10 @@ import type { SkillScopeTreeGroup } from '../mapper/skillScope.mapper';
 export interface ToolOption {
   toolId: string;
   label: string;
+  description: string;
+  enabled: boolean;
+  configured: boolean;
+  requiresConfig: boolean;
 }
 
 export interface ChatModelTag {
@@ -93,6 +97,7 @@ export interface IChatService {
     params: GetChatInputCapabilityOptionsParams
   ): Promise<ChatInputCapabilityOptions>;
   createSession(params?: CreateSessionRequest): Promise<ChatSession>;
+  setSessionAgent(params: SetSessionAgentRequest): Promise<ChatSession>;
   renameSession(params: RenameSessionRequest): Promise<ChatSession>;
   deleteSession(params: DeleteSessionRequest): Promise<void>;
   listSessions(params?: ListSessionsRequest): Promise<PageResult<ChatSession>>;
@@ -111,6 +116,14 @@ export interface RenameSessionRequest {
 /** 创建会话请求参数（与 POST /session/createSession 对齐） */
 export interface CreateSessionRequest {
   title?: string;
+  agentId?: string | null;
+  agentVersion?: number | null;
+}
+
+export interface SetSessionAgentRequest {
+  sessionId: string;
+  agentId?: string | null;
+  agentVersion?: number | null;
 }
 
 /** 会话实体 */
@@ -120,6 +133,8 @@ export interface ChatSession {
   title: string;
   createdAt: string;
   updatedAt: string;
+  agentId?: string | null;
+  agentVersion?: number | null;
 }
 
 /** 删除会话请求参数 */

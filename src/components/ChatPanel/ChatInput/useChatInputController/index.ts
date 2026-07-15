@@ -56,13 +56,15 @@ export function useChatInputController({ onSend, onStop, sending }: UseChatInput
     try {
       const pendingAttachments = await preparePendingAttachments();
       if (!pendingAttachments) return;
-      await onSend(text, {
+      const sendAccepted = await onSend(text, {
         model: selectedModel,
+        selectedAgent: completionState.selectedAgent,
         activeDocRefs: completionState.activeDocRefs,
         activeAttachments: [...completionState.activeAttachments, ...pendingAttachments],
         selectedSkills: completionState.selectedSkills,
         selectedTools: completionState.selectedTools,
       });
+      if (sendAccepted === false) return;
       clearAfterSend();
       clearPendingFileCache();
     } catch (err) {

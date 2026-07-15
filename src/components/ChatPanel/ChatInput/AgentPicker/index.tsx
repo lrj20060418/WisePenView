@@ -1,16 +1,37 @@
 import { Popover } from '@/components/Overlay';
 import { useChatService } from '@/domains';
 import type { ChatAgentOption } from '@/domains/Chat';
-import { buildChatInputAgentOptions, resolveChatInputSelectedAgent } from '@/domains/Chat';
+import {
+  buildChatInputAgentOptions,
+  buildDefaultPersonalAgent,
+  resolveChatInputSelectedAgent,
+} from '@/domains/Chat';
 import { parseErrorMessage } from '@/utils/error';
 import { Button, ListBox, ListBoxItem, toast } from '@heroui/react';
-import { useRequest } from 'ahooks';
+import { useMount, useRequest, useUpdateEffect } from 'ahooks';
 import { Bot, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useChatInputStore, useChatInputStoreApi } from '../_store/ChatInputStore';
 import styles from '../style.module.less';
 
-function AgentPicker() {
+interface AgentPickerProps {
+  injectedAgents?: ChatAgentOption[];
+  preferredAgent?: ChatAgentOption | null;
+}
+
+function mergeAgentOptions(
+  agents: ChatAgentOption[],
+  injectedAgents: ChatAgentOption[] = []
+): ChatAgentOption[] {
+  const seen = new Set<string>();
+  return [...injectedAgents, ...agents].filter((agent) => {
+    if (seen.has(agent.agentId)) return false;
+    seen.add(agent.agentId);
+    return true;
+  });
+}
+
+function AgentPicker({ injectedAgents, preferredAgent }: AgentPickerProps) {
   const chatService = useChatService();
   const store = useChatInputStoreApi();
   const selectedAgent = useChatInputStore((state) => state.selectedAgent);
@@ -19,14 +40,51 @@ function AgentPicker() {
   const { data: agents = [] } = useRequest(() => chatService.getChatInputAgents(), {
     onSuccess: (nextAgents) => {
       const currentAgent = store.getState().selectedAgent;
-      const nextAgent = resolveChatInputSelectedAgent(nextAgents, currentAgent);
+      const nextAgent = resolveChatInputSelectedAgent(
+        mergeAgentOptions(nextAgents, injectedAgents),
+        currentAgent
+      );
       if (nextAgent.agentId !== currentAgent.agentId) {
         setSelectedAgent(nextAgent);
       }
     },
     onError: (error) => toast.danger(parseErrorMessage(error)),
   });
-  const displayAgents = buildChatInputAgentOptions(agents, selectedAgent);
+  const displayAgents = useMemo(
+    () => buildChatInputAgentOptions(mergeAgentOptions(agents, injectedAgents), selectedAgent),
+    [agents, injectedAgents, selectedAgent]
+  );
+  const injectedAgentKey = useMemo(
+    () =>
+      (injectedAgents ?? [])
+        .map((agent) => `${agent.agentId}:${agent.agentVersion ?? ''}`)
+        .join('|'),
+    [injectedAgents]
+  );
+  const injectedAgentIds = useMemo(
+    () => new Set((injectedAgents ?? []).map((agent) => agent.agentId)),
+    [injectedAgents]
+  );
+
+  const syncPreferredAgent = () => {
+    const currentAgent = store.getState().selectedAgent;
+    if (currentAgent.source === 'CURRENT_DRAFT' && !injectedAgentIds.has(currentAgent.agentId)) {
+      setSelectedAgent(buildDefaultPersonalAgent());
+      return;
+    }
+    if (!preferredAgent) return;
+    if (!currentAgent.isDefault && currentAgent.source !== 'CURRENT_DRAFT') return;
+    if (currentAgent.agentId === preferredAgent.agentId) {
+      if (currentAgent.source === 'CURRENT_DRAFT' && currentAgent !== preferredAgent) {
+        setSelectedAgent(preferredAgent);
+      }
+      return;
+    }
+    setSelectedAgent(preferredAgent);
+  };
+
+  useMount(syncPreferredAgent);
+  useUpdateEffect(syncPreferredAgent, [injectedAgentKey, preferredAgent?.agentId]);
 
   const handleSelect = (agent: ChatAgentOption) => {
     setSelectedAgent(agent);
@@ -70,7 +128,9 @@ function AgentPicker() {
                           <Bot size={14} />
                           <span>{agent.label}</span>
                         </span>
-                        {agent.agentType === 'GROUP' && agent.groupName ? (
+                        {agent.source === 'CURRENT_DRAFT' ? (
+                          <span className={styles.agentMeta}>当前草稿</span>
+                        ) : agent.agentType === 'GROUP' && agent.groupName ? (
                           <span className={styles.agentMeta}>{agent.groupName}</span>
                         ) : null}
                         {selectedAgent.agentId === agent.agentId ? (

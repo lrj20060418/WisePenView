@@ -8,6 +8,7 @@ export const buildDefaultPersonalAgent = (): ChatAgentOption => ({
   agentId: DEFAULT_PERSONAL_AGENT_ID,
   agentType: 'PERSONAL',
   label: DEFAULT_PERSONAL_AGENT_LABEL,
+  source: 'DEFAULT',
   isDefault: true,
 });
 
@@ -20,6 +21,8 @@ export const buildAgentFromResourceItem = (
     agentId: `agent-${item.resourceId}`,
     agentType: group ? 'GROUP' : 'PERSONAL',
     label: item.resourceName,
+    source: 'RESOURCE',
+    resourceId: item.resourceId,
     ...(group ? { groupId: group.groupId, groupName: group.groupName } : {}),
     defaultSkillIds: raw.defaultSkillIds,
   };
@@ -37,6 +40,7 @@ export const buildAgentFromSkillTreeGroup = (
     agentId: currentAgent?.groupId === groupId ? currentAgent.agentId : `agent-group-${groupId}`,
     agentType: 'GROUP',
     label: group.label,
+    source: 'RESOURCE',
     groupId,
     groupName: group.label,
   };

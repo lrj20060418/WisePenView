@@ -19,6 +19,8 @@ function ChatInputContent({
   sending,
   contextPreview,
   onClearContext,
+  injectedAgents,
+  preferredAgent,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { attachmentStripProps, containerProps, dropOverlayProps, textAreaProps, toolbarProps } =
@@ -55,7 +57,11 @@ function ChatInputContent({
           className={styles.textarea}
         />
 
-        <InputToolbar {...toolbarProps} />
+        <InputToolbar
+          {...toolbarProps}
+          injectedAgents={injectedAgents}
+          preferredAgent={preferredAgent}
+        />
 
         <DropOverlay {...dropOverlayProps} />
       </div>

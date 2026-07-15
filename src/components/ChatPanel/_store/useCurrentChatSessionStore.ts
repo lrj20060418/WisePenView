@@ -7,36 +7,60 @@ import { createStoreJSONStorage } from '@/store/persistence';
 interface CurrentChatSessionState {
   currentSessionId?: string;
   currentSessionTitle?: string;
-  setCurrentSession: (session: { id: string; title: string }) => void;
+  currentSessionAgentId?: string | null;
+  currentSessionAgentVersion?: number | null;
+  setCurrentSession: (session: {
+    id: string;
+    title: string;
+    agentId?: string | null;
+    agentVersion?: number | null;
+  }) => void;
   clearCurrentSession: () => void;
 }
 
 const DEFAULT_CURRENT_CHAT_SESSION_STATE: Pick<
   CurrentChatSessionState,
-  'currentSessionId' | 'currentSessionTitle'
+  | 'currentSessionId'
+  | 'currentSessionTitle'
+  | 'currentSessionAgentId'
+  | 'currentSessionAgentVersion'
 > = {
   currentSessionId: undefined,
   currentSessionTitle: undefined,
+  currentSessionAgentId: undefined,
+  currentSessionAgentVersion: undefined,
 };
 
 export const useCurrentChatSessionStore = create<CurrentChatSessionState>()(
   persist(
     (set) => ({
       ...DEFAULT_CURRENT_CHAT_SESSION_STATE,
-      setCurrentSession: ({ id, title }) => {
+      setCurrentSession: ({ id, title, agentId, agentVersion }) => {
         set((state) => {
-          if (state.currentSessionId === id && state.currentSessionTitle === title) {
+          if (
+            state.currentSessionId === id &&
+            state.currentSessionTitle === title &&
+            state.currentSessionAgentId === agentId &&
+            state.currentSessionAgentVersion === agentVersion
+          ) {
             return state;
           }
           return {
             currentSessionId: id,
             currentSessionTitle: title,
+            currentSessionAgentId: agentId,
+            currentSessionAgentVersion: agentVersion,
           };
         });
       },
       clearCurrentSession: () =>
         set((state) => {
-          if (state.currentSessionId == null && state.currentSessionTitle == null) {
+          if (
+            state.currentSessionId == null &&
+            state.currentSessionTitle == null &&
+            state.currentSessionAgentId == null &&
+            state.currentSessionAgentVersion == null
+          ) {
             return state;
           }
           return DEFAULT_CURRENT_CHAT_SESSION_STATE;

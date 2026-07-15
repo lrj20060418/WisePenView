@@ -151,12 +151,13 @@ function mapSkillSummary(item: {
   resourceId?: string;
   resourceName?: string;
   ownerId?: string;
+  preview?: string;
 }): SkillSummary {
   return {
     resourceId: item.resourceId ?? '',
     title: item.resourceName ?? '',
     skillName: '',
-    description: '',
+    description: item.preview?.trim() || '',
     version: 0,
     status: SKILL_VERSION_STATUS.DRAFT,
     updatedAt: '',
