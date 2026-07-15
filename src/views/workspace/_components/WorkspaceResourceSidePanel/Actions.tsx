@@ -32,14 +32,13 @@ function WorkspaceResourceSidePanelActions({
             variant="ghost"
             size="sm"
             isIconOnly
-            className={styles.actionButton}
             isSelected={mode === 'inlineComment'}
             isDisabled={disabled || !inlineCommentAvailable}
             aria-label={mode === 'inlineComment' ? '收起批注栏' : '展开批注栏'}
             aria-expanded={mode === 'inlineComment'}
             onChange={() => toggleMode(resourceId, 'inlineComment')}
           >
-            <MessageSquareText size={16} aria-hidden="true" />
+            <MessageSquareText size={18} aria-hidden="true" />
           </ToggleButton>
         </Tooltip.Trigger>
         <Tooltip.Content>{inlineCommentTooltip}</Tooltip.Content>
@@ -50,14 +49,13 @@ function WorkspaceResourceSidePanelActions({
             variant="ghost"
             size="sm"
             isIconOnly
-            className={styles.actionButton}
             isSelected={mode === 'comment'}
             isDisabled={disabled}
             aria-label={mode === 'comment' ? '收起评论区' : '展开评论区'}
             aria-expanded={mode === 'comment'}
             onChange={() => toggleMode(resourceId, 'comment')}
           >
-            <MessagesSquare size={16} aria-hidden="true" />
+            <MessagesSquare size={18} aria-hidden="true" />
           </ToggleButton>
         </Tooltip.Trigger>
         <Tooltip.Content>{mode === 'comment' ? '收起评论区' : '打开评论区'}</Tooltip.Content>
