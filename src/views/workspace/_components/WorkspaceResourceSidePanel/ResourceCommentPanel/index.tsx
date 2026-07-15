@@ -210,11 +210,7 @@ function ResourceCommentPanel({ resource, onResourceChanged }: ResourceCommentPa
   };
 
   return (
-    <aside className={styles.panel} aria-label="资源评论区">
-      <header className={styles.header}>
-        <h2 className={styles.title}>评论区</h2>
-      </header>
-
+    <div className={styles.panel}>
       <div className={styles.content}>
         <ResourceFeedbackSummary
           readCount={resource.readCount}
@@ -326,7 +322,7 @@ function ResourceCommentPanel({ resource, onResourceChanged }: ResourceCommentPa
           <img className={styles.previewImage} src={previewImageUrl} alt="评论图片预览" />
         ) : null}
       </AppDisplayDialog>
-    </aside>
+    </div>
   );
 }
 

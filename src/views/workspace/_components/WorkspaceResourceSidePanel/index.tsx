@@ -42,8 +42,9 @@ function WorkspaceResourceSidePanel({
   const setWidth = useWorkspaceResourceSidePanelStore((state) => state.setWidth);
   const sidePanelRef = useRef<PanelImperativeHandle | null>(null);
   const pendingWidthRef = useRef<number | null>(null);
-  const annotationAvailable = Boolean(config?.annotation);
-  const activeMode = storedMode === 'annotation' && !annotationAvailable ? 'closed' : storedMode;
+  const inlineCommentAvailable = Boolean(config?.inlineComment);
+  const activeMode =
+    storedMode === 'inlineComment' && !inlineCommentAvailable ? 'closed' : storedMode;
   const open = Boolean(config) && activeMode !== 'closed';
   const panelSize = open ? width : 0;
 
@@ -67,8 +68,8 @@ function WorkspaceResourceSidePanel({
   );
 
   const panelContent =
-    activeMode === 'annotation' ? (
-      config?.annotation
+    activeMode === 'inlineComment' ? (
+      config?.inlineComment
     ) : config ? (
       <ResourceCommentPanel
         key={config.resource.resourceId}
@@ -76,6 +77,7 @@ function WorkspaceResourceSidePanel({
         onResourceChanged={config.onResourceChanged}
       />
     ) : null;
+  const panelTitle = activeMode === 'inlineComment' ? '批注' : '评论';
 
   return (
     <SystemResizablePanelGroup
@@ -105,11 +107,18 @@ function WorkspaceResourceSidePanel({
         maxSize={open ? WORKSPACE_RESOURCE_SIDE_PANEL_MAX_WIDTH : 0}
         groupResizeBehavior="preserve-pixel-size"
         className={styles.sidePanel}
-        aria-label={activeMode === 'annotation' ? '批注栏' : '评论区'}
+        aria-label={activeMode === 'inlineComment' ? '批注栏' : '评论区'}
         aria-hidden={!open ? true : undefined}
         onResize={handleResize}
       >
-        {open ? panelContent : null}
+        {open ? (
+          <section className={styles.panelFrame} aria-label={`${panelTitle}栏`}>
+            <header className={styles.panelHeader}>
+              <h2 className={styles.panelTitle}>{panelTitle}</h2>
+            </header>
+            <div className={styles.panelBody}>{panelContent}</div>
+          </section>
+        ) : null}
       </SystemResizablePanel>
     </SystemResizablePanelGroup>
   );

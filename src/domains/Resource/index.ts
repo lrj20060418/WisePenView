@@ -74,5 +74,5 @@ export type {
   UpdateResourcePermissionSubjectsRequest,
   UpdateResourceTagsRequest,
 } from './service/index.type';
-export { isCommentVisibilityPrivileged } from './utils/isCommentVisibilityPrivileged';
+export { isInlineCommentVisibilityPrivileged } from './utils/isInlineCommentVisibilityPrivileged';
 export { resolveResourceIconType } from './utils/resolveResourceIconType';
