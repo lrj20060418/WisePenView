@@ -26,7 +26,8 @@ import CapabilitiesSection from './_components/CapabilitiesSection';
 import MemorySection from './_components/MemorySection';
 import ModelSection from './_components/ModelSection';
 import SystemPromptSection, { type PromptMode } from './_components/SystemPromptSection';
-import { useAgentWorkspaceController, type AgentDraft } from './_hooks/useAgentWorkspaceController';
+import { useAgentWorkspaceController } from './_hooks/useAgentWorkspaceController';
+import { loadAgentEditorData } from './_services/agentEditorDataService';
 import styles from './style.module.less';
 import { buildGuidedPrompt, DEFAULT_GUIDED_PROMPT_FIELDS, parseGuidedPrompt } from './systemPrompt';
 
@@ -66,27 +67,7 @@ export default function AgentView({ resourceId }: Props) {
   const load = useRequest(
     async () => {
       if (!resourceId) return null;
-      const [agent, models, tools, skills] = await Promise.all([
-        agentService.getAgentDetail(resourceId),
-        chatService.getModels(),
-        chatService.getTools(),
-        skillService.getSkillSummaries(),
-      ]);
-      const savedDraft: AgentDraft = {
-        name: agent.name,
-        description: agent.description,
-        spec: structuredClone(agent.spec),
-      };
-      const usesDefaultPrompt = !agent.spec.systemPrompt;
-      if (usesDefaultPrompt)
-        agent.spec.systemPrompt = buildGuidedPrompt(DEFAULT_GUIDED_PROMPT_FIELDS, true);
-      return {
-        agent,
-        models,
-        tools,
-        skills,
-        savedDraft: usesDefaultPrompt ? savedDraft : undefined,
-      };
+      return loadAgentEditorData({ resourceId, agentService, chatService, skillService });
     },
     {
       ready: Boolean(resourceId),
