@@ -119,11 +119,21 @@
   /* 贴近飞书文档的正文与标题字阶（仅作用正文编辑区） */
   :global(.bodyBlockNoteView .bn-editor) {
     font-size: 16px;
+    line-height: 1.8;
     padding-bottom: 60vh;
   }
 
+  :global(.bn-editor .bn-block-outer) {
+    line-height: 1.8;
+  }
+
   :global(.bn-editor .bn-block-content) {
+    /* 块类型切换时 BlockNote 会短暂挂载上一类型属性，必须持续压住其原生排版与字号动画。 */
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    line-height: 1.8;
     margin-top: 0;
+    transition: none !important;
   }
 
   :global(.bn-editor .bn-block-content:not([data-content-type='heading']) .bn-inline-content),
@@ -438,10 +448,19 @@
   --bn-font-family: var(--app-font-family);
   font-family: var(--app-font-family);
   font-size: 16px;
+  line-height: 1.8;
+}
+
+:global(.bn-drag-preview .bn-block-outer) {
+  line-height: 1.8;
 }
 
 :global(.bn-drag-preview .bn-block-content) {
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 1.8;
   margin-top: 0;
+  transition: none !important;
 }
 
 :global(.bn-drag-preview .bn-block-content:not([data-content-type='heading']) .bn-inline-content),
