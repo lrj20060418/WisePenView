@@ -1,16 +1,24 @@
 import { CommentApi } from '../apis/CommentApi';
 import { FavoriteApi } from '../apis/FavoriteApi';
+import { InlineCommentApi } from '../apis/InlineCommentApi';
 import { InteractApi } from '../apis/InteractApi';
+import { InlineCommentServicesMap } from '../mapper/InlineCommentServices.map';
 import { InteractServicesMap } from '../mapper/InteractServices.map';
 import type {
+  AddInlineCommentRequest,
   CommentItemActionRequest,
   CreateCommentRequest,
   CreateFavoriteCollectionRequest,
+  CreateInlineCommentThreadRequest,
   CreateReplyRequest,
   DeleteFavoriteCollectionRequest,
+  GetInlineCommentChangesRequest,
+  GetInlineCommentRequest,
+  GetInlineCommentThreadRequest,
   IInteractService,
   ListCommentsRequest,
   ListFavoritedResourcesRequest,
+  ListInlineCommentThreadsRequest,
   ListRepliesRequest,
   RateResourceRequest,
   UpdateFavoriteCollectionRequest,
@@ -58,6 +66,35 @@ function toggleCommentLike(params: CommentItemActionRequest): Promise<boolean> {
   return CommentApi.toggleLike(params);
 }
 
+const createInlineCommentThread = async (params: CreateInlineCommentThreadRequest) =>
+  InlineCommentServicesMap.mapThread(
+    await InlineCommentApi.createThread(InlineCommentServicesMap.mapCreateThreadRequest(params))
+  );
+
+const addInlineComment = async (params: AddInlineCommentRequest) =>
+  InlineCommentServicesMap.mapComment(
+    await InlineCommentApi.addComment(
+      params.threadId,
+      InlineCommentServicesMap.mapAddCommentRequest(params)
+    )
+  );
+
+const listInlineCommentThreads = async (params: ListInlineCommentThreadsRequest) =>
+  InlineCommentServicesMap.mapThreadsFromApi(
+    await InlineCommentApi.listThreads(InlineCommentServicesMap.mapListThreadsRequest(params))
+  );
+
+const getInlineCommentThread = async (params: GetInlineCommentThreadRequest) =>
+  InlineCommentServicesMap.mapThread(await InlineCommentApi.getThread(params.threadId));
+
+const getInlineComment = async (params: GetInlineCommentRequest) =>
+  InlineCommentServicesMap.mapComment(
+    await InlineCommentApi.getComment(params.threadId, params.commentId)
+  );
+
+const getInlineCommentChanges = async (params: GetInlineCommentChangesRequest) =>
+  InlineCommentServicesMap.mapChangesFromApi(await InlineCommentApi.getChanges(params));
+
 const getFavoriteCollectionIds = async (resourceId: string) =>
   InteractServicesMap.mapFavoriteCollectionIdsFromApi(
     await FavoriteApi.getFavoriteStatus(resourceId)
@@ -100,6 +137,12 @@ export const createInteractServices = (): IInteractService => ({
   createReply,
   deleteComment,
   toggleCommentLike,
+  createInlineCommentThread,
+  addInlineComment,
+  listInlineCommentThreads,
+  getInlineCommentThread,
+  getInlineComment,
+  getInlineCommentChanges,
   getFavoriteCollectionIds,
   updateFavoriteCollections,
   listFavoriteCollections,

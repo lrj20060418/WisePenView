@@ -31,7 +31,7 @@ export interface InlineCommentThread {
 
 export interface InlineCommentThreadList {
   items: InlineCommentThread[];
-  cursor?: string;
+  cursor: string;
 }
 
 export interface InlineCommentDraft {

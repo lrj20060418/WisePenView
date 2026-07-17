@@ -7,7 +7,7 @@ import {
 import type { XmlFragment } from 'yjs';
 import * as Y from 'yjs';
 
-import type { InlineCommentAnchor, InlineCommentDraft } from '@/domains/Note';
+import type { InlineCommentAnchor, InlineCommentDraft } from '@/domains/Interact';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
 import type { NotePluginRegistry } from '../../registry/types';
 

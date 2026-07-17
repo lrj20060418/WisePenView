@@ -1,9 +1,11 @@
+import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
+
 import type {
   InlineComment,
   InlineCommentDraft,
   InlineCommentThread,
 } from '../entity/inlineComment';
-import type { INoteService } from '../service/index.type';
+import type { IInteractService } from '../service/index.type';
 
 const CHANGE_POLL_INTERVAL = 8_000;
 
@@ -19,7 +21,7 @@ function compareThreads(a: InlineCommentThread, b: InlineCommentThread): number 
 
 export class InlineCommentSession {
   readonly resourceId: string;
-  private readonly noteService: INoteService;
+  private readonly interactService: IInteractService;
   private readonly threadsById = new Map<string, InlineCommentThread>();
   private readonly knownRevisions = new Map<string, number>();
   private readonly subscribers = new Set<() => void>();
@@ -30,9 +32,9 @@ export class InlineCommentSession {
   private pollTimer: number | null = null;
   private destroyed = false;
 
-  constructor(resourceId: string, noteService: INoteService) {
+  constructor(resourceId: string, interactService: IInteractService) {
     this.resourceId = resourceId;
-    this.noteService = noteService;
+    this.interactService = interactService;
   }
 
   getSnapshot = (): InlineCommentSessionSnapshot => this.snapshot;
@@ -58,11 +60,11 @@ export class InlineCommentSession {
   }
 
   async createThread(
-    params: InlineCommentDraft & { content: string }
+    params: InlineCommentDraft & { content: string; idempotencyKey: string }
   ): Promise<InlineCommentThread> {
-    const thread = await this.noteService.createInlineCommentThread({
+    const thread = await this.interactService.createInlineCommentThread({
       resourceId: this.resourceId,
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: params.idempotencyKey,
       anchor: params.anchor,
       quoteText: params.quoteText,
       content: params.content,
@@ -71,12 +73,17 @@ export class InlineCommentSession {
     return thread;
   }
 
-  async addComment(threadId: string, content: string): Promise<InlineComment> {
-    const comment = await this.noteService.addInlineComment({
+  async addComment(
+    threadId: string,
+    content: string,
+    idempotencyKey: string
+  ): Promise<InlineComment> {
+    const comment = await this.interactService.addInlineComment({
       threadId,
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey,
       content,
     });
+    this.markKnownRevision(threadId, comment.revision);
     const cachedThread = this.threadsById.get(threadId);
     if (!cachedThread) {
       await this.recallThread(threadId);
@@ -87,19 +94,31 @@ export class InlineCommentSession {
       (item) => item.commentId === comment.commentId
     );
     const items = [...cachedThread.items];
-    if (existingIndex >= 0) items[existingIndex] = comment;
-    else items.push(comment);
+    if (existingIndex >= 0) {
+      items[existingIndex] = comment;
+    } else if (comment.revision === cachedThread.revision + 1) {
+      items.push(comment);
+    } else {
+      await this.recallThread(threadId);
+      return comment;
+    }
     this.upsertThread({
       ...cachedThread,
       items,
-      revision: comment.revision,
-      updatedAt: comment.createdAt,
+      revision: Math.max(cachedThread.revision, comment.revision),
+      updatedAt: Math.max(cachedThread.updatedAt, comment.createdAt),
     });
     return comment;
   }
 
   async recallThread(threadId: string): Promise<InlineCommentThread> {
-    const thread = await this.noteService.getInlineCommentThread({ threadId });
+    const thread = await this.interactService.getInlineCommentThread({ threadId });
+    const knownRevision = this.knownRevisions.get(threadId) ?? 0;
+    if (thread.revision < knownRevision) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.INTERNAL_STATE, {
+        reason: `批注 Thread ${threadId} 尚未同步到 revision ${knownRevision}`,
+      });
+    }
     this.upsertThread(thread);
     return thread;
   }
@@ -115,18 +134,27 @@ export class InlineCommentSession {
   }
 
   async recallCommentPrecisely(threadId: string, commentId: string): Promise<InlineComment> {
-    const comment = await this.noteService.getInlineComment({ threadId, commentId });
+    const comment = await this.interactService.getInlineComment({ threadId, commentId });
+    this.markKnownRevision(threadId, comment.revision);
     const cachedThread = this.threadsById.get(threadId);
     if (cachedThread) {
-      const items = cachedThread.items.some((item) => item.commentId === comment.commentId)
-        ? cachedThread.items.map((item) => (item.commentId === comment.commentId ? comment : item))
-        : [...cachedThread.items, comment];
-      this.upsertThread({
-        ...cachedThread,
-        items,
-        revision: Math.max(cachedThread.revision, comment.revision),
-        updatedAt: Math.max(cachedThread.updatedAt, comment.createdAt),
-      });
+      const existingIndex = cachedThread.items.findIndex(
+        (item) => item.commentId === comment.commentId
+      );
+      if (existingIndex >= 0 && comment.revision <= cachedThread.revision) {
+        const items = [...cachedThread.items];
+        items[existingIndex] = comment;
+        this.upsertThread({ ...cachedThread, items });
+      } else if (existingIndex < 0 && comment.revision === cachedThread.revision + 1) {
+        this.upsertThread({
+          ...cachedThread,
+          items: [...cachedThread.items, comment],
+          revision: comment.revision,
+          updatedAt: Math.max(cachedThread.updatedAt, comment.createdAt),
+        });
+      } else {
+        await this.recallThread(threadId);
+      }
     }
     return comment;
   }
@@ -142,7 +170,7 @@ export class InlineCommentSession {
   private async loadInitialThreads(): Promise<void> {
     this.updateSnapshot({ loading: true, error: undefined });
     try {
-      const threadList = await this.noteService.listInlineCommentThreads({
+      const threadList = await this.interactService.listInlineCommentThreads({
         resourceId: this.resourceId,
       });
       if (this.destroyed) return;
@@ -160,31 +188,32 @@ export class InlineCommentSession {
 
   private async pullChanges(): Promise<void> {
     if (this.destroyed) return;
-    const changes = await this.noteService.getInlineCommentChanges({
+    const changes = await this.interactService.getInlineCommentChanges({
       resourceId: this.resourceId,
       cursor: this.cursor,
     });
     if (this.destroyed) return;
-    this.cursor = changes.cursor ?? this.cursor;
 
     const staleThreadIds = new Set<string>();
     changes.items.forEach((change) => {
-      const currentKnownRevision = this.knownRevisions.get(change.threadId) ?? 0;
-      this.knownRevisions.set(change.threadId, Math.max(currentKnownRevision, change.revision));
+      this.markKnownRevision(change.threadId, change.revision);
       const cachedRevision = this.threadsById.get(change.threadId)?.revision ?? 0;
       if (cachedRevision < change.revision) staleThreadIds.add(change.threadId);
     });
     await Promise.all([...staleThreadIds].map((threadId) => this.recallThread(threadId)));
+    this.cursor = changes.cursor;
+  }
+
+  private markKnownRevision(threadId: string, revision: number): void {
+    const currentKnownRevision = this.knownRevisions.get(threadId) ?? 0;
+    this.knownRevisions.set(threadId, Math.max(currentKnownRevision, revision));
   }
 
   private upsertThread(thread: InlineCommentThread, publish = true): void {
     const cachedThread = this.threadsById.get(thread.threadId);
     if (cachedThread && cachedThread.revision > thread.revision) return;
     this.threadsById.set(thread.threadId, thread);
-    this.knownRevisions.set(
-      thread.threadId,
-      Math.max(this.knownRevisions.get(thread.threadId) ?? 0, thread.revision)
-    );
+    this.markKnownRevision(thread.threadId, thread.revision);
     if (publish) this.publish({ error: undefined });
   }
 

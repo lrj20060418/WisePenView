@@ -5,12 +5,6 @@
 
 import type { Block, NoteAiDiffPreviewData } from '@/domains/Note';
 import type { ResourceItem } from '@/domains/Resource';
-import type {
-  InlineComment,
-  InlineCommentDraft,
-  InlineCommentThread,
-  InlineCommentThreadList,
-} from '../entity/inlineComment';
 
 /** NoteService 接口：供依赖注入使用 */
 /** web-socket服务放在了yjs目录下 */
@@ -30,14 +24,6 @@ export interface INoteService {
   forkNote(params: ForkNoteRequest): Promise<ForkNoteResponse>;
   /** 查询 NOTE/DRAWIO 版本摘要列表 */
   listNoteVersions(params: ListNoteVersionsRequest): Promise<NoteVersionListPage>;
-  createInlineCommentThread(params: CreateInlineCommentThreadRequest): Promise<InlineCommentThread>;
-  addInlineComment(params: AddInlineCommentRequest): Promise<InlineComment>;
-  listInlineCommentThreads(
-    params: ListInlineCommentThreadsRequest
-  ): Promise<InlineCommentThreadList>;
-  getInlineCommentThread(params: GetInlineCommentThreadRequest): Promise<InlineCommentThread>;
-  getInlineComment(params: GetInlineCommentRequest): Promise<InlineComment>;
-  getInlineCommentChanges(params: GetInlineCommentChangesRequest): Promise<InlineCommentChanges>;
 }
 
 export interface NoteInfoDisplayAuthor {
@@ -116,46 +102,6 @@ export interface ListNoteVersionsRequest {
   resourceId: string;
   page?: number;
   size?: number;
-}
-
-export interface CreateInlineCommentThreadRequest extends InlineCommentDraft {
-  resourceId: string;
-  idempotencyKey: string;
-  content: string;
-}
-
-export interface AddInlineCommentRequest {
-  threadId: string;
-  idempotencyKey: string;
-  content: string;
-}
-
-export interface ListInlineCommentThreadsRequest {
-  resourceId: string;
-}
-
-export interface GetInlineCommentThreadRequest {
-  threadId: string;
-}
-
-export interface GetInlineCommentRequest {
-  threadId: string;
-  commentId: string;
-}
-
-export interface GetInlineCommentChangesRequest {
-  resourceId: string;
-  cursor?: string;
-}
-
-export interface InlineCommentChange {
-  threadId: string;
-  revision: number;
-}
-
-export interface InlineCommentChanges {
-  items: InlineCommentChange[];
-  cursor?: string;
 }
 
 export interface NoteVersionSummary {

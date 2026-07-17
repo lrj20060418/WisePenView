@@ -9,10 +9,11 @@ import type {
   NoteCollaborationUser,
   NoteOutlineItem,
 } from '@/components/Note/CustomBlockNote/index.type';
-import { useInteractService, useNoteService, useUserService } from '@/domains';
+import { useInteractService, useUserService } from '@/domains';
+import type { InlineCommentDraft } from '@/domains/Interact';
+import { InlineCommentSession } from '@/domains/Interact';
 import type {
   AiDiffDisplayMode,
-  InlineCommentDraft,
   NoteInfoDisplayData,
   NoteSaveStatus,
   NoteSelectionSnapshot,
@@ -21,7 +22,6 @@ import {
   AI_DIFF_DISPLAY_MODE,
   AI_DIFF_DISPLAY_MODE_LABELS,
   encodeNoteClientContentSignature,
-  InlineCommentSession,
   useNoteSession,
 } from '@/domains/Note';
 import type { User } from '@/domains/User';
@@ -168,12 +168,11 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const [inlineCommentDraft, setInlineCommentDraft] = useState<InlineCommentDraft>();
   const [activeInlineCommentThreadId, setActiveInlineCommentThreadId] = useState<string>();
   const interactService = useInteractService();
-  const noteService = useNoteService();
   const userService = useUserService();
   const setResourceSidePanelMode = useWorkspaceResourceSidePanelStore((state) => state.setMode);
   const inlineCommentSession = useMemo(
-    () => new InlineCommentSession(resourceId, noteService),
-    [noteService, resourceId]
+    () => new InlineCommentSession(resourceId, interactService),
+    [interactService, resourceId]
   );
   const { data: currentUser, error: currentUserError } = useRequest(() =>
     userService.getUserInfo()

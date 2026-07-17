@@ -1,9 +1,8 @@
 import type { Doc } from 'yjs';
 
+import type { InlineCommentDraft, InlineCommentSession } from '@/domains/Interact';
 import type {
   AiDiffDisplayMode,
-  InlineCommentDraft,
-  InlineCommentSession,
   NoteAiDiffPreviewData,
   NoteSelectionSnapshot,
   WisepenProvider,

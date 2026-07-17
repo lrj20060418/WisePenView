@@ -5,7 +5,7 @@ import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey, type ProsemirrorBinding } from 'y-prosemirror';
 import type { XmlFragment } from 'yjs';
 
-import type { InlineCommentSession } from '@/domains/Note';
+import type { InlineCommentSession } from '@/domains/Interact';
 import { resolveInlineCommentAnchor } from './relativePosition';
 import styles from './style.module.less';
 

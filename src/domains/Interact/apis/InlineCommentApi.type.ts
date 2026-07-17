@@ -12,9 +12,9 @@ export interface InlineCommentAuthorApi {
 export interface InlineCommentItemApi {
   commentId: string;
   authorId: string;
-  author?: InlineCommentAuthorApi | null;
+  author: InlineCommentAuthorApi;
   content: string;
-  createdAt: number | string;
+  createdAt: number;
   revision: number;
 }
 
@@ -25,8 +25,8 @@ export interface InlineCommentThreadApi {
   quoteText: string;
   items: InlineCommentItemApi[];
   revision: number;
-  createdAt: number | string;
-  updatedAt?: number | string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface CreateInlineCommentThreadApiRequest {
@@ -58,10 +58,10 @@ export interface InlineCommentChangeApi {
 
 export interface InlineCommentChangesApiResponse {
   items: InlineCommentChangeApi[];
-  cursor?: string | null;
+  cursor: string;
 }
 
 export interface ListInlineCommentThreadsApiResponse {
   items: InlineCommentThreadApi[];
-  cursor?: string | null;
+  cursor: string;
 }

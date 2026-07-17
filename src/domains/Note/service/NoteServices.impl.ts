@@ -1,24 +1,16 @@
 ﻿import type { IResourceService } from '@/domains/Resource';
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
-import { InlineCommentApi } from '../apis/InlineCommentApi';
 import { NoteApi } from '../apis/NoteApi';
-import { InlineCommentServicesMap } from '../mapper/InlineCommentServices.map';
 import { NoteServicesMap } from '../mapper/NoteServices.map';
 import type {
-  AddInlineCommentRequest,
-  CreateInlineCommentThreadRequest,
   CreateNoteRequest,
   CreateNoteResponse,
   DrawIoLatestSnapshotData,
   ForkNoteRequest,
   ForkNoteResponse,
   GetDrawIoLatestSnapshotRequest,
-  GetInlineCommentChangesRequest,
-  GetInlineCommentRequest,
-  GetInlineCommentThreadRequest,
   GetNoteInfoRequest,
   INoteService,
-  ListInlineCommentThreadsRequest,
   ListNoteVersionsRequest,
   NoteInfoDisplayData,
   NoteVersionListPage,
@@ -64,39 +56,6 @@ const listNoteVersions = async (params: ListNoteVersionsRequest): Promise<NoteVe
   return NoteServicesMap.mapNoteVersionListPageFromApi(data);
 };
 
-const createInlineCommentThread = async (params: CreateInlineCommentThreadRequest) => {
-  const data = await InlineCommentApi.createThread(
-    InlineCommentServicesMap.mapCreateThreadRequest(params)
-  );
-  return InlineCommentServicesMap.mapThread(data);
-};
-
-const addInlineComment = async (params: AddInlineCommentRequest) => {
-  const data = await InlineCommentApi.addComment(
-    params.threadId,
-    InlineCommentServicesMap.mapAddCommentRequest(params)
-  );
-  return InlineCommentServicesMap.mapComment(data);
-};
-
-const listInlineCommentThreads = async (params: ListInlineCommentThreadsRequest) => {
-  const data = await InlineCommentApi.listThreads(
-    InlineCommentServicesMap.mapListThreadsRequest(params)
-  );
-  return InlineCommentServicesMap.mapThreadsFromApi(data);
-};
-
-const getInlineCommentThread = async (params: GetInlineCommentThreadRequest) =>
-  InlineCommentServicesMap.mapThread(await InlineCommentApi.getThread(params.threadId));
-
-const getInlineComment = async (params: GetInlineCommentRequest) => {
-  const data = await InlineCommentApi.getComment(params.threadId, params.commentId);
-  return InlineCommentServicesMap.mapComment(data);
-};
-
-const getInlineCommentChanges = async (params: GetInlineCommentChangesRequest) =>
-  InlineCommentServicesMap.mapChangesFromApi(await InlineCommentApi.getChanges(params));
-
 export const createNoteServices = (deps: NoteServicesDeps): INoteService => {
   const { resourceService } = deps;
 
@@ -114,11 +73,5 @@ export const createNoteServices = (deps: NoteServicesDeps): INoteService => {
     saveDrawIoSnapshot,
     forkNote,
     listNoteVersions,
-    createInlineCommentThread,
-    addInlineComment,
-    listInlineCommentThreads,
-    getInlineCommentThread,
-    getInlineComment,
-    getInlineCommentChanges,
   };
 };

@@ -31,12 +31,17 @@ function requiredId(value: string | undefined, field: string): string {
   return id;
 }
 
-function mapTimestamp(value: number | string | undefined, field: string): number {
-  const timestamp =
-    normalizeFiniteNumber(value) ??
-    (typeof value === 'string' && Number.isFinite(Date.parse(value))
-      ? Date.parse(value)
-      : undefined);
+function requiredText(value: string, field: string): string {
+  if (!value.trim()) {
+    throw createClientError(FRONTEND_CLIENT_ERROR.INTERNAL_STATE, {
+      reason: `批注 ${field} 缺失`,
+    });
+  }
+  return value;
+}
+
+function mapTimestamp(value: number, field: string): number {
+  const timestamp = normalizeFiniteNumber(value);
   if (timestamp === undefined) {
     throw createClientError(FRONTEND_CLIENT_ERROR.INTERNAL_STATE, {
       reason: `批注 ${field} 无效`,
@@ -45,11 +50,20 @@ function mapTimestamp(value: number | string | undefined, field: string): number
   return timestamp;
 }
 
-function mapAuthor(authorId: string, author?: InlineCommentItemApi['author']): InlineCommentAuthor {
+function mapRevision(value: number, field: string): number {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw createClientError(FRONTEND_CLIENT_ERROR.INTERNAL_STATE, {
+      reason: `批注 ${field} 无效`,
+    });
+  }
+  return value;
+}
+
+function mapAuthor(author: InlineCommentItemApi['author']): InlineCommentAuthor {
   return {
-    id: requiredId(author?.id ?? authorId, '作者 ID'),
-    name: author?.name?.trim() || requiredId(authorId, '作者'),
-    avatar: author?.avatar?.trim() || undefined,
+    id: requiredId(author.id, '作者 ID'),
+    name: requiredText(author.name, '作者名称').trim(),
+    avatar: author.avatar?.trim() || undefined,
   };
 }
 
@@ -57,10 +71,10 @@ function mapComment(item: InlineCommentItemApi): InlineComment {
   return {
     commentId: requiredId(item.commentId, 'commentId'),
     authorId: requiredId(item.authorId, 'authorId'),
-    author: mapAuthor(item.authorId, item.author),
-    content: item.content,
+    author: mapAuthor(item.author),
+    content: requiredText(item.content, 'content'),
     createdAt: mapTimestamp(item.createdAt, 'createdAt'),
-    revision: item.revision,
+    revision: mapRevision(item.revision, 'Comment revision'),
   };
 }
 
@@ -69,14 +83,14 @@ function mapThread(data: InlineCommentThreadApi): InlineCommentThread {
     threadId: requiredId(data.threadId, 'threadId'),
     resourceId: requiredId(data.resourceId, 'resourceId'),
     anchor: {
-      start: data.anchor.start,
-      end: data.anchor.end,
+      start: requiredText(data.anchor.start, 'anchor.start'),
+      end: requiredText(data.anchor.end, 'anchor.end'),
     },
-    quoteText: data.quoteText,
+    quoteText: requiredText(data.quoteText, 'quoteText'),
     items: data.items.map(mapComment),
-    revision: data.revision,
+    revision: mapRevision(data.revision, 'Thread revision'),
     createdAt: mapTimestamp(data.createdAt, 'createdAt'),
-    updatedAt: mapTimestamp(data.updatedAt ?? data.createdAt, 'updatedAt'),
+    updatedAt: mapTimestamp(data.updatedAt, 'updatedAt'),
   };
 }
 
@@ -101,15 +115,15 @@ const mapListThreadsRequest = (
 
 const mapThreadsFromApi = (data: ListInlineCommentThreadsApiResponse): InlineCommentThreadList => ({
   items: data.items.map(mapThread),
-  cursor: data.cursor ?? undefined,
+  cursor: requiredText(data.cursor, 'cursor'),
 });
 
 const mapChangesFromApi = (data: InlineCommentChangesApiResponse): InlineCommentChanges => ({
   items: data.items.map((item) => ({
     threadId: requiredId(item.threadId, 'threadId'),
-    revision: item.revision,
+    revision: mapRevision(item.revision, 'Thread revision'),
   })),
-  cursor: data.cursor ?? undefined,
+  cursor: requiredText(data.cursor, 'cursor'),
 });
 
 export const InlineCommentServicesMap = {

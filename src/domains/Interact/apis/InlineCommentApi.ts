@@ -11,30 +11,32 @@ import type {
 } from './InlineCommentApi.type';
 
 const createThread = (req: CreateInlineCommentThreadApiRequest): Promise<InlineCommentThreadApi> =>
-  apiPost('/threads', req);
+  apiPost('/resource/threads', req);
 
 const addComment = (
   threadId: string,
   req: AddInlineCommentApiRequest
 ): Promise<InlineCommentThreadApi['items'][number]> =>
-  apiPost(`/threads/${encodeURIComponent(threadId)}/comments`, req);
+  apiPost(`/resource/threads/${encodeURIComponent(threadId)}/comments`, req);
 
 const listThreads = (
   req: ListInlineCommentThreadsApiRequest
-): Promise<ListInlineCommentThreadsApiResponse> => apiGet('/threads', { params: req });
+): Promise<ListInlineCommentThreadsApiResponse> => apiGet('/resource/threads', { params: req });
 
 const getThread = (threadId: string): Promise<InlineCommentThreadApi> =>
-  apiGet(`/threads/${encodeURIComponent(threadId)}`);
+  apiGet(`/resource/threads/${encodeURIComponent(threadId)}`);
 
 const getComment = (
   threadId: string,
   commentId: string
 ): Promise<InlineCommentThreadApi['items'][number]> =>
-  apiGet(`/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`);
+  apiGet(
+    `/resource/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`
+  );
 
 const getChanges = (
   req: GetInlineCommentChangesApiRequest
-): Promise<InlineCommentChangesApiResponse> => apiGet('/threads/changes', { params: req });
+): Promise<InlineCommentChangesApiResponse> => apiGet('/resource/threads/changes', { params: req });
 
 export const InlineCommentApi = {
   createThread,

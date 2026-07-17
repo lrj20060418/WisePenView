@@ -1,4 +1,8 @@
-import type { InlineCommentDraft, InlineCommentSession, InlineCommentThread } from '@/domains/Note';
+import type {
+  InlineCommentDraft,
+  InlineCommentSession,
+  InlineCommentThread,
+} from '@/domains/Interact';
 import { parseErrorMessage } from '@/utils/error';
 import { formatTimestampToDateTime } from '@/utils/format/formatTime';
 import { Avatar, Button, TextArea, toast } from '@heroui/react';
@@ -31,14 +35,15 @@ function InlineCommentComposer({
   placeholder: string;
   submitLabel: string;
   onCancel(): void;
-  onSubmit(content: string): Promise<void>;
+  onSubmit(content: string, idempotencyKey: string): Promise<void>;
 }) {
   const [content, setContent] = useState('');
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const { loading, run: submit } = useRequest(
     async () => {
       const normalizedContent = content.trim();
       if (!normalizedContent) return;
-      await onSubmit(normalizedContent);
+      await onSubmit(normalizedContent, idempotencyKey);
       setContent('');
     },
     {
@@ -181,12 +186,13 @@ function InlineCommentPanel({
             </Button>
           </div>
           <InlineCommentComposer
+            key={`draft:${draft.anchor.start}:${draft.anchor.end}`}
             quoteText={draft.quoteText}
             placeholder="写下批注内容"
             submitLabel="发布"
             onCancel={onDraftClose}
-            onSubmit={async (content) => {
-              const thread = await session.createThread({ ...draft, content });
+            onSubmit={async (content, idempotencyKey) => {
+              const thread = await session.createThread({ ...draft, content, idempotencyKey });
               onThreadSelect(thread.threadId);
               onDraftClose();
             }}
@@ -195,12 +201,13 @@ function InlineCommentPanel({
       ) : replyThread ? (
         <div className={styles.composerDock}>
           <InlineCommentComposer
+            key={`reply:${replyThread.threadId}`}
             quoteText={replyThread.quoteText}
             placeholder="回复这条批注"
             submitLabel="回复"
             onCancel={() => setReplyThreadId(undefined)}
-            onSubmit={async (content) => {
-              await session.addComment(replyThread.threadId, content);
+            onSubmit={async (content, idempotencyKey) => {
+              await session.addComment(replyThread.threadId, content, idempotencyKey);
               setReplyThreadId(undefined);
             }}
           />
