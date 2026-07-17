@@ -1,13 +1,5 @@
-import type { NoteBlockPlugin, NoteInlinePlugin, NotePluginBundle } from '../../content/types';
+import type { NoteBlockPlugin, NoteInlinePlugin, NotePluginBundle } from '../../registry/types';
 import { inlineMathAiDiff, mathBlockAiDiff } from './aiDiff';
-import {
-  INLINE_MATH_INLINE_COMMENT_OWNER_ID,
-  MATH_BLOCK_INLINE_COMMENT_OWNER_ID,
-} from './inlineComment/inlineCommentAnchor';
-import {
-  inlineMathInlineCommentFacet,
-  mathBlockInlineCommentFacet,
-} from './inlineComment/inlineCommentFacet';
 import { inlineMathContentSpec } from './InlineMath';
 import { createInlineMathDollarExtension } from './InlineMath/inlineMathDollarExtension';
 import { inlineMathMarkdownImport, mathBlockMarkdownImport } from './markdownImport';
@@ -16,7 +8,7 @@ import { createMathSlashMenuItem } from './slashMenuItem';
 
 const mathBlockPlugin = {
   kind: 'block',
-  id: MATH_BLOCK_INLINE_COMMENT_OWNER_ID,
+  id: 'latex.block.math',
   type: 'math',
   contentModel: 'none',
   spec: createMathBlockSpec(),
@@ -24,10 +16,24 @@ const mathBlockPlugin = {
     markdownImport: { support: 'custom' },
     markdownExport: { support: 'custom' },
     aiDiff: { support: 'custom' },
-    projection: { support: 'custom' },
+    plainText: { support: 'custom' },
     print: { support: 'custom' },
   },
-  inlineComment: mathBlockInlineCommentFacet,
+  selection: {
+    inspect: (block, context) => {
+      if (context.selectedText) {
+        return { selected: context.selected, text: context.selectedText };
+      }
+      const props =
+        typeof block.props === 'object' && block.props !== null
+          ? (block.props as Record<string, unknown>)
+          : {};
+      return {
+        selected: context.selected,
+        text: typeof props.expression === 'string' ? props.expression : '',
+      };
+    },
+  },
   print: {
     styles: [
       `.note-print-body .bn-block-content[data-content-type='math'] {
@@ -41,8 +47,8 @@ const mathBlockPlugin = {
     ],
   },
   slashMenu: ({ editor }) => [createMathSlashMenuItem(editor)],
-  projection: {
-    plainText: (block) => {
+  plainText: {
+    project: (block) => {
       const props =
         typeof block.props === 'object' && block.props !== null
           ? (block.props as Record<string, unknown>)
@@ -67,19 +73,34 @@ const mathBlockPlugin = {
 
 const inlineMathPlugin = {
   kind: 'inline',
-  id: INLINE_MATH_INLINE_COMMENT_OWNER_ID,
+  id: 'latex.inline.inlineMath',
   type: 'inlineMath',
   spec: inlineMathContentSpec,
   capabilities: {
     markdownImport: { support: 'custom' },
     markdownExport: { support: 'custom' },
     aiDiff: { support: 'custom' },
-    projection: { support: 'custom' },
+    plainText: { support: 'custom' },
     print: { support: 'default' },
   },
+  selection: {
+    inspect: (inline, context) => {
+      if (context.selectedText) {
+        return { selected: context.selected, text: context.selectedText };
+      }
+      const props =
+        typeof inline.props === 'object' && inline.props !== null
+          ? (inline.props as Record<string, unknown>)
+          : {};
+      return {
+        selected: context.selected,
+        text: typeof props.expression === 'string' ? props.expression : '',
+      };
+    },
+  },
   extensions: ({ registry }) => [createInlineMathDollarExtension(registry)()],
-  projection: {
-    plainText: (inline) => {
+  plainText: {
+    project: (inline) => {
       const props =
         typeof inline.props === 'object' && inline.props !== null
           ? (inline.props as Record<string, unknown>)
@@ -90,7 +111,6 @@ const inlineMathPlugin = {
   markdownImport: inlineMathMarkdownImport,
   markdownExport: { project: (inline) => inline },
   aiDiff: inlineMathAiDiff,
-  inlineComment: inlineMathInlineCommentFacet,
 } satisfies NoteInlinePlugin;
 
 export const latexPlugin = {

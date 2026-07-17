@@ -3,7 +3,7 @@ import type { Mark } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorProps } from '@tiptap/pm/view';
 
-import type { NoteRuntimeExtension } from '../../content/types';
+import type { NoteEditorExtension } from '../../registry/types';
 
 const ESC = '\u001b';
 
@@ -86,8 +86,8 @@ const stripEscapeCharExtension = createExtension({
   ],
 });
 
-export const editorRuntimeExtension = {
-  id: 'editor.runtime',
+export const stripEscapeEditorExtension = {
+  id: 'editor.strip-escape',
   extensions: () => [stripEscapeCharExtension],
   editorProps: () => stripEscapeEditorProps,
-} satisfies NoteRuntimeExtension;
+} satisfies NoteEditorExtension;

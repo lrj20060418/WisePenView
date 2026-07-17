@@ -8,18 +8,17 @@ import {
 import { Image as ImageIcon } from 'lucide-react';
 
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
-import { projectInlinePlainText } from '../../content/projection';
+import { projectInlinePlainText } from '../../engines/plainText';
+import type { NoteRichTextAiDiffConfig } from '../../noteConfig';
 import type {
   NoteBlockPlugin,
   NoteCapabilityDeclaration,
   NoteContentCapabilityDeclarations,
-  NoteInlineCommentFacet,
   NoteInlinePlugin,
   NotePluginBundle,
   NotePrintContribution,
-} from '../../content/types';
-import type { NoteRichTextAiDiffConfig } from '../../noteConfig';
-import { createRichTextBlockAiDiff, plainLinkInlineAiDiff, plainTextInlineAiDiff } from './aiDiff';
+} from '../../registry/types';
+import { createRichTextBlockAiDiff, linkInlineAiDiff, textInlineAiDiff } from './aiDiff';
 
 const DEFAULT_CAPABILITY: NoteCapabilityDeclaration = { support: 'default' };
 const UNSUPPORTED_AI_DIFF: NoteCapabilityDeclaration = {
@@ -31,7 +30,7 @@ function richTextCapabilities(): NoteContentCapabilityDeclarations {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff: { support: 'inherited' },
-    projection: { support: 'inherited' },
+    plainText: { support: 'inherited' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -41,7 +40,7 @@ function atomicCapabilities(): NoteContentCapabilityDeclarations {
     markdownImport: DEFAULT_CAPABILITY,
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff: UNSUPPORTED_AI_DIFF,
-    projection: { support: 'inherited' },
+    plainText: { support: 'inherited' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -50,9 +49,8 @@ function createDefaultBlockPlugin(
   type: string,
   capabilities: NoteContentCapabilityDeclarations,
   options: {
-    outline?: boolean;
+    outline?: NoteBlockPlugin['outline'];
     aiDiff?: NoteBlockPlugin['aiDiff'];
-    inlineComment?: NoteInlineCommentFacet;
     contentModel?: NoteBlockPlugin['contentModel'];
     defaultInsertion?: boolean;
     inlineMathDollar?: boolean;
@@ -77,24 +75,15 @@ function createDefaultBlockPlugin(
       : {}),
     ...(options.inlineMathDollar ? { inputRules: { inlineMathDollar: true } } : {}),
     capabilities,
+    selection: {
+      inspect: (_block, context) => ({ selected: context.selected, text: context.selectedText }),
+    },
     ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
     ...(options.print ? { print: options.print } : {}),
     ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
-    inlineComment: options.inlineComment ?? { mode: 'unsupported' },
-    projection: {
-      plainText: (block, registry) => projectInlinePlainText(block.content, registry),
-      ...(options.outline
-        ? {
-            outlineLevel: (block: Record<string, unknown>) => {
-              const props =
-                typeof block.props === 'object' && block.props !== null
-                  ? (block.props as Record<string, unknown>)
-                  : {};
-              const level = Number(props.level ?? 1);
-              return Number.isFinite(level) && level > 0 ? level : 1;
-            },
-          }
-        : {}),
+    ...(options.outline ? { outline: options.outline } : {}),
+    plainText: {
+      project: (block, registry) => projectInlinePlainText(block.content, registry),
     },
   } satisfies NoteBlockPlugin;
 }
@@ -110,19 +99,21 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       markdownImport: DEFAULT_CAPABILITY,
       markdownExport: DEFAULT_CAPABILITY,
       aiDiff: { support: 'inherited' },
-      projection: { support: 'inherited' },
+      plainText: { support: 'inherited' },
       print: DEFAULT_CAPABILITY,
     },
-    projection: {
-      plainText: (inline, registry) => {
+    selection: {
+      inspect: (_inline, context) => ({ selected: context.selected, text: context.selectedText }),
+    },
+    plainText: {
+      project: (inline, registry) => {
         if (type === 'text') {
           return typeof inline.text === 'string' ? inline.text : '';
         }
         return projectInlinePlainText(inline.content, registry);
       },
     },
-    aiDiff: type === 'text' ? plainTextInlineAiDiff : plainLinkInlineAiDiff,
-    inlineComment: { mode: 'range' },
+    aiDiff: type === 'text' ? textInlineAiDiff : linkInlineAiDiff,
   } satisfies NoteInlinePlugin;
 }
 
@@ -137,6 +128,17 @@ const richTextBlockTypes = [
 ] as const;
 
 const passThroughAtomicBlockTypes = ['audio', 'divider', 'file', 'image', 'video'] as const;
+
+const headingOutline: NonNullable<NoteBlockPlugin['outline']> = {
+  getLevel: (block) => {
+    const props =
+      typeof block.props === 'object' && block.props !== null
+        ? (block.props as Record<string, unknown>)
+        : {};
+    const level = Number(props.level ?? 1);
+    return Number.isFinite(level) && level > 0 ? level : 1;
+  },
+};
 
 const headingPrint: NotePrintContribution = {
   styles: [
@@ -188,9 +190,8 @@ export function createDefaultContentPlugin(
               : {}),
           },
           {
-            outline: type === 'heading',
+            ...(type === 'heading' ? { outline: headingOutline } : {}),
             aiDiff: richTextBlockAiDiff,
-            inlineComment: { mode: 'range' },
             defaultInsertion: type === 'paragraph',
             inlineMathDollar:
               type === 'paragraph' ||

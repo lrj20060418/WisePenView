@@ -42,10 +42,7 @@ function WorkspaceResourceSidePanel({
   const setWidth = useWorkspaceResourceSidePanelStore((state) => state.setWidth);
   const sidePanelRef = useRef<PanelImperativeHandle | null>(null);
   const pendingWidthRef = useRef<number | null>(null);
-  const inlineCommentAvailable = Boolean(config?.inlineComment);
-  const activeMode =
-    storedMode === 'inlineComment' && !inlineCommentAvailable ? 'closed' : storedMode;
-  const open = Boolean(config) && activeMode !== 'closed';
+  const open = Boolean(config) && storedMode === 'comment';
   const panelSize = open ? width : 0;
 
   useResizablePanelSize({ panelRef: sidePanelRef, size: panelSize });
@@ -67,17 +64,16 @@ function WorkspaceResourceSidePanel({
     [open, setWidth]
   );
 
-  const panelContent =
-    activeMode === 'inlineComment' ? (
-      config?.inlineComment
-    ) : config ? (
-      <ResourceCommentPanel
-        key={config.resource.resourceId}
-        resource={config.resource}
-        onResourceChanged={config.onResourceChanged}
-      />
-    ) : null;
-  const panelTitle = activeMode === 'inlineComment' ? '批注' : '评论';
+  const panelContent = config
+    ? (config.content ?? (
+        <ResourceCommentPanel
+          key={config.resource.resourceId}
+          resource={config.resource}
+          onResourceChanged={config.onResourceChanged}
+        />
+      ))
+    : null;
+  const panelTitle = config?.title ?? '评论';
 
   return (
     <SystemResizablePanelGroup
@@ -107,12 +103,12 @@ function WorkspaceResourceSidePanel({
         maxSize={open ? WORKSPACE_RESOURCE_SIDE_PANEL_MAX_WIDTH : 0}
         groupResizeBehavior="preserve-pixel-size"
         className={styles.sidePanel}
-        aria-label={activeMode === 'inlineComment' ? '批注栏' : '评论区'}
+        aria-label={panelTitle}
         aria-hidden={!open ? true : undefined}
         onResize={handleResize}
       >
         {open ? (
-          <section className={styles.panelFrame} aria-label={`${panelTitle}栏`}>
+          <section className={styles.panelFrame} aria-label={panelTitle}>
             <header className={styles.panelHeader}>
               <h2 className={styles.panelTitle}>{panelTitle}</h2>
             </header>

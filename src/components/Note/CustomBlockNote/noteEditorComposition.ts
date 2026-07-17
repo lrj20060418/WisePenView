@@ -1,18 +1,18 @@
+import { aiDiffEditorExtension } from './engines/aiDiff/extension';
+import { stripEscapeEditorExtension } from './engines/editor/stripEscape';
+import { noteConfig } from './noteConfig';
+import { codeBlockPlugin } from './plugins/CodeBlockPlugin';
+import { createDefaultContentPlugin } from './plugins/DefaultContentPlugin';
+import { latexPlugin } from './plugins/LatexPlugin';
+import { tablePlugin } from './plugins/TablePlugin';
 import {
   collectNoteEditorExtensions,
   collectNoteEditorProps,
   createDefaultNoteBlock,
   createNoteBlockNoteSchema,
   createNotePluginRegistry,
-} from './content/registry';
-import type { NotePluginBundle } from './content/types';
-import { aiDiffRuntimeExtension } from './engines/aiDiff/runtime';
-import { editorRuntimeExtension } from './engines/editor/stripEscape';
-import { noteConfig } from './noteConfig';
-import { codeBlockPlugin } from './plugins/CodeBlockPlugin';
-import { createDefaultContentPlugin } from './plugins/DefaultContentPlugin';
-import { latexPlugin } from './plugins/LatexPlugin';
-import { tablePlugin } from './plugins/TablePlugin';
+} from './registry';
+import type { NotePluginBundle } from './registry/types';
 
 const defaultContentPlugin = createDefaultContentPlugin(noteConfig.aiDiff.richText);
 
@@ -23,8 +23,8 @@ const notePluginTree = {
 } satisfies NotePluginBundle;
 
 export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
-  editorRuntimeExtension,
-  aiDiffRuntimeExtension,
+  stripEscapeEditorExtension,
+  aiDiffEditorExtension,
 ]);
 
 /** 笔记正文 schema 由唯一的内容插件树生成。 */

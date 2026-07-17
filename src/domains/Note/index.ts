@@ -1,3 +1,8 @@
+export type {
+  NoteInlineCommentAnchor,
+  NoteInlineCommentDraft,
+  NoteInlineCommentThread,
+} from './entity/inlineComment';
 export type { Block, NoteAiDiffPreviewData, NoteBlockSnapshot } from './entity/note';
 export type { NoteSelectionSnapshot, SelectedNoteScope } from './entity/noteSelection';
 export { AI_DIFF_DISPLAY_MODE, AI_DIFF_DISPLAY_MODE_LABELS } from './enum';
@@ -14,7 +19,6 @@ export type {
   ListNoteVersionsRequest,
   NoteInfoDisplayAuthor,
   NoteInfoDisplayData,
-  NoteInlineCommentUserDisplayRecord,
   NoteVersionListPage,
   NoteVersionSummary,
   SaveDrawIoSnapshotRequest,
@@ -24,6 +28,8 @@ export {
   computeNoteBodyContentHash,
   encodeNoteClientContentSignature,
 } from './session/contentSignature';
+export { NoteInlineCommentSession } from './session/NoteInlineCommentSession';
+export type { NoteInlineCommentSessionSnapshot } from './session/NoteInlineCommentSession';
 export { NoteSaveStatusObserver } from './session/NoteSaveStatusObserver';
 export type { NoteSaveStatus } from './session/NoteSaveStatusObserver';
 export { NoteStatusObserver } from './session/NoteStatusObserver';

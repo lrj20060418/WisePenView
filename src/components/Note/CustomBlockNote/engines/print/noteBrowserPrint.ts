@@ -1,7 +1,7 @@
 import { createClientError, FRONTEND_CLIENT_ERROR, isWisePenError } from '@/utils/error';
-import { collectNotePrintStyles } from '../../content/registry';
-import type { NotePluginRegistry } from '../../content/types';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
+import { collectNotePrintStyles } from '../../registry';
+import type { NotePluginRegistry } from '../../registry/types';
 import { getProseMirrorRoot } from '../editor/dom';
 
 interface PrintNotePdfOptions {
@@ -83,7 +83,6 @@ const PRINT_BASE_CSS = `
   .note-print-body .bn-formatting-toolbar,
   .note-print-body .bn-slash-menu,
   .note-print-body .bn-table-handle,
-  .note-print-body .bn-thread-mark::before,
   .note-print-body .column-resize-handle,
   .note-print-body .bn-table-drop-cursor {
     display: none !important;
@@ -191,7 +190,7 @@ async function waitForPrintIframeReady(win: Window): Promise<void> {
 
 /**
  * 保留 ProseMirror 到 BlockNote React 外壳的节点路径，使 CSS Module 的作用域选择器在打印文档中继续生效。
- * 仅克隆路径本身，不带入工具栏、批注侧栏等兄弟节点。
+ * 仅克隆路径本身，不带入工具栏等兄弟节点。
  */
 function cloneEditorWithStyleScope(doc: Document, proseMirrorRoot: HTMLElement): HTMLElement {
   const blockNoteContainer = proseMirrorRoot.closest<HTMLElement>('.bn-container');

@@ -38,6 +38,7 @@ export {
   useDriveService,
   useGroupService,
   useImageService,
+  useInlineCommentService,
   useInteractService,
   useNoteService,
   useQuotaService,
