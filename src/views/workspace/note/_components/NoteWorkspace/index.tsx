@@ -1,6 +1,6 @@
 import { Spin } from '@/components/Feedback';
 import SegmentedTabs from '@/components/SegmentedTabs';
-import { useMemoizedFn, useRequest, useUnmount } from 'ahooks';
+import { useMemoizedFn, useMount, useRequest, useUnmount } from 'ahooks';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import CustomBlockNote from '@/components/Note/CustomBlockNote';
@@ -9,9 +9,10 @@ import type {
   NoteCollaborationUser,
   NoteOutlineItem,
 } from '@/components/Note/CustomBlockNote/index.type';
-import { useInteractService, useUserService } from '@/domains';
+import { useInteractService, useNoteService, useUserService } from '@/domains';
 import type {
   AiDiffDisplayMode,
+  InlineCommentDraft,
   NoteInfoDisplayData,
   NoteSaveStatus,
   NoteSelectionSnapshot,
@@ -20,6 +21,7 @@ import {
   AI_DIFF_DISPLAY_MODE,
   AI_DIFF_DISPLAY_MODE_LABELS,
   encodeNoteClientContentSignature,
+  InlineCommentSession,
   useNoteSession,
 } from '@/domains/Note';
 import type { User } from '@/domains/User';
@@ -32,6 +34,7 @@ import {
   useResourceHostLayoutConfig,
   type ResourceHostLayoutConfig,
 } from '@/views/workspace/ResourceHostContext';
+import { useWorkspaceResourceSidePanelStore } from '@/views/workspace/_store/useWorkspaceResourceSidePanelStore';
 import { Alert, Button, toast } from '@heroui/react';
 import {
   createNoteChatStateProvider,
@@ -39,6 +42,7 @@ import {
 } from '../../NoteChatProtocol';
 import { useAiDiffDisplayStore } from '../../_store/useAiDiffDisplayStore';
 import styles from '../../style.module.less';
+import InlineCommentPanel from '../InlineCommentPanel';
 import NoteInfoBar from '../NoteInfoBar';
 import NoteOutline, { NOTE_OUTLINE_TITLE_ID } from '../NoteOutline';
 import NoteTitle, { type NoteTitleHandle, type NoteTitleSaveStatus } from '../NoteTitle';
@@ -161,8 +165,16 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const [exportPending, setExportPending] = useState(false);
   const [titleSaveStatus, setTitleSaveStatus] = useState<NoteTitleSaveStatus>('saved');
   const [hasAiDiffContent, setHasAiDiffContent] = useState(false);
+  const [inlineCommentDraft, setInlineCommentDraft] = useState<InlineCommentDraft>();
+  const [activeInlineCommentThreadId, setActiveInlineCommentThreadId] = useState<string>();
   const interactService = useInteractService();
+  const noteService = useNoteService();
   const userService = useUserService();
+  const setResourceSidePanelMode = useWorkspaceResourceSidePanelStore((state) => state.setMode);
+  const inlineCommentSession = useMemo(
+    () => new InlineCommentSession(resourceId, noteService),
+    [noteService, resourceId]
+  );
   const { data: currentUser, error: currentUserError } = useRequest(() =>
     userService.getUserInfo()
   );
@@ -198,6 +210,12 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   useRequest(() => interactService.recordResourceRead(resourceId), {
     refreshDeps: [resourceId],
   });
+
+  useMount(() => {
+    void inlineCommentSession.start().catch(() => undefined);
+  });
+
+  useUnmount(() => inlineCommentSession.destroy());
 
   const focusBody = () => {
     bodyEditorRef.current?.focus();
@@ -299,6 +317,31 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
     [resourceId, setChatContext]
   );
 
+  const handleInlineCommentCreateRequest = useCallback(
+    (draft: InlineCommentDraft) => {
+      setInlineCommentDraft(draft);
+      setResourceSidePanelMode(resourceId, 'comment');
+    },
+    [resourceId, setResourceSidePanelMode]
+  );
+
+  const handleInlineCommentThreadSelect = useCallback(
+    (threadId: string) => {
+      setActiveInlineCommentThreadId(threadId);
+      setResourceSidePanelMode(resourceId, 'comment');
+    },
+    [resourceId, setResourceSidePanelMode]
+  );
+
+  const inlineCommentsBinding = useMemo(
+    () => ({
+      session: inlineCommentSession,
+      onCreateRequest: handleInlineCommentCreateRequest,
+      onThreadSelect: handleInlineCommentThreadSelect,
+    }),
+    [handleInlineCommentCreateRequest, handleInlineCommentThreadSelect, inlineCommentSession]
+  );
+
   const resourceHostConfig = useMemo<ResourceHostLayoutConfig>(
     () => ({
       className: styles.pageWrap,
@@ -307,6 +350,17 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
         ? {
             resource: noteInfoDisplay.resourceInfo,
             onResourceChanged: onRefreshNoteInfo,
+            title: '批注',
+            actionLabel: '批注栏',
+            content: (
+              <InlineCommentPanel
+                session={inlineCommentSession}
+                draft={inlineCommentDraft}
+                activeThreadId={activeInlineCommentThreadId}
+                onDraftClose={() => setInlineCommentDraft(undefined)}
+                onThreadSelect={handleInlineCommentThreadSelect}
+              />
+            ),
           }
         : undefined,
       header: {
@@ -362,6 +416,10 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
       noteInfoDisplay.ownerId,
       noteInfoDisplay.resourceInfo,
       noteInfoDisplay.version,
+      activeInlineCommentThreadId,
+      handleInlineCommentThreadSelect,
+      inlineCommentDraft,
+      inlineCommentSession,
       onRefreshNoteInfo,
       resourceId,
       resourceName,
@@ -448,6 +506,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
                         aiBulkActions: aiBulkActionsPortalContainer,
                       }}
                       onAiDiffBodyContentHashChange={setAiDiffBodyContentHash}
+                      inlineComments={inlineCommentsBinding}
                     />
                   ) : null}
                 </div>

@@ -2,6 +2,8 @@ import type { Doc } from 'yjs';
 
 import type {
   AiDiffDisplayMode,
+  InlineCommentDraft,
+  InlineCommentSession,
   NoteAiDiffPreviewData,
   NoteSelectionSnapshot,
   WisepenProvider,
@@ -53,6 +55,12 @@ interface NotePortalContainers {
   aiBulkActions: HTMLElement | null;
 }
 
+export interface NoteInlineCommentsBinding {
+  session: InlineCommentSession;
+  onCreateRequest: (draft: InlineCommentDraft) => void;
+  onThreadSelect?: (threadId: string) => void;
+}
+
 export interface CustomBlockNoteProps {
   resourceId: string;
   collaboration: NoteCollaborationBinding;
@@ -64,4 +72,5 @@ export interface CustomBlockNoteProps {
   onAiDiffPresenceChange?: (hasAiDiffContent: boolean) => void;
   onAskAi: (context: NoteSelectionSnapshot) => void;
   onAiDiffBodyContentHashChange?: (hash: string | undefined) => void;
+  inlineComments?: NoteInlineCommentsBinding;
 }

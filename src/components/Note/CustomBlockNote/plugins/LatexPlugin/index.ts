@@ -19,6 +19,21 @@ const mathBlockPlugin = {
     plainText: { support: 'custom' },
     print: { support: 'custom' },
   },
+  selection: {
+    inspect: (block, context) => {
+      if (context.selectedText) {
+        return { selected: context.selected, text: context.selectedText };
+      }
+      const props =
+        typeof block.props === 'object' && block.props !== null
+          ? (block.props as Record<string, unknown>)
+          : {};
+      return {
+        selected: context.selected,
+        text: typeof props.expression === 'string' ? props.expression : '',
+      };
+    },
+  },
   print: {
     styles: [
       `.note-print-body .bn-block-content[data-content-type='math'] {
@@ -67,6 +82,21 @@ const inlineMathPlugin = {
     aiDiff: { support: 'custom' },
     plainText: { support: 'custom' },
     print: { support: 'default' },
+  },
+  selection: {
+    inspect: (inline, context) => {
+      if (context.selectedText) {
+        return { selected: context.selected, text: context.selectedText };
+      }
+      const props =
+        typeof inline.props === 'object' && inline.props !== null
+          ? (inline.props as Record<string, unknown>)
+          : {};
+      return {
+        selected: context.selected,
+        text: typeof props.expression === 'string' ? props.expression : '',
+      };
+    },
   },
   extensions: ({ registry }) => [createInlineMathDollarExtension(registry)()],
   plainText: {

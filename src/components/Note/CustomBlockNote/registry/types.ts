@@ -48,6 +48,18 @@ interface NoteMarkdownExportContext {
   aiDiffDisplayMode: AiDiffDisplayMode;
 }
 
+export interface NoteSelectionContext {
+  selected: boolean;
+  selectedText: string;
+}
+
+export interface NoteSelectionFacet {
+  inspect: (
+    content: Record<string, unknown>,
+    context: NoteSelectionContext
+  ) => { selected: boolean; text: string };
+}
+
 interface NoteMarkdownExportProjection {
   project: (
     node: Record<string, unknown>,
@@ -190,6 +202,7 @@ interface NoteContentPluginBase extends NotePluginNodeBase {
   extensions?: (context: NotePluginContext) => ExtensionFactoryInstance[];
   editorProps?: (context: NotePluginContext) => Partial<EditorProps>;
   slashMenu?: (ctx: { editor: PluginEditor }) => DefaultReactSuggestionItem[];
+  selection: NoteSelectionFacet;
 }
 
 export interface NoteBlockPlugin extends NoteContentPluginBase {

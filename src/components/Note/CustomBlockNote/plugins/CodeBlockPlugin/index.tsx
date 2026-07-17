@@ -123,6 +123,9 @@ export const codeBlockPlugin = {
     plainText: { support: 'default' },
     print: { support: 'custom' },
   },
+  selection: {
+    inspect: (_block, context) => ({ selected: context.selected, text: context.selectedText }),
+  },
   aiDiff: {
     renderAiContent: CodeBlockAiContentView,
     comparison: {

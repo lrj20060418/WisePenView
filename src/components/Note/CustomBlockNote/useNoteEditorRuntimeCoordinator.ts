@@ -1,5 +1,7 @@
+import { toast } from '@heroui/react';
 import { useMemoizedFn } from 'ahooks';
 
+import { captureInlineCommentDraft } from './engines/inlineComments/relativePosition';
 import type { CustomBlockNoteProps } from './index.type';
 import { notePluginRegistry, type CustomBlockNoteEditor } from './noteEditorComposition';
 import {
@@ -81,12 +83,25 @@ export function useNoteEditorRuntimeCoordinator({
     outlineRuntime.syncActiveItem();
   });
 
+  const handleCreateInlineComment = useMemoizedFn(() => {
+    if (!props.inlineComments) return;
+    const draft = captureInlineCommentDraft(editor, notePluginRegistry);
+    if (!draft) {
+      toast.info('请先选中一段文字再添加批注');
+      return;
+    }
+    props.inlineComments.onCreateRequest(draft);
+  });
+
   return {
     collaboration,
     document,
     aiDiff,
     commands,
     handleSelectionChange,
+    inlineComments: {
+      handleCreate: handleCreateInlineComment,
+    },
   };
 }
 

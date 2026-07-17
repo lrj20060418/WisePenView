@@ -75,6 +75,9 @@ function createDefaultBlockPlugin(
       : {}),
     ...(options.inlineMathDollar ? { inputRules: { inlineMathDollar: true } } : {}),
     capabilities,
+    selection: {
+      inspect: (_block, context) => ({ selected: context.selected, text: context.selectedText }),
+    },
     ...(options.aiDiff ? { aiDiff: options.aiDiff } : {}),
     ...(options.print ? { print: options.print } : {}),
     ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
@@ -98,6 +101,9 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       aiDiff: { support: 'inherited' },
       plainText: { support: 'inherited' },
       print: DEFAULT_CAPABILITY,
+    },
+    selection: {
+      inspect: (_inline, context) => ({ selected: context.selected, text: context.selectedText }),
     },
     plainText: {
       project: (inline, registry) => {

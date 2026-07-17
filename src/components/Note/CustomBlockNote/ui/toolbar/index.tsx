@@ -19,7 +19,7 @@ import {
   type GenericPopoverReference,
 } from '@blocknote/react';
 import { ButtonGroup, Separator, Toolbar } from '@heroui/react';
-import { Sparkles } from 'lucide-react';
+import { MessageSquarePlus, Sparkles } from 'lucide-react';
 import { useMemo, type ComponentProps } from 'react';
 import { BlockTypeMenu } from './components/BlockTypeMenu';
 import { ColorMenu } from './components/ColorMenu';
@@ -36,6 +36,7 @@ import { getSelectedBlocks, stopToolbarMouseDown } from './utils';
 
 interface NoteToolbarProps {
   onAskAi: () => void;
+  onAddComment: () => void;
 }
 
 const getTableRailToolbarPlacement = (
@@ -77,7 +78,7 @@ function useBlockTypeFileGroupVisible() {
   });
 }
 
-function CustomFormattingToolbar({ onAskAi }: NoteToolbarProps) {
+function CustomFormattingToolbar({ onAskAi, onAddComment }: NoteToolbarProps) {
   const readOnly = useNoteEditorReadOnlyContext();
   const showBlockTypeFileGroup = useBlockTypeFileGroupVisible();
 
@@ -113,7 +114,12 @@ function CustomFormattingToolbar({ onAskAi }: NoteToolbarProps) {
           <ToolbarSeparator />
         </>
       ) : null}
-      <ButtonGroup size="sm" variant="ghost" aria-label="AI">
+      <ButtonGroup size="sm" variant="ghost" aria-label="批注和 AI">
+        <ToolbarButton
+          label="添加批注"
+          icon={<MessageSquarePlus size={20} />}
+          onPress={onAddComment}
+        />
         <ToolbarButton label="问 AI" icon={<Sparkles size={20} />} onPress={onAskAi} />
       </ButtonGroup>
     </Toolbar>

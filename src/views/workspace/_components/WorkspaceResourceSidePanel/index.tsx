@@ -64,13 +64,16 @@ function WorkspaceResourceSidePanel({
     [open, setWidth]
   );
 
-  const panelContent = config ? (
-    <ResourceCommentPanel
-      key={config.resource.resourceId}
-      resource={config.resource}
-      onResourceChanged={config.onResourceChanged}
-    />
-  ) : null;
+  const panelContent = config
+    ? (config.content ?? (
+        <ResourceCommentPanel
+          key={config.resource.resourceId}
+          resource={config.resource}
+          onResourceChanged={config.onResourceChanged}
+        />
+      ))
+    : null;
+  const panelTitle = config?.title ?? '评论';
 
   return (
     <SystemResizablePanelGroup
@@ -100,14 +103,14 @@ function WorkspaceResourceSidePanel({
         maxSize={open ? WORKSPACE_RESOURCE_SIDE_PANEL_MAX_WIDTH : 0}
         groupResizeBehavior="preserve-pixel-size"
         className={styles.sidePanel}
-        aria-label="评论区"
+        aria-label={panelTitle}
         aria-hidden={!open ? true : undefined}
         onResize={handleResize}
       >
         {open ? (
-          <section className={styles.panelFrame} aria-label="评论栏">
+          <section className={styles.panelFrame} aria-label={panelTitle}>
             <header className={styles.panelHeader}>
-              <h2 className={styles.panelTitle}>评论</h2>
+              <h2 className={styles.panelTitle}>{panelTitle}</h2>
             </header>
             <div className={styles.panelBody}>{panelContent}</div>
           </section>

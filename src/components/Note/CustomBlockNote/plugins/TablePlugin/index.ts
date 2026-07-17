@@ -46,6 +46,9 @@ export const tablePlugin = {
     plainText: { support: 'custom' },
     print: { support: 'custom' },
   },
+  selection: {
+    inspect: (_block, context) => ({ selected: context.selected, text: context.selectedText }),
+  },
   aiDiff: {
     renderAiContent: TableAiContentView,
   },

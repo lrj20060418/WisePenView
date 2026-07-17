@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import { getAiContentStore } from '../engines/aiDiff/store';
 import { useNoteYjsFragment } from '../engines/collaboration/useNoteYjsUndoStack';
 import { createNoteReadOnlyFilterExtension } from '../engines/editor/readOnly';
+import { createInlineCommentExtension } from '../engines/inlineComments/extension';
 import type { CustomBlockNoteProps } from '../index.type';
 import {
   blockNoteSchema,
@@ -27,6 +28,7 @@ export function useNoteEditorDefinition({
   resourceId,
   collaboration: { doc, provider, user: collaborationUser },
   state: { readOnly, blockLocalDocWrites },
+  inlineComments,
 }: CustomBlockNoteProps) {
   const imageService = useImageService();
   const [pmWriteGuardReady, setPmWriteGuardReady] = useState(false);
@@ -61,9 +63,18 @@ export function useNoteEditorDefinition({
   const editorExtensions = useMemo(
     () => [
       ...collectNoteEditorExtensions(notePluginRegistry),
+      ...(inlineComments
+        ? [
+            createInlineCommentExtension({
+              fragment: noteFragment,
+              session: inlineComments.session,
+              onThreadSelect: inlineComments.onThreadSelect ?? (() => undefined),
+            }),
+          ]
+        : []),
       createNoteReadOnlyFilterExtension(shouldBlockLocalDocWrites),
     ],
-    [shouldBlockLocalDocWrites]
+    [inlineComments, noteFragment, shouldBlockLocalDocWrites]
   );
 
   return {

@@ -51,7 +51,10 @@ export function NoteEditorSurface({
           editable={!readOnly}
           onSelectionChange={runtimeCoordinator.handleSelectionChange}
         >
-          <NoteToolbar onAskAi={runtimeCoordinator.document.handleAskAi} />
+          <NoteToolbar
+            onAskAi={runtimeCoordinator.document.handleAskAi}
+            onAddComment={runtimeCoordinator.inlineComments.handleCreate}
+          />
           <NoteSlashMenu editor={editor} plugins={notePluginRegistry.contentPlugins} />
           <NoteSideMenu plugins={notePluginRegistry.contentPlugins} />
           <NoteTableHandles />

@@ -303,6 +303,7 @@ function WorkspaceLayout() {
             <WorkspaceResourceSidePanelActions
               resourceId={sidePanelConfig.resource.resourceId}
               disabled={headerConfig.resource?.isDisabled}
+              label={sidePanelConfig.actionLabel}
             />
           ) : undefined
         }
