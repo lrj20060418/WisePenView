@@ -4,10 +4,10 @@ import { useAuthService } from '@/domains';
 import type { RegisterRequest } from '@/domains/Auth';
 import { parseErrorMessage } from '@/utils/error';
 import ServiceAgreement from '@/views/app/auth/_components/ServiceAgreement/index';
-import { Button, Checkbox, Form, toast } from '@heroui/react';
-import { useRequest } from 'ahooks';
+import { Button, Checkbox, Form, Spinner, toast } from '@heroui/react';
+import { useRequest, useUnmount } from 'ahooks';
 import { User } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import auth from '../Auth.module.less';
@@ -15,6 +15,7 @@ import { hasFieldErrors, runFieldValidation, type FieldErrors } from '../formVal
 
 const USERNAME_MAX_LENGTH = 20;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{4,20}$/;
+const AUTO_LOGIN_DELAY_MS = 2000;
 type RegisterFormValues = RegisterRequest & {
   confirmPassword: string;
 };
@@ -34,20 +35,54 @@ function Register() {
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [formValues, setFormValues] = useState<RegisterFormValues>(DEFAULT_REGISTER_VALUES);
   const [formErrors, setFormErrors] = useState<FieldErrors<RegisterField>>({});
+  const autoLoginTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
 
-  const { loading, run: submitRegister } = useRequest(
-    (values: RegisterRequest) => authService.register(values),
+  const { run: submitLogin } = useRequest(
+    (values: RegisterRequest) =>
+      authService.login({
+        account: values.username,
+        password: values.password,
+      }),
     {
       manual: true,
       onSuccess: () => {
+        setSuccessModalOpen(false);
+        navigate('/app/chat', { replace: true });
+      },
+      onError: (err: unknown) => {
+        setSuccessModalOpen(false);
+        toast.danger(parseErrorMessage(err));
+        navigate('/login', { replace: true });
+      },
+    }
+  );
+
+  const { loading, run: submitRegister } = useRequest(
+    async (values: RegisterRequest) => {
+      await authService.register(values);
+      return values;
+    },
+    {
+      manual: true,
+      onSuccess: (values) => {
         setSuccessModalOpen(true);
+        autoLoginTimerRef.current = window.setTimeout(() => {
+          autoLoginTimerRef.current = null;
+          submitLogin(values);
+        }, AUTO_LOGIN_DELAY_MS);
       },
       onError: (err: unknown) => {
         toast.danger(parseErrorMessage(err));
       },
     }
   );
+
+  useUnmount(() => {
+    if (autoLoginTimerRef.current !== null) {
+      window.clearTimeout(autoLoginTimerRef.current);
+    }
+  });
 
   const updateFormValue = (field: RegisterField, value: string) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -99,12 +134,6 @@ function Register() {
       username: formValues.username.trim(),
       password: formValues.password,
     });
-  };
-
-  const resetForm = () => {
-    setFormValues(DEFAULT_REGISTER_VALUES);
-    setFormErrors({});
-    setAgreement(false);
   };
 
   return (
@@ -203,22 +232,14 @@ function Register() {
         isOpen={successModalOpen}
         onOpenChange={setSuccessModalOpen}
         title={t('register.registerSuccessTitle')}
-        secondaryAction={{
-          label: t('register.stayHere'),
-          onPress: () => {
-            setSuccessModalOpen(false);
-            resetForm();
-          },
-        }}
-        primaryAction={{
-          label: t('register.goToLogin'),
-          onPress: () => {
-            setSuccessModalOpen(false);
-            navigate('/login');
-          },
-        }}
+        isDismissable={false}
+        showCloseTrigger={false}
+        footer={false}
       >
-        <p>{t('register.registerSuccessDescription')}</p>
+        <div className={auth.autoLoginStatus} role="status" aria-live="polite">
+          <Spinner size="sm" />
+          <span>{t('register.registerSuccessDescription')}</span>
+        </div>
       </AppDisplayDialog>
     </div>
   );
