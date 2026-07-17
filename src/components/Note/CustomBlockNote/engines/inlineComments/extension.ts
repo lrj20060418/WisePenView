@@ -5,7 +5,7 @@ import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey, type ProsemirrorBinding } from 'y-prosemirror';
 import type { XmlFragment } from 'yjs';
 
-import type { InlineCommentSession } from '@/domains/Interact';
+import type { NoteInlineCommentSession } from '@/domains/Note';
 import { resolveInlineCommentAnchor } from './relativePosition';
 import styles from './style.module.less';
 
@@ -25,7 +25,7 @@ function buildDecorations(params: {
   doc: PMNode;
   view: EditorView;
   fragment: XmlFragment;
-  session: InlineCommentSession;
+  session: NoteInlineCommentSession;
 }): DecorationSet {
   const { doc, view, fragment, session } = params;
   const binding = readBinding(view);
@@ -62,7 +62,7 @@ function buildDecorations(params: {
 
 export function createInlineCommentExtension(params: {
   fragment: XmlFragment;
-  session: InlineCommentSession;
+  session: NoteInlineCommentSession;
   onThreadSelect(threadId: string): void;
 }): ExtensionFactoryInstance {
   const { fragment, session, onThreadSelect } = params;

@@ -7,7 +7,7 @@ import {
 import type { XmlFragment } from 'yjs';
 import * as Y from 'yjs';
 
-import type { InlineCommentAnchor, InlineCommentDraft } from '@/domains/Interact';
+import type { NoteInlineCommentAnchor, NoteInlineCommentDraft } from '@/domains/Note';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
 import type { NotePluginRegistry } from '../../registry/types';
 
@@ -56,7 +56,7 @@ function projectSelectedText(editor: CustomBlockNoteEditor, registry: NotePlugin
 export function captureInlineCommentDraft(
   editor: CustomBlockNoteEditor,
   registry: NotePluginRegistry
-): InlineCommentDraft | null {
+): NoteInlineCommentDraft | null {
   const { from, to, empty } = editor.prosemirrorState.selection;
   if (empty || from === to) return null;
   const binding = readBinding(editor);
@@ -78,7 +78,7 @@ export function captureInlineCommentDraft(
 }
 
 export function resolveInlineCommentAnchor(params: {
-  anchor: InlineCommentAnchor;
+  anchor: NoteInlineCommentAnchor;
   fragment: XmlFragment;
   binding: ProsemirrorBinding;
 }): { from: number; to: number } | null {

@@ -6,6 +6,7 @@ import type { IDocumentService } from '@/domains/Document';
 import type { IDriveService } from '@/domains/Drive';
 import type { IGroupService } from '@/domains/Group';
 import type { IImageService } from '@/domains/Image';
+import type { IInlineCommentService } from '@/domains/InlineComment';
 import type { IInteractService } from '@/domains/Interact';
 import type { INoteService } from '@/domains/Note';
 import type { IQuotaService } from '@/domains/Quota';
@@ -25,6 +26,7 @@ export interface ServicesContextValue {
   driveService: IDriveService;
   groupService: IGroupService;
   imageService: IImageService;
+  inlineCommentService: IInlineCommentService;
   interactService: IInteractService;
   noteService: INoteService;
   quotaService: IQuotaService;

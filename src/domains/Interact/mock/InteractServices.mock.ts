@@ -21,14 +21,6 @@ import {
   updateMockFavoriteCollection,
   updateMockFavoriteCollections,
 } from './favoriteMock';
-import {
-  addInlineComment,
-  createInlineCommentThread,
-  getInlineComment,
-  getInlineCommentChanges,
-  getInlineCommentThread,
-  listInlineCommentThreads,
-} from './inlineCommentMock';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const interactionByResource = new Map<string, { liked: boolean; score: number }>();
@@ -73,12 +65,6 @@ export const InteractServicesMock: IInteractService = {
   createReply: createMockReply,
   deleteComment: deleteMockComment,
   toggleCommentLike: toggleMockCommentLike,
-  createInlineCommentThread,
-  addInlineComment,
-  listInlineCommentThreads,
-  getInlineCommentThread,
-  getInlineComment,
-  getInlineCommentChanges,
   getFavoriteCollectionIds: getMockFavoriteCollectionIds,
   updateFavoriteCollections: updateMockFavoriteCollections,
   listFavoriteCollections: listMockFavoriteCollections,

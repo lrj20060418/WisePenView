@@ -1,6 +1,6 @@
 import { Spin } from '@/components/Feedback';
 import SegmentedTabs from '@/components/SegmentedTabs';
-import { useMemoizedFn, useMount, useRequest, useUnmount } from 'ahooks';
+import { useMemoizedFn, useRequest, useUnmount } from 'ahooks';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import CustomBlockNote from '@/components/Note/CustomBlockNote';
@@ -9,12 +9,11 @@ import type {
   NoteCollaborationUser,
   NoteOutlineItem,
 } from '@/components/Note/CustomBlockNote/index.type';
-import { useInteractService, useUserService } from '@/domains';
-import type { InlineCommentDraft } from '@/domains/Interact';
-import { InlineCommentSession } from '@/domains/Interact';
+import { useInlineCommentService, useInteractService, useUserService } from '@/domains';
 import type {
   AiDiffDisplayMode,
   NoteInfoDisplayData,
+  NoteInlineCommentDraft,
   NoteSaveStatus,
   NoteSelectionSnapshot,
 } from '@/domains/Note';
@@ -22,6 +21,7 @@ import {
   AI_DIFF_DISPLAY_MODE,
   AI_DIFF_DISPLAY_MODE_LABELS,
   encodeNoteClientContentSignature,
+  NoteInlineCommentSession,
   useNoteSession,
 } from '@/domains/Note';
 import type { User } from '@/domains/User';
@@ -52,6 +52,8 @@ interface NoteWorkspaceProps {
   noteInfoDisplay: NoteInfoDisplayData;
   onRefreshNoteInfo: () => unknown | Promise<unknown>;
 }
+
+const INLINE_COMMENT_POLLING_INTERVAL = 8_000;
 
 const AI_DIFF_DISPLAY_OPTIONS: Array<{ value: AiDiffDisplayMode; label: string }> = [
   {
@@ -165,14 +167,19 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const [exportPending, setExportPending] = useState(false);
   const [titleSaveStatus, setTitleSaveStatus] = useState<NoteTitleSaveStatus>('saved');
   const [hasAiDiffContent, setHasAiDiffContent] = useState(false);
-  const [inlineCommentDraft, setInlineCommentDraft] = useState<InlineCommentDraft>();
+  const [inlineCommentDraft, setInlineCommentDraft] = useState<NoteInlineCommentDraft>();
   const [activeInlineCommentThreadId, setActiveInlineCommentThreadId] = useState<string>();
   const interactService = useInteractService();
+  const inlineCommentService = useInlineCommentService();
   const userService = useUserService();
   const setResourceSidePanelMode = useWorkspaceResourceSidePanelStore((state) => state.setMode);
   const inlineCommentSession = useMemo(
-    () => new InlineCommentSession(resourceId, interactService),
-    [interactService, resourceId]
+    () =>
+      new NoteInlineCommentSession({
+        resourceId,
+        inlineCommentService,
+      }),
+    [inlineCommentService, resourceId]
   );
   const { data: currentUser, error: currentUserError } = useRequest(() =>
     userService.getUserInfo()
@@ -210,8 +217,9 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
     refreshDeps: [resourceId],
   });
 
-  useMount(() => {
-    void inlineCommentSession.start().catch(() => undefined);
+  useRequest(() => inlineCommentSession.refresh(), {
+    pollingInterval: INLINE_COMMENT_POLLING_INTERVAL,
+    refreshDeps: [inlineCommentSession],
   });
 
   useUnmount(() => inlineCommentSession.destroy());
@@ -317,7 +325,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   );
 
   const handleInlineCommentCreateRequest = useCallback(
-    (draft: InlineCommentDraft) => {
+    (draft: NoteInlineCommentDraft) => {
       setInlineCommentDraft(draft);
       setResourceSidePanelMode(resourceId, 'comment');
     },

@@ -1,8 +1,8 @@
 import type {
-  InlineCommentDraft,
-  InlineCommentSession,
-  InlineCommentThread,
-} from '@/domains/Interact';
+  NoteInlineCommentDraft,
+  NoteInlineCommentSession,
+  NoteInlineCommentThread,
+} from '@/domains/Note';
 import { parseErrorMessage } from '@/utils/error';
 import { formatTimestampToDateTime } from '@/utils/format/formatTime';
 import { createUuid } from '@/utils/random/createUuid';
@@ -14,8 +14,8 @@ import { useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import styles from './style.module.less';
 
 interface InlineCommentPanelProps {
-  session: InlineCommentSession;
-  draft?: InlineCommentDraft;
+  session: NoteInlineCommentSession;
+  draft?: NoteInlineCommentDraft;
   activeThreadId?: string;
   onDraftClose(): void;
   onThreadSelect(threadId: string): void;
@@ -96,7 +96,7 @@ function InlineCommentThreadItem({
   onSelect,
   onReply,
 }: {
-  thread: InlineCommentThread;
+  thread: NoteInlineCommentThread;
   active: boolean;
   onSelect(): void;
   onReply(): void;

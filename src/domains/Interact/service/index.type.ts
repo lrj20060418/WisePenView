@@ -1,11 +1,5 @@
 import type { CommentPage, CommentSortBy } from '../entity/comment';
 import type { FavoriteCollection, FavoritedResourcesPage } from '../entity/favorite';
-import type {
-  InlineComment,
-  InlineCommentDraft,
-  InlineCommentThread,
-  InlineCommentThreadList,
-} from '../entity/inlineComment';
 import type { ResourceInteractionRecord } from '../entity/interaction';
 
 export interface IInteractService {
@@ -26,14 +20,6 @@ export interface IInteractService {
   updateFavoriteCollection(params: UpdateFavoriteCollectionRequest): Promise<void>;
   deleteFavoriteCollection(params: DeleteFavoriteCollectionRequest): Promise<void>;
   listFavoritedResources(params: ListFavoritedResourcesRequest): Promise<FavoritedResourcesPage>;
-  createInlineCommentThread(params: CreateInlineCommentThreadRequest): Promise<InlineCommentThread>;
-  addInlineComment(params: AddInlineCommentRequest): Promise<InlineComment>;
-  listInlineCommentThreads(
-    params: ListInlineCommentThreadsRequest
-  ): Promise<InlineCommentThreadList>;
-  getInlineCommentThread(params: GetInlineCommentThreadRequest): Promise<InlineCommentThread>;
-  getInlineComment(params: GetInlineCommentRequest): Promise<InlineComment>;
-  getInlineCommentChanges(params: GetInlineCommentChangesRequest): Promise<InlineCommentChanges>;
 }
 
 export interface RateResourceRequest {
@@ -94,44 +80,4 @@ export interface ListFavoritedResourcesRequest {
   collectionId?: string;
   page: number;
   size: number;
-}
-
-export interface CreateInlineCommentThreadRequest extends InlineCommentDraft {
-  resourceId: string;
-  idempotencyKey: string;
-  content: string;
-}
-
-export interface AddInlineCommentRequest {
-  threadId: string;
-  idempotencyKey: string;
-  content: string;
-}
-
-export interface ListInlineCommentThreadsRequest {
-  resourceId: string;
-}
-
-export interface GetInlineCommentThreadRequest {
-  threadId: string;
-}
-
-export interface GetInlineCommentRequest {
-  threadId: string;
-  commentId: string;
-}
-
-export interface GetInlineCommentChangesRequest {
-  resourceId: string;
-  cursor?: string;
-}
-
-export interface InlineCommentChange {
-  threadId: string;
-  revision: number;
-}
-
-export interface InlineCommentChanges {
-  items: InlineCommentChange[];
-  cursor: string;
 }

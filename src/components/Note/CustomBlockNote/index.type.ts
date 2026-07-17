@@ -1,9 +1,10 @@
 import type { Doc } from 'yjs';
 
-import type { InlineCommentDraft, InlineCommentSession } from '@/domains/Interact';
 import type {
   AiDiffDisplayMode,
   NoteAiDiffPreviewData,
+  NoteInlineCommentDraft,
+  NoteInlineCommentSession,
   NoteSelectionSnapshot,
   WisepenProvider,
 } from '@/domains/Note';
@@ -55,8 +56,8 @@ interface NotePortalContainers {
 }
 
 export interface NoteInlineCommentsBinding {
-  session: InlineCommentSession;
-  onCreateRequest: (draft: InlineCommentDraft) => void;
+  session: NoteInlineCommentSession;
+  onCreateRequest: (draft: NoteInlineCommentDraft) => void;
   onThreadSelect?: (threadId: string) => void;
 }
 
