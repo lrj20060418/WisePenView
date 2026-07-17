@@ -48,6 +48,28 @@ function createItem(
   };
 }
 
+function updateItemReactions(
+  item: InlineCommentItem,
+  reactions: InlineCommentItem['reactions']
+): InlineCommentItem {
+  const groupsByEmoji = new Map<string, InlineCommentItem['reactionGroups'][number]>();
+  reactions.forEach((reaction) => {
+    const group = groupsByEmoji.get(reaction.emojiId);
+    groupsByEmoji.set(reaction.emojiId, {
+      emojiId: reaction.emojiId,
+      count: (group?.count ?? 0) + 1,
+      reactedByCurrentUser: group?.reactedByCurrentUser || reaction.userId === currentUser.id,
+      users: reaction.userId === currentUser.id ? [currentUser] : (group?.users ?? []),
+    });
+  });
+  return {
+    ...item,
+    reactions,
+    reactionGroups: [...groupsByEmoji.values()],
+    updatedAt: Date.now(),
+  };
+}
+
 const listInlineComments = async (
   params: ListInlineCommentsRequest
 ): Promise<InlineCommentThread[]> =>
@@ -127,13 +149,10 @@ const setInlineCommentItemReaction = async (
     ...thread,
     items: thread.items.map((item) =>
       item.itemId === params.itemId
-        ? {
-            ...item,
-            reactions: [
-              ...item.reactions.filter((reaction) => reaction.userId !== currentUser.id),
-              { userId: currentUser.id, emojiId: params.emojiId, createdAt: now },
-            ],
-          }
+        ? updateItemReactions(item, [
+            ...item.reactions.filter((reaction) => reaction.userId !== currentUser.id),
+            { userId: currentUser.id, emojiId: params.emojiId, createdAt: now },
+          ])
         : item
     ),
   });
@@ -147,10 +166,10 @@ const deleteInlineCommentItemReaction = async (
     ...thread,
     items: thread.items.map((item) =>
       item.itemId === params.itemId
-        ? {
-            ...item,
-            reactions: item.reactions.filter((reaction) => reaction.userId !== currentUser.id),
-          }
+        ? updateItemReactions(
+            item,
+            item.reactions.filter((reaction) => reaction.userId !== currentUser.id)
+          )
         : item
     ),
   });

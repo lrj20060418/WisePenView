@@ -1,7 +1,5 @@
 export type {
-  NoteInlineComment,
   NoteInlineCommentAnchor,
-  NoteInlineCommentAuthor,
   NoteInlineCommentDraft,
   NoteInlineCommentThread,
 } from './entity/inlineComment';

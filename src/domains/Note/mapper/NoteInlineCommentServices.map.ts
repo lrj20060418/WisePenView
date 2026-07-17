@@ -4,11 +4,7 @@ import type {
   InlineCommentThread,
 } from '@/domains/InlineComment';
 
-import type {
-  NoteInlineComment,
-  NoteInlineCommentDraft,
-  NoteInlineCommentThread,
-} from '../entity/inlineComment';
+import type { NoteInlineCommentDraft, NoteInlineCommentThread } from '../entity/inlineComment';
 
 function mapThread(thread: InlineCommentThread): NoteInlineCommentThread | null {
   const start = thread.anchor.anchorPayload.start;
@@ -22,13 +18,7 @@ function mapThread(thread: InlineCommentThread): NoteInlineCommentThread | null 
     externalAnchorId: thread.anchor.externalAnchorId,
     anchor: { start, end },
     quoteText: thread.anchor.quoteText,
-    items: thread.items.map((item): NoteInlineComment => ({
-      commentId: item.itemId,
-      authorId: item.authorId,
-      author: item.author,
-      content: item.content,
-      createdAt: item.createdAt,
-    })),
+    items: thread.items,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
   };
@@ -45,6 +35,7 @@ const mapCreateRequest = (params: {
   requestKey: string;
   draft: NoteInlineCommentDraft;
   content: string;
+  imageUrls: string[];
 }): CreateInlineCommentRequest => ({
   resourceId: params.resourceId,
   externalAnchorId: params.requestKey,
@@ -54,7 +45,7 @@ const mapCreateRequest = (params: {
     end: params.draft.anchor.end,
   },
   content: params.content,
-  imageUrls: [],
+  imageUrls: params.imageUrls,
   mentionUserIds: [],
 });
 
@@ -62,11 +53,12 @@ const mapAddItemRequest = (params: {
   resourceId: string;
   threadId: string;
   content: string;
+  imageUrls: string[];
 }): AddInlineCommentItemRequest => ({
   resourceId: params.resourceId,
   inlineCommentId: params.threadId,
   content: params.content,
-  imageUrls: [],
+  imageUrls: params.imageUrls,
   mentionUserIds: [],
 });
 

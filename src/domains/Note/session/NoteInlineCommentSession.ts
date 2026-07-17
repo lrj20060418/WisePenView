@@ -1,11 +1,7 @@
-import type { IInlineCommentService } from '@/domains/InlineComment';
+import type { IInlineCommentService, InlineCommentItem } from '@/domains/InlineComment';
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 
-import type {
-  NoteInlineComment,
-  NoteInlineCommentDraft,
-  NoteInlineCommentThread,
-} from '../entity/inlineComment';
+import type { NoteInlineCommentDraft, NoteInlineCommentThread } from '../entity/inlineComment';
 import { NoteInlineCommentServicesMap } from '../mapper/NoteInlineCommentServices.map';
 
 export interface NoteInlineCommentSessionSnapshot {
@@ -52,7 +48,11 @@ export class NoteInlineCommentSession {
   }
 
   async createThread(
-    params: NoteInlineCommentDraft & { content: string; idempotencyKey: string }
+    params: NoteInlineCommentDraft & {
+      content: string;
+      imageUrls: string[];
+      idempotencyKey: string;
+    }
   ): Promise<NoteInlineCommentThread> {
     await this.refresh();
     const existingThread = this.findThreadByRequestKey(params.idempotencyKey);
@@ -64,6 +64,7 @@ export class NoteInlineCommentSession {
         requestKey: params.idempotencyKey,
         draft: params,
         content: params.content,
+        imageUrls: params.imageUrls,
       })
     );
     return this.reloadCreatedThread(threadId);
@@ -72,8 +73,9 @@ export class NoteInlineCommentSession {
   async addComment(
     threadId: string,
     content: string,
+    imageUrls: string[],
     idempotencyKey: string
-  ): Promise<NoteInlineComment> {
+  ): Promise<InlineCommentItem> {
     const existingItemId = this.addedItemIdsByRequestKey.get(idempotencyKey);
     if (existingItemId) {
       await this.refresh();
@@ -86,10 +88,47 @@ export class NoteInlineCommentSession {
         resourceId: this.resourceId,
         threadId,
         content,
+        imageUrls,
       })
     );
     this.addedItemIdsByRequestKey.set(idempotencyKey, itemId);
     return this.reloadCreatedItem(threadId, itemId);
+  }
+
+  async changeReaction(threadId: string, itemId: string, emojiId?: string): Promise<void> {
+    if (emojiId) {
+      await this.inlineCommentService.setInlineCommentItemReaction({
+        resourceId: this.resourceId,
+        inlineCommentId: threadId,
+        itemId,
+        emojiId,
+      });
+    } else {
+      await this.inlineCommentService.deleteInlineCommentItemReaction({
+        resourceId: this.resourceId,
+        inlineCommentId: threadId,
+        itemId,
+      });
+    }
+    await this.refreshAfterMutation();
+  }
+
+  async deleteComment(threadId: string, itemId: string): Promise<void> {
+    await this.inlineCommentService.deleteInlineCommentItem({
+      resourceId: this.resourceId,
+      inlineCommentId: threadId,
+      itemId,
+    });
+    await this.refreshAfterMutation();
+  }
+
+  async resolveThread(threadId: string): Promise<void> {
+    await this.inlineCommentService.changeInlineCommentResolveStatus({
+      resourceId: this.resourceId,
+      inlineCommentId: threadId,
+      resolved: true,
+    });
+    await this.refreshAfterMutation();
   }
 
   refresh(): Promise<void> {
@@ -117,6 +156,7 @@ export class NoteInlineCommentSession {
     const threads = NoteInlineCommentServicesMap.mapThreads(
       await this.inlineCommentService.listInlineComments({
         resourceId: this.resourceId,
+        resolved: false,
       })
     );
     if (this.destroyed) return;
@@ -125,7 +165,7 @@ export class NoteInlineCommentSession {
   }
 
   private async reloadCreatedThread(threadId: string): Promise<NoteInlineCommentThread> {
-    await this.refresh();
+    await this.refreshAfterMutation();
     let thread = this.threadsById.get(threadId);
     if (!thread) {
       await this.refresh();
@@ -139,8 +179,8 @@ export class NoteInlineCommentSession {
     return thread;
   }
 
-  private async reloadCreatedItem(threadId: string, itemId: string): Promise<NoteInlineComment> {
-    await this.refresh();
+  private async reloadCreatedItem(threadId: string, itemId: string): Promise<InlineCommentItem> {
+    await this.refreshAfterMutation();
     let item = this.findItem(threadId, itemId);
     if (!item) {
       await this.refresh();
@@ -158,8 +198,15 @@ export class NoteInlineCommentSession {
     return [...this.threadsById.values()].find((thread) => thread.externalAnchorId === requestKey);
   }
 
-  private findItem(threadId: string, itemId: string): NoteInlineComment | undefined {
-    return this.threadsById.get(threadId)?.items.find((comment) => comment.commentId === itemId);
+  private findItem(threadId: string, itemId: string): InlineCommentItem | undefined {
+    return this.threadsById.get(threadId)?.items.find((comment) => comment.itemId === itemId);
+  }
+
+  private async refreshAfterMutation(): Promise<void> {
+    if (this.refreshPromise) {
+      await this.refreshPromise.catch(() => undefined);
+    }
+    await this.refresh();
   }
 
   private updateSnapshot(patch: Partial<NoteInlineCommentSessionSnapshot>): void {

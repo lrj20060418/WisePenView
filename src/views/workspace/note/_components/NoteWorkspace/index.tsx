@@ -1,7 +1,8 @@
 import { Spin } from '@/components/Feedback';
+import InlineComment from '@/components/InlineComment';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useMemoizedFn, useRequest, useUnmount } from 'ahooks';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import CustomBlockNote from '@/components/Note/CustomBlockNote';
 import type {
@@ -42,7 +43,6 @@ import {
 } from '../../NoteChatProtocol';
 import { useAiDiffDisplayStore } from '../../_store/useAiDiffDisplayStore';
 import styles from '../../style.module.less';
-import InlineCommentPanel from '../InlineCommentPanel';
 import NoteInfoBar from '../NoteInfoBar';
 import NoteOutline, { NOTE_OUTLINE_TITLE_ID } from '../NoteOutline';
 import NoteTitle, { type NoteTitleHandle, type NoteTitleSaveStatus } from '../NoteTitle';
@@ -181,6 +181,10 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
       }),
     [inlineCommentService, resourceId]
   );
+  const inlineCommentSnapshot = useSyncExternalStore(
+    inlineCommentSession.subscribe,
+    inlineCommentSession.getSnapshot
+  );
   const { data: currentUser, error: currentUserError } = useRequest(() =>
     userService.getUserInfo()
   );
@@ -264,7 +268,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
 
   const showAiDiffDisplayModeSwitch = hasAiDiffContent;
 
-  const handlePrintPdf = useCallback(async () => {
+  const handlePrintPdf = useMemoizedFn(async () => {
     const bodyApi = bodyEditorRef.current;
     if (!bodyApi) {
       toast.info('编辑器未就绪');
@@ -281,9 +285,9 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
     } finally {
       setExportPending(false);
     }
-  }, [fallbackNoteTitle]);
+  });
 
-  const handleDownloadMarkdown = useCallback(async () => {
+  const handleDownloadMarkdown = useMemoizedFn(async () => {
     const bodyApi = bodyEditorRef.current;
     if (!bodyApi) {
       toast.info('编辑器未就绪');
@@ -304,7 +308,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
     } finally {
       setExportPending(false);
     }
-  }, [fallbackNoteTitle]);
+  });
 
   const noteChatStateProvider = useMemo(
     () =>
@@ -360,12 +364,58 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
             title: '批注',
             actionLabel: '批注栏',
             content: (
-              <InlineCommentPanel
-                session={inlineCommentSession}
-                draft={inlineCommentDraft}
+              <InlineComment
+                threads={inlineCommentSnapshot.threads}
+                loading={inlineCommentSnapshot.loading}
+                error={inlineCommentSnapshot.error}
+                draft={
+                  inlineCommentDraft
+                    ? {
+                        key: `${inlineCommentDraft.anchor.start}:${inlineCommentDraft.anchor.end}`,
+                        quoteText: inlineCommentDraft.quoteText,
+                      }
+                    : undefined
+                }
                 activeThreadId={activeInlineCommentThreadId}
+                currentUserId={currentUser?.id}
+                resourceOwnerId={noteInfoDisplay.ownerId}
+                imageUpload={{
+                  scene: 'PRIVATE_IMAGE_FOR_NOTE',
+                  bizTag: `notes/${resourceId}/inline-comments`,
+                }}
                 onDraftClose={() => setInlineCommentDraft(undefined)}
                 onThreadSelect={handleInlineCommentThreadSelect}
+                onCreate={async ({ content, imageUrls, idempotencyKey }) => {
+                  if (!inlineCommentDraft) return;
+                  const thread = await inlineCommentSession.createThread({
+                    ...inlineCommentDraft,
+                    content,
+                    imageUrls,
+                    idempotencyKey,
+                  });
+                  handleInlineCommentThreadSelect(thread.threadId);
+                  setInlineCommentDraft(undefined);
+                }}
+                onReply={async (threadId, { content, imageUrls, idempotencyKey }) => {
+                  await inlineCommentSession.addComment(
+                    threadId,
+                    content,
+                    imageUrls,
+                    idempotencyKey
+                  );
+                }}
+                onReactionChange={({ threadId, itemId, emojiId }) =>
+                  inlineCommentSession.changeReaction(threadId, itemId, emojiId)
+                }
+                onResolve={async (threadId) => {
+                  await inlineCommentSession.resolveThread(threadId);
+                  setActiveInlineCommentThreadId((currentThreadId) =>
+                    currentThreadId === threadId ? undefined : currentThreadId
+                  );
+                }}
+                onDelete={({ threadId, itemId }) =>
+                  inlineCommentSession.deleteComment(threadId, itemId)
+                }
               />
             ),
           }
@@ -404,10 +454,10 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
             />
           ) : null,
           moreMenu: {
-            onPrint: () => void handlePrintPdf(),
+            onPrint: handlePrintPdf,
             download: {
               label: '下载为 Markdown',
-              onAction: () => void handleDownloadMarkdown(),
+              onAction: handleDownloadMarkdown,
             },
             isPending: exportPending,
           },
@@ -426,7 +476,9 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
       activeInlineCommentThreadId,
       handleInlineCommentThreadSelect,
       inlineCommentDraft,
+      inlineCommentSnapshot,
       inlineCommentSession,
+      currentUser?.id,
       onRefreshNoteInfo,
       resourceId,
       resourceName,
