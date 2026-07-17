@@ -2,7 +2,7 @@ import { MessageSquare } from 'lucide-react';
 import type { RefObject } from 'react';
 
 import type { NoteInlineCommentAnchor } from '../../../content/types';
-import { useNoteInlineCommentRuntime } from '../../../engines/inlineComment/runtime/InlineCommentRuntime';
+import { useNoteInlineCommentContext } from '../../../engines/inlineComment/integration/InlineCommentContext';
 import { captureInlineMathAnchor } from './formulaInlineCommentAnchor';
 import {
   formatFormulaInlineCommentReferenceText,
@@ -27,9 +27,9 @@ export function LatexFormulaInlineCommentButton({
   shellRef,
   blockId,
 }: LatexFormulaInlineCommentButtonProps) {
-  const inlineCommentRuntime = useNoteInlineCommentRuntime();
+  const inlineCommentContext = useNoteInlineCommentContext();
 
-  if (!inlineCommentRuntime?.canInlineComment) {
+  if (!inlineCommentContext?.canInlineComment) {
     return null;
   }
 
@@ -53,10 +53,10 @@ export function LatexFormulaInlineCommentButton({
         const anchor =
           kind === 'block' && blockId
             ? { kind: 'block' as const, blockId }
-            : captureInlineMathAnchor(inlineCommentRuntime.editor, shellElement);
+            : captureInlineMathAnchor(inlineCommentContext.editor, shellElement);
         const referenceText = formatFormulaInlineCommentReferenceText(expression, kind);
         if (!anchor || !referenceText) return;
-        inlineCommentRuntime.startContentInlineComment({
+        inlineCommentContext.startContentInlineComment({
           ownerId:
             kind === 'block'
               ? MATH_BLOCK_INLINE_COMMENT_OWNER_ID

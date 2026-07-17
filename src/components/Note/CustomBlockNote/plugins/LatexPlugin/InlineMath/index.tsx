@@ -11,7 +11,7 @@ import { useEffectForce } from '@/hooks/useEffectForce';
 import 'katex/dist/katex.min.css';
 import type { NoteInlineCommentAnchor } from '../../../content/types';
 import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
-import { useNoteInlineCommentRuntime } from '../../../engines/inlineComment/runtime/InlineCommentRuntime';
+import { useNoteInlineCommentContext } from '../../../engines/inlineComment/integration/InlineCommentContext';
 import { captureInlineMathAnchor } from '../inlineComment/formulaInlineCommentAnchor';
 import { formatFormulaInlineCommentReferenceText } from '../inlineComment/formulaInlineCommentReference';
 import {
@@ -112,7 +112,7 @@ function InlineMathView(
 ) {
   const { contentRef, updateInlineContent, inlineContent, editor } = props;
   const readOnly = useNoteEditorReadOnlyContext();
-  const inlineCommentRuntime = useNoteInlineCommentRuntime();
+  const inlineCommentContext = useNoteInlineCommentContext();
   const expression = inlineContent.props.expression as string;
   const autoOpenEdit = inlineContent.props.autoOpenEdit as boolean;
 
@@ -152,7 +152,7 @@ function InlineMathView(
     }
     const referenceText = formatFormulaInlineCommentReferenceText(nextExpression, 'inline');
     if (!referenceText) return;
-    inlineCommentRuntime?.updateContentInlineCommentReference({
+    inlineCommentContext?.updateContentInlineCommentReference({
       ownerId: INLINE_MATH_INLINE_COMMENT_OWNER_ID,
       anchor: anchor as unknown as NoteInlineCommentAnchor,
       referenceText,
@@ -221,7 +221,7 @@ function InlineMathView(
     const anchor = getInlineFormulaAnchor();
     if (anchor) {
       window.setTimeout(() => {
-        inlineCommentRuntime?.clearContentInlineCommentReferenceOverride({
+        inlineCommentContext?.clearContentInlineCommentReferenceOverride({
           ownerId: INLINE_MATH_INLINE_COMMENT_OWNER_ID,
           anchor: anchor as unknown as NoteInlineCommentAnchor,
         });

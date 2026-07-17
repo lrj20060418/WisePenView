@@ -1,6 +1,6 @@
 import type { NoteInlineCommentFacet, NotePluginRegistry } from '../../../content/types';
 import type { CustomBlockNoteEditor } from '../../../noteEditorComposition';
-import { hasAiDiffForBlockInEditorState } from '../../aiDiff/runtime';
+import { hasAiDiffForBlockInEditorState } from '../../aiDiff/extension';
 
 function getInlineCommentPolicy(
   type: string,

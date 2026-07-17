@@ -1,15 +1,15 @@
 import type { NoteInlineCommentStatus } from '../../../index.type';
 
-interface NoteInlineCommentRuntimeState {
+interface NoteInlineCommentAvailability {
   enabled: boolean;
   uiEnabled: boolean;
   hasWritePermission: boolean;
   canWrite: boolean;
 }
 
-export function resolveNoteInlineCommentRuntimeState(
+export function resolveNoteInlineCommentAvailability(
   status: NoteInlineCommentStatus
-): NoteInlineCommentRuntimeState {
+): NoteInlineCommentAvailability {
   if (status.kind === 'disabled') {
     return { enabled: false, uiEnabled: false, hasWritePermission: false, canWrite: false };
   }

@@ -6,12 +6,12 @@ import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 import type {
   NoteBlockPlugin,
   NoteContentPlugin,
+  NoteEditorExtension,
   NoteInlineContentSpecs,
   NoteInlinePlugin,
   NotePluginBundle,
   NotePluginNode,
   NotePluginRegistry,
-  NoteRuntimeExtension,
 } from './types';
 
 type DOMEventHandlers = NonNullable<EditorProps['handleDOMEvents']>;
@@ -66,10 +66,10 @@ function sortByDependencies<T extends { id: string; dependencies?: readonly stri
 
 export function createNotePluginRegistry(
   root: NotePluginBundle,
-  runtimeExtensions: readonly NoteRuntimeExtension[] = []
+  editorExtensions: readonly NoteEditorExtension[] = []
 ): NotePluginRegistry {
   const nodes = flattenPluginTree(root);
-  const allItems = [...nodes, ...runtimeExtensions];
+  const allItems = [...nodes, ...editorExtensions];
   const seenIds = new Set<string>();
   for (const item of allItems) {
     if (seenIds.has(item.id)) {
@@ -82,7 +82,7 @@ export function createNotePluginRegistry(
     (node): node is NoteContentPlugin => node.kind === 'block' || node.kind === 'inline'
   );
   const sortedContentPlugins = sortByDependencies(contentPlugins, seenIds);
-  const sortedRuntimeExtensions = sortByDependencies(runtimeExtensions, seenIds);
+  const sortedEditorExtensions = sortByDependencies(editorExtensions, seenIds);
   const blockPlugins = new Map<string, NoteBlockPlugin>();
   const inlinePlugins = new Map<string, NoteInlinePlugin>();
   let defaultBlock: NotePluginRegistry['defaultBlock'];
@@ -136,7 +136,7 @@ export function createNotePluginRegistry(
     blockPlugins,
     inlinePlugins,
     defaultBlock,
-    runtimeExtensions: sortedRuntimeExtensions,
+    editorExtensions: sortedEditorExtensions,
   };
 }
 
@@ -168,14 +168,14 @@ export function createNoteBlockNoteSchema(registry: NotePluginRegistry) {
 export function collectNoteEditorExtensions(
   registry: NotePluginRegistry
 ): ExtensionFactoryInstance[] {
-  return [...registry.contentPlugins, ...registry.runtimeExtensions].flatMap(
+  return [...registry.contentPlugins, ...registry.editorExtensions].flatMap(
     (plugin) => plugin.extensions?.({ registry }) ?? []
   );
 }
 
 export function collectNotePrintStyles(registry: NotePluginRegistry): string {
   const styles = new Set<string>();
-  for (const plugin of [...registry.contentPlugins, ...registry.runtimeExtensions]) {
+  for (const plugin of [...registry.contentPlugins, ...registry.editorExtensions]) {
     for (const style of plugin.print?.styles ?? []) {
       const normalized = style.trim();
       if (normalized) styles.add(normalized);
@@ -214,7 +214,7 @@ function mergeHandleDOMEvents(
 }
 
 export function collectNoteEditorProps(registry: NotePluginRegistry): Partial<EditorProps> {
-  const contributors = [...registry.contentPlugins, ...registry.runtimeExtensions];
+  const contributors = [...registry.contentPlugins, ...registry.editorExtensions];
   const domHandlersList: DOMEventHandlers[] = [];
   const merged: Partial<EditorProps> = {};
   const seenScalarKeys = new Map<string, string>();

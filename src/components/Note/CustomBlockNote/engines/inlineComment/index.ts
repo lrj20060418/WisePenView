@@ -9,13 +9,13 @@ export {
   resolveBlockNoteInlineCommentUsers,
 } from './threads/users';
 
-export { buildInlineCommentExtension } from './runtime/buildInlineCommentExtension';
+export { buildInlineCommentExtension } from './integration/buildInlineCommentExtension';
 
 export { NoteInlineCommentUi } from './ui/NoteInlineCommentUi';
 
-export { NoteInlineCommentRuntimeProvider } from './runtime/InlineCommentRuntime';
-export { resolveNoteInlineCommentRuntimeState } from './runtime/state';
-export { useContentInlineComments } from './runtime/useContentInlineComments';
+export { NoteInlineCommentProvider } from './integration/InlineCommentContext';
+export { resolveNoteInlineCommentAvailability } from './integration/status';
+export { useContentInlineComments } from './integration/useContentInlineComments';
 
 export {
   capturePendingInlineCommentSelection,

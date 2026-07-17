@@ -14,7 +14,7 @@ import { useEffectForce } from '@/hooks/useEffectForce';
 import 'katex/dist/katex.min.css';
 import type { NoteInlineCommentAnchor } from '../../../content/types';
 import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
-import { useNoteInlineCommentRuntime } from '../../../engines/inlineComment/runtime/InlineCommentRuntime';
+import { useNoteInlineCommentContext } from '../../../engines/inlineComment/integration/InlineCommentContext';
 import type { CustomBlockNoteEditor } from '../../../noteEditorComposition';
 import { formatFormulaInlineCommentReferenceText } from '../inlineComment/formulaInlineCommentReference';
 import { MATH_BLOCK_INLINE_COMMENT_OWNER_ID } from '../inlineComment/inlineCommentAnchor';
@@ -74,7 +74,7 @@ function MathFormulaPreview({ expression, className }: { expression: string; cla
 
 function MathBlockView(props: MathBlockRenderProps) {
   const readOnly = useNoteEditorReadOnlyContext();
-  const inlineCommentRuntime = useNoteInlineCommentRuntime();
+  const inlineCommentContext = useNoteInlineCommentContext();
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(props.block.props.expression);
@@ -226,10 +226,10 @@ function MathBlockView(props: MathBlockRenderProps) {
   );
   const inlineCommentHighlight = useMathBlockInlineCommentHighlight({
     inlineCommentEditor:
-      inlineCommentRuntime?.editor ?? (props.editor as unknown as CustomBlockNoteEditor),
+      inlineCommentContext?.editor ?? (props.editor as unknown as CustomBlockNoteEditor),
     target: blockInlineCommentTarget,
     revisionKey: String(props.block.props.expression ?? ''),
-    inlineCommentRuntime,
+    inlineCommentContext,
   });
   const inlineCommentHighlightClass = [
     inlineCommentHighlight.hasInlineComment ? styles.mathBlockInlineCommented : '',
@@ -259,7 +259,7 @@ function MathBlockView(props: MathBlockRenderProps) {
         setValue(nextValue);
         const referenceText = formatFormulaInlineCommentReferenceText(nextValue, 'block');
         if (referenceText) {
-          inlineCommentRuntime?.updateContentInlineCommentReference({
+          inlineCommentContext?.updateContentInlineCommentReference({
             ...blockInlineCommentTarget,
             referenceText,
           });

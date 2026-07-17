@@ -8,8 +8,8 @@ import type { NotePluginRegistry } from '../../content/types';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
 import { applyNoteAiDiffAction } from './action';
 import { resolveNoteAiDiffBlock } from './contentState';
-import type { NoteAiDiffActionRequest } from './runtime';
-import { syncAiDiffRuntimeState } from './runtime';
+import type { NoteAiDiffActionRequest } from './extension';
+import { syncAiDiffExtensionState } from './extension';
 import { observeAiContent, readAllAiContent } from './store';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,7 +44,7 @@ function hasActiveAiDiff(
   return false;
 }
 
-export function useAiDiffSidecarRuntime(params: {
+export function useAiDiffSidecar(params: {
   doc: Y.Doc;
   noteFragment: Y.XmlFragment;
   editor: CustomBlockNoteEditor;
@@ -77,7 +77,7 @@ export function useAiDiffSidecarRuntime(params: {
 
   const sync = useMemoizedFn(() => {
     const aiContentByBlockId = readAllAiContent(doc);
-    syncAiDiffRuntimeState(editor.prosemirrorView, {
+    syncAiDiffExtensionState(editor.prosemirrorView, {
       displayMode,
       aiContentByBlockId,
       actionsEnabled: !readOnly,

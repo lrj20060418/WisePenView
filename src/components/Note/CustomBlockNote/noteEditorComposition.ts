@@ -6,8 +6,8 @@ import {
   createNotePluginRegistry,
 } from './content/registry';
 import type { NotePluginBundle } from './content/types';
-import { aiDiffRuntimeExtension } from './engines/aiDiff/runtime';
-import { editorRuntimeExtension } from './engines/editor/stripEscape';
+import { aiDiffEditorExtension } from './engines/aiDiff/extension';
+import { stripEscapeEditorExtension } from './engines/editor/stripEscape';
 import { noteConfig } from './noteConfig';
 import { codeBlockPlugin } from './plugins/CodeBlockPlugin';
 import { createDefaultContentPlugin } from './plugins/DefaultContentPlugin';
@@ -23,8 +23,8 @@ const notePluginTree = {
 } satisfies NotePluginBundle;
 
 export const notePluginRegistry = createNotePluginRegistry(notePluginTree, [
-  editorRuntimeExtension,
-  aiDiffRuntimeExtension,
+  stripEscapeEditorExtension,
+  aiDiffEditorExtension,
 ]);
 
 /** 笔记正文 schema 由唯一的内容插件树生成。 */

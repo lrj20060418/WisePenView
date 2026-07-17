@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- Provider 与读取 hook 必须共享同一个运行时 Context。 */
+/* eslint-disable react-refresh/only-export-components -- Provider 与读取 hook 必须共享同一个批注 Context。 */
 import { createContext, createElement, use, type ReactNode } from 'react';
 
 import type { NoteInlineCommentAnchor } from '../../../content/types';
@@ -18,7 +18,7 @@ export interface UpdateContentInlineCommentReferenceOptions extends ContentInlin
   persist?: boolean;
 }
 
-export interface NoteInlineCommentRuntime {
+export interface NoteInlineCommentContextValue {
   canInlineComment: boolean;
   startContentInlineComment: (options: StartContentInlineCommentOptions) => void;
   updateContentInlineCommentReference: (
@@ -32,15 +32,15 @@ export interface NoteInlineCommentRuntime {
   getThreadContentInlineCommentAnchor: (threadId: string) => ContentInlineCommentTarget | undefined;
 }
 
-const NoteInlineCommentRuntimeContext = createContext<NoteInlineCommentRuntime | null>(null);
+const NoteInlineCommentContext = createContext<NoteInlineCommentContextValue | null>(null);
 
-export function NoteInlineCommentRuntimeProvider({
+export function NoteInlineCommentProvider({
   children,
   ...value
-}: NoteInlineCommentRuntime & { children: ReactNode }) {
-  return createElement(NoteInlineCommentRuntimeContext.Provider, { value }, children);
+}: NoteInlineCommentContextValue & { children: ReactNode }) {
+  return createElement(NoteInlineCommentContext.Provider, { value }, children);
 }
 
-export function useNoteInlineCommentRuntime() {
-  return use(NoteInlineCommentRuntimeContext);
+export function useNoteInlineCommentContext() {
+  return use(NoteInlineCommentContext);
 }

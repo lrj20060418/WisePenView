@@ -236,8 +236,8 @@ interface NoteContentPluginBase extends NotePluginNodeBase {
   capabilities: NoteContentCapabilityDeclarations;
   inlineComment: NoteInlineCommentFacet;
   print?: NotePrintContribution;
-  extensions?: (context: NotePluginRuntimeContext) => ExtensionFactoryInstance[];
-  editorProps?: (context: NotePluginRuntimeContext) => Partial<EditorProps>;
+  extensions?: (context: NotePluginContext) => ExtensionFactoryInstance[];
+  editorProps?: (context: NotePluginContext) => Partial<EditorProps>;
   slashMenu?: (ctx: { editor: PluginEditor }) => DefaultReactSuggestionItem[];
 }
 
@@ -271,13 +271,13 @@ export interface NotePluginBundle extends NotePluginNodeBase {
 export type NoteContentPlugin = NoteBlockPlugin | NoteInlinePlugin;
 export type NotePluginNode = NotePluginBundle | NoteContentPlugin;
 
-export interface NoteRuntimeExtension extends NotePluginNodeBase {
+export interface NoteEditorExtension extends NotePluginNodeBase {
   print?: NotePrintContribution;
-  extensions?: (context: NotePluginRuntimeContext) => ExtensionFactoryInstance[];
-  editorProps?: (context: NotePluginRuntimeContext) => Partial<EditorProps>;
+  extensions?: (context: NotePluginContext) => ExtensionFactoryInstance[];
+  editorProps?: (context: NotePluginContext) => Partial<EditorProps>;
 }
 
-interface NotePluginRuntimeContext {
+interface NotePluginContext {
   registry: NotePluginRegistry;
 }
 
@@ -287,5 +287,5 @@ export interface NotePluginRegistry {
   blockPlugins: ReadonlyMap<string, NoteBlockPlugin>;
   inlinePlugins: ReadonlyMap<string, NoteInlinePlugin>;
   defaultBlock?: NoteBlockInsertion;
-  runtimeExtensions: readonly NoteRuntimeExtension[];
+  editorExtensions: readonly NoteEditorExtension[];
 }

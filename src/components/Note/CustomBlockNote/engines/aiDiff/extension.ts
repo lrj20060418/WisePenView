@@ -10,8 +10,8 @@ import type {
   NoteAiDiffAction,
   NoteAiDiffActionTarget,
   NoteAiDiffComparisonContext,
+  NoteEditorExtension,
   NotePluginRegistry,
-  NoteRuntimeExtension,
 } from '../../content/types';
 import { resolveNoteAiDiffBlock } from './contentState';
 import styles from './style.module.less';
@@ -22,14 +22,14 @@ export interface NoteAiDiffActionRequest {
   target?: NoteAiDiffActionTarget;
 }
 
-interface AiDiffRuntimeMeta {
+interface AiDiffExtensionMeta {
   displayMode?: AiDiffDisplayMode;
   aiContentByBlockId?: ReadonlyMap<string, unknown>;
   actionsEnabled?: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
 }
 
-interface AiDiffRuntimeState {
+interface AiDiffExtensionState {
   displayMode: AiDiffDisplayMode;
   aiContentByBlockId: ReadonlyMap<string, unknown>;
   actionsEnabled: boolean;
@@ -37,7 +37,7 @@ interface AiDiffRuntimeState {
   decorations: DecorationSet;
 }
 
-const aiDiffRuntimePluginKey = new PluginKey<AiDiffRuntimeState>('noteAiDiffRuntime');
+const aiDiffExtensionPluginKey = new PluginKey<AiDiffExtensionState>('noteAiDiffExtension');
 
 function buildActionButton(
   label: string,
@@ -171,16 +171,16 @@ function buildDecorations(params: {
   };
   proseMirrorSchema: unknown;
   registry: NotePluginRegistry;
-  runtime: Omit<AiDiffRuntimeState, 'decorations'>;
+  extensionState: Omit<AiDiffExtensionState, 'decorations'>;
 }): DecorationSet {
-  const { doc, editorSchema, proseMirrorSchema, registry, runtime } = params;
+  const { doc, editorSchema, proseMirrorSchema, registry, extensionState } = params;
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {
     if (node.type.name !== 'blockContainer') return true;
     const blockId = typeof node.attrs.id === 'string' ? node.attrs.id : '';
-    if (!runtime.aiContentByBlockId.has(blockId)) return true;
-    const aiContent = runtime.aiContentByBlockId.get(blockId);
+    if (!extensionState.aiContentByBlockId.has(blockId)) return true;
+    const aiContent = extensionState.aiContentByBlockId.get(blockId);
 
     let block: Record<string, unknown> & { type: string };
     try {
@@ -208,8 +208,8 @@ function buildDecorations(params: {
     });
 
     const hideWholeBlock =
-      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY && projection.currentEmpty) ||
-      (runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY && projection.aiContentEmpty);
+      (extensionState.displayMode === AI_DIFF_DISPLAY_MODE.OLD_ONLY && projection.currentEmpty) ||
+      (extensionState.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY && projection.aiContentEmpty);
     if (hideWholeBlock) {
       decorations.push(
         Decoration.node(pos, pos + node.nodeSize, {
@@ -221,14 +221,14 @@ function buildDecorations(params: {
     }
 
     const hasCustomComparison = Boolean(
-      runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE &&
+      extensionState.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE &&
       !projection.currentEmpty &&
       !projection.aiContentEmpty &&
       aiDiff.comparison
     );
     const hideCurrent =
       projection.currentEmpty ||
-      runtime.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY ||
+      extensionState.displayMode === AI_DIFF_DISPLAY_MODE.NEW_ONLY ||
       hasCustomComparison;
     if (hideCurrent) {
       decorations.push(
@@ -237,7 +237,7 @@ function buildDecorations(params: {
           'data-ai-diff-current-hidden': 'true',
         })
       );
-    } else if (runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE) {
+    } else if (extensionState.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE) {
       decorations.push(
         Decoration.node(contentFrom, contentTo, {
           class: styles.current,
@@ -248,8 +248,8 @@ function buildDecorations(params: {
     }
 
     const shouldRenderWidget =
-      runtime.displayMode !== AI_DIFF_DISPLAY_MODE.OLD_ONLY &&
-      (!projection.aiContentEmpty || runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE);
+      extensionState.displayMode !== AI_DIFF_DISPLAY_MODE.OLD_ONLY &&
+      (!projection.aiContentEmpty || extensionState.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE);
     if (shouldRenderWidget) {
       decorations.push(
         Decoration.widget(
@@ -262,10 +262,10 @@ function buildDecorations(params: {
               current: projection.current,
               aiBlock: projection.aiBlock,
               aiContentEmpty: projection.aiContentEmpty,
-              displayMode: runtime.displayMode,
-              actionsEnabled: runtime.actionsEnabled,
+              displayMode: extensionState.displayMode,
+              actionsEnabled: extensionState.actionsEnabled,
               hunkActions: Boolean(hasCustomComparison && aiDiff.applyGranular),
-              onAction: runtime.onAction,
+              onAction: extensionState.onAction,
               renderAiContent: (aiBlock) => aiDiff.renderAiContent(aiBlock, registry),
               renderComparison:
                 hasCustomComparison && aiDiff.comparison
@@ -283,12 +283,12 @@ function buildDecorations(params: {
   return DecorationSet.create(doc, decorations);
 }
 
-function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
+function createAiDiffExtension(registry: NotePluginRegistry) {
   return createExtension(({ editor }) => ({
-    key: 'noteAiDiffRuntime',
+    key: 'noteAiDiffExtension',
     prosemirrorPlugins: [
-      new Plugin<AiDiffRuntimeState>({
-        key: aiDiffRuntimePluginKey,
+      new Plugin<AiDiffExtensionState>({
+        key: aiDiffExtensionPluginKey,
         state: {
           init: () => ({
             displayMode: AI_DIFF_DISPLAY_MODE.COMPARE,
@@ -297,8 +297,8 @@ function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
             decorations: DecorationSet.empty,
           }),
           apply: (tr, previous, _oldState, newState) => {
-            const meta = tr.getMeta(aiDiffRuntimePluginKey) as AiDiffRuntimeMeta | undefined;
-            const runtime = {
+            const meta = tr.getMeta(aiDiffExtensionPluginKey) as AiDiffExtensionMeta | undefined;
+            const extensionState = {
               displayMode: meta?.displayMode ?? previous.displayMode,
               aiContentByBlockId: meta?.aiContentByBlockId ?? previous.aiContentByBlockId,
               actionsEnabled: meta?.actionsEnabled ?? previous.actionsEnabled,
@@ -306,7 +306,7 @@ function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
             };
             if (!tr.docChanged && !meta) return previous;
             return {
-              ...runtime,
+              ...extensionState,
               decorations: buildDecorations({
                 doc: newState.doc as unknown as PMNode,
                 editorSchema: editor.schema as unknown as {
@@ -316,25 +316,27 @@ function createAiDiffRuntimeExtension(registry: NotePluginRegistry) {
                 },
                 proseMirrorSchema: newState.schema,
                 registry,
-                runtime,
+                extensionState,
               }),
             };
           },
         },
         props: {
-          decorations: (state) => aiDiffRuntimePluginKey.getState(state)?.decorations ?? null,
+          decorations: (state) => aiDiffExtensionPluginKey.getState(state)?.decorations ?? null,
         },
       }),
     ],
   }));
 }
 
-export function syncAiDiffRuntimeState(view: EditorView, meta: AiDiffRuntimeMeta): void {
-  view.dispatch(view.state.tr.setMeta(aiDiffRuntimePluginKey, meta).setMeta('addToHistory', false));
+export function syncAiDiffExtensionState(view: EditorView, meta: AiDiffExtensionMeta): void {
+  view.dispatch(
+    view.state.tr.setMeta(aiDiffExtensionPluginKey, meta).setMeta('addToHistory', false)
+  );
 }
 
 export function readAiContentFromEditorState(state: EditorState): ReadonlyMap<string, unknown> {
-  return aiDiffRuntimePluginKey.getState(state)?.aiContentByBlockId ?? new Map();
+  return aiDiffExtensionPluginKey.getState(state)?.aiContentByBlockId ?? new Map();
 }
 
 export function hasAiDiffForBlockInEditorState(
@@ -344,14 +346,14 @@ export function hasAiDiffForBlockInEditorState(
 ): boolean {
   const blockId = typeof block.id === 'string' ? block.id : '';
   const type = typeof block.type === 'string' ? block.type : '';
-  const aiContentByBlockId = aiDiffRuntimePluginKey.getState(state)?.aiContentByBlockId;
+  const aiContentByBlockId = aiDiffExtensionPluginKey.getState(state)?.aiContentByBlockId;
   const aiDiff = registry.blockPlugins.get(type)?.aiDiff;
   if (!aiContentByBlockId?.has(blockId) || !aiDiff) return false;
   return Boolean(resolveNoteAiDiffBlock(block, aiContentByBlockId.get(blockId), aiDiff, registry));
 }
 
-export const aiDiffRuntimeExtension = {
-  id: 'ai-diff.runtime',
+export const aiDiffEditorExtension = {
+  id: 'ai-diff.extension',
   print: {
     styles: [
       `.note-print-body [data-ai-diff-current-hidden='true'] {
@@ -359,5 +361,5 @@ export const aiDiffRuntimeExtension = {
 }`,
     ],
   },
-  extensions: ({ registry }) => [createAiDiffRuntimeExtension(registry)()],
-} satisfies NoteRuntimeExtension;
+  extensions: ({ registry }) => [createAiDiffExtension(registry)()],
+} satisfies NoteEditorExtension;

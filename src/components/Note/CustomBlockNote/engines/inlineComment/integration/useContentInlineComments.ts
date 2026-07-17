@@ -31,7 +31,7 @@ import type {
   ContentInlineCommentTarget,
   StartContentInlineCommentOptions,
   UpdateContentInlineCommentReferenceOptions,
-} from './InlineCommentRuntime';
+} from './InlineCommentContext';
 
 interface PendingContentInlineCommentAnchor extends ContentInlineCommentTarget {
   existingThreadIds: Set<string>;
@@ -265,7 +265,7 @@ export function useContentInlineComments({
   };
 
   return {
-    runtimeProviderProps: {
+    contextValue: {
       canInlineComment: inlineCommentEnabled && inlineCommentWritable,
       startContentInlineComment,
       updateContentInlineCommentReference,
