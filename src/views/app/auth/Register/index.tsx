@@ -1,13 +1,12 @@
 import { FormField, Input, PasswordInput } from '@/components/Input';
-import AppDisplayDialog from '@/components/Overlay/AppDisplayDialog';
 import { useAuthService } from '@/domains';
 import type { RegisterRequest } from '@/domains/Auth';
 import { parseErrorMessage } from '@/utils/error';
 import ServiceAgreement from '@/views/app/auth/_components/ServiceAgreement/index';
-import { Button, Checkbox, Form, Spinner, toast } from '@heroui/react';
-import { useRequest, useUnmount } from 'ahooks';
+import { Button, Checkbox, Form, toast } from '@heroui/react';
+import { useRequest } from 'ahooks';
 import { User } from 'lucide-react';
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import auth from '../Auth.module.less';
@@ -15,7 +14,6 @@ import { hasFieldErrors, runFieldValidation, type FieldErrors } from '../formVal
 
 const USERNAME_MAX_LENGTH = 20;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{4,20}$/;
-const AUTO_LOGIN_DELAY_MS = 2000;
 type RegisterFormValues = RegisterRequest & {
   confirmPassword: string;
 };
@@ -32,10 +30,8 @@ function Register() {
   const { t } = useTranslation('auth');
   const [agreement, setAgreement] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [formValues, setFormValues] = useState<RegisterFormValues>(DEFAULT_REGISTER_VALUES);
   const [formErrors, setFormErrors] = useState<FieldErrors<RegisterField>>({});
-  const autoLoginTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
 
   const { run: submitLogin } = useRequest(
@@ -47,11 +43,9 @@ function Register() {
     {
       manual: true,
       onSuccess: () => {
-        setSuccessModalOpen(false);
         navigate('/app/chat', { replace: true });
       },
       onError: (err: unknown) => {
-        setSuccessModalOpen(false);
         toast.danger(parseErrorMessage(err));
         navigate('/login', { replace: true });
       },
@@ -66,23 +60,14 @@ function Register() {
     {
       manual: true,
       onSuccess: (values) => {
-        setSuccessModalOpen(true);
-        autoLoginTimerRef.current = window.setTimeout(() => {
-          autoLoginTimerRef.current = null;
-          submitLogin(values);
-        }, AUTO_LOGIN_DELAY_MS);
+        toast.success(t('register.registerSuccess'));
+        submitLogin(values);
       },
       onError: (err: unknown) => {
         toast.danger(parseErrorMessage(err));
       },
     }
   );
-
-  useUnmount(() => {
-    if (autoLoginTimerRef.current !== null) {
-      window.clearTimeout(autoLoginTimerRef.current);
-    }
-  });
 
   const updateFormValue = (field: RegisterField, value: string) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -228,19 +213,6 @@ function Register() {
       </div>
 
       <ServiceAgreement isOpen={contractOpen} onOpenChange={setContractOpen} />
-      <AppDisplayDialog
-        isOpen={successModalOpen}
-        onOpenChange={setSuccessModalOpen}
-        title={t('register.registerSuccessTitle')}
-        isDismissable={false}
-        showCloseTrigger={false}
-        footer={false}
-      >
-        <div className={auth.autoLoginStatus} role="status" aria-live="polite">
-          <Spinner size="sm" />
-          <span>{t('register.registerSuccessDescription')}</span>
-        </div>
-      </AppDisplayDialog>
     </div>
   );
 }
