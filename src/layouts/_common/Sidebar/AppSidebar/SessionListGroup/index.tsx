@@ -10,15 +10,11 @@ import { useImperativeHandle, useState, type Ref } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../AppSessionMenu/style.module.less';
 import SessionMenuItem from '../SessionMenuItem';
-import type {
-  SessionListGroupComponentProps,
-  SessionListGroupProps,
-  SessionListGroupRef,
-} from './index.type';
+import type { SessionListGroupProps, SessionListGroupRef } from './index.type';
 
 const SESSION_PAGE_SIZE = 20;
 
-const useSessionListGroup = ({ onActiveSessionMenuKeyChange }: SessionListGroupProps) => {
+const useSessionListGroup = () => {
   const chatService = useChatService();
   const [sessionItems, setSessionItems] = useState<ChatSession[]>([]);
   const [sessionPage, setSessionPage] = useState(1);
@@ -88,7 +84,6 @@ const useSessionListGroup = ({ onActiveSessionMenuKeyChange }: SessionListGroupP
       clearCurrentSession();
     }
     useNewChatSessionStore.getState().clearNewChatSessionById(sessionId);
-    onActiveSessionMenuKeyChange?.(undefined);
   };
 
   const selectSession = (session: ChatSession) => {
@@ -116,8 +111,7 @@ const useSessionListGroup = ({ onActiveSessionMenuKeyChange }: SessionListGroupP
 function SessionListGroup({
   ref,
   selectedKeys,
-  ...listGroupProps
-}: SessionListGroupComponentProps & { ref?: Ref<SessionListGroupRef> }) {
+}: SessionListGroupProps & { ref?: Ref<SessionListGroupRef> }) {
   const {
     handleDeleted,
     hasMoreSessions,
@@ -127,7 +121,7 @@ function SessionListGroup({
     selectSession,
     sessionItems,
     sessionListLoading,
-  } = useSessionListGroup(listGroupProps);
+  } = useSessionListGroup();
 
   useImperativeHandle(ref, () => ({ refresh }), [refresh]);
 

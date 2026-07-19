@@ -1,8 +1,12 @@
 import { useChatSessionHistoryRefreshStore } from '@/components/ChatPanel/_store/useChatSessionHistoryRefreshStore';
 import { useCurrentChatSessionStore } from '@/components/ChatPanel/_store/useCurrentChatSessionStore';
+import {
+  APP_HEADER_NAV_KEY,
+  resolveAppHeaderNavKey,
+} from '@/layouts/_common/Sidebar/appSidebarNavigation';
 import { useUpdateEffect } from 'ahooks';
 import clsx from 'clsx';
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import SessionListGroup, { type SessionListGroupRef } from '../SessionListGroup';
 import type { AppSessionMenuProps } from './index.type';
@@ -14,12 +18,11 @@ function AppSessionMenu({ collapsed }: AppSessionMenuProps) {
   const currentSessionId = useCurrentChatSessionStore((state) => state.currentSessionId);
   const refreshVersion = useChatSessionHistoryRefreshStore((state) => state.refreshVersion);
 
-  const selectedKeys = useMemo(() => {
-    if (currentSessionId) {
-      return [`session-${currentSessionId}`];
-    }
-    return [location.pathname];
-  }, [currentSessionId, location.pathname]);
+  const activeNavKey = resolveAppHeaderNavKey(location.pathname);
+  const selectedKeys =
+    activeNavKey === APP_HEADER_NAV_KEY.CHAT && currentSessionId
+      ? [`session-${currentSessionId}`]
+      : [];
 
   useUpdateEffect(() => {
     void sessionListGroupRef.current?.refresh();

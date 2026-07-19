@@ -1,4 +1,3 @@
-import type { ApiErrorBody } from '@/apis/api.type';
 import { useDriveUploadQueueStore } from '@/components/Drive/_store/useDriveUploadQueueStore';
 import {
   buildUploadedResourceMountTagIds,
@@ -7,12 +6,11 @@ import {
 import AppModal from '@/components/Overlay/AppModal';
 import UploadZone from '@/components/UploadZone';
 import { useDocumentService, useDriveService, useResourceService } from '@/domains';
-import { parseErrorMessage } from '@/utils/error';
+import { isWisePenError, parseErrorMessage } from '@/utils/error';
 import { parseExtension } from '@/utils/parser/extensionParser';
 import { createUuid } from '@/utils/random/createUuid';
 import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import type { AxiosError } from 'axios';
 import { CloudUpload, X } from 'lucide-react';
 import { useState } from 'react';
 import styles from './index.module.less';
@@ -91,18 +89,21 @@ function UploadDocumentModal({
     }, UPLOAD_STATUS_SYNC_DELAY_MS);
   };
 
-  const scheduleFolderMount = (documentId: string, mountTagId: string) => {
+  const scheduleFolderMount = (documentId: string, mountTagId: string, uploadId: string) => {
     const tagId = mountTagId.trim();
     if (!tagId) return;
 
     window.setTimeout(() => {
       void (async () => {
-        await documentService.syncPendingDocStatus(documentId).catch(() => undefined);
-        const mounted = groupId
-          ? await mountUploadedGroupDocument(documentId, tagId)
-          : await mountToPersonalFolderWhenReady(documentId, tagId);
-        if (mounted) {
-          onSuccess?.();
+        try {
+          const mounted = groupId
+            ? await mountUploadedGroupDocument(documentId, tagId)
+            : await mountToPersonalFolderWhenReady(documentId, tagId);
+          if (mounted) {
+            onSuccess?.();
+          }
+        } finally {
+          completeQueuedUpload(uploadId);
         }
       })();
     }, UPLOAD_STATUS_SYNC_DELAY_MS);
@@ -115,6 +116,12 @@ function UploadDocumentModal({
   ): Promise<boolean> => {
     for (let attempt = 1; attempt <= FOLDER_MOUNT_MAX_ATTEMPTS; attempt += 1) {
       try {
+        // 首次同步可能早于 OSS 回调完成；未就绪时仍继续查询，并在下一轮重新同步。
+        await documentService.syncPendingDocStatus(resourceId).catch((err: unknown) => {
+          if (!isResourceNotReadyError(err)) {
+            throw err;
+          }
+        });
         const { resourceInfo } = await documentService.getDocInfo(resourceId);
         const primaryTagId = resolveResourcePrimaryTagId(resourceInfo);
         if (primaryTagId === tagId) {
@@ -228,28 +235,16 @@ function UploadDocumentModal({
                 });
               },
             });
-            if (result.flashUploaded) {
-              updateQueuedUpload(uploadId, {
-                documentId: result.documentId,
-                objectKey: result.objectKey,
-                phase: 'confirming',
-                progress: QUEUE_PROCESSING_PROGRESS_START,
-              });
-              scheduleUploadStatusSync(result.documentId, uploadId);
-              if (shouldMountToFolder && mountTagId) {
-                scheduleFolderMount(result.documentId, mountTagId);
-              }
+            updateQueuedUpload(uploadId, {
+              documentId: result.documentId,
+              objectKey: result.objectKey,
+              phase: 'confirming',
+              progress: QUEUE_PROCESSING_PROGRESS_START,
+            });
+            if (shouldMountToFolder && mountTagId) {
+              scheduleFolderMount(result.documentId, mountTagId, uploadId);
             } else {
-              updateQueuedUpload(uploadId, {
-                documentId: result.documentId,
-                objectKey: result.objectKey,
-                phase: 'confirming',
-                progress: QUEUE_PROCESSING_PROGRESS_START,
-              });
               scheduleUploadStatusSync(result.documentId, uploadId);
-              if (shouldMountToFolder && mountTagId) {
-                scheduleFolderMount(result.documentId, mountTagId);
-              }
             }
           } catch (err) {
             updateQueuedUpload(uploadId, {
@@ -375,13 +370,7 @@ function getDisplayFileType(file: File): string {
 }
 
 function isResourceNotReadyError(err: unknown): boolean {
-  const axiosErr = err as AxiosError<ApiErrorBody>;
-  const code = axiosErr.response?.data?.code;
-  if (typeof code === 'number' && RESOURCE_NOT_READY_CODES.has(code)) {
-    return true;
-  }
-  const message = parseErrorMessage(err);
-  return message.includes('资源不存在') || message.includes('文档不存在');
+  return isWisePenError(err) && RESOURCE_NOT_READY_CODES.has(err.code);
 }
 
 function delay(ms: number): Promise<void> {
