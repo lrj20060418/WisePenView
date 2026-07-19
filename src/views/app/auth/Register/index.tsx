@@ -1,5 +1,4 @@
 import { FormField, Input, PasswordInput } from '@/components/Input';
-import AppDisplayDialog from '@/components/Overlay/AppDisplayDialog';
 import { useAuthService } from '@/domains';
 import type { RegisterRequest } from '@/domains/Auth';
 import { parseErrorMessage } from '@/utils/error';
@@ -31,17 +30,38 @@ function Register() {
   const { t } = useTranslation('auth');
   const [agreement, setAgreement] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [formValues, setFormValues] = useState<RegisterFormValues>(DEFAULT_REGISTER_VALUES);
   const [formErrors, setFormErrors] = useState<FieldErrors<RegisterField>>({});
   const navigate = useNavigate();
 
-  const { loading, run: submitRegister } = useRequest(
-    (values: RegisterRequest) => authService.register(values),
+  const { run: submitLogin } = useRequest(
+    (values: RegisterRequest) =>
+      authService.login({
+        account: values.username,
+        password: values.password,
+      }),
     {
       manual: true,
       onSuccess: () => {
-        setSuccessModalOpen(true);
+        navigate('/app/chat', { replace: true });
+      },
+      onError: (err: unknown) => {
+        toast.danger(parseErrorMessage(err));
+        navigate('/login', { replace: true });
+      },
+    }
+  );
+
+  const { loading, run: submitRegister } = useRequest(
+    async (values: RegisterRequest) => {
+      await authService.register(values);
+      return values;
+    },
+    {
+      manual: true,
+      onSuccess: (values) => {
+        toast.success(t('register.registerSuccess'));
+        submitLogin(values);
       },
       onError: (err: unknown) => {
         toast.danger(parseErrorMessage(err));
@@ -99,12 +119,6 @@ function Register() {
       username: formValues.username.trim(),
       password: formValues.password,
     });
-  };
-
-  const resetForm = () => {
-    setFormValues(DEFAULT_REGISTER_VALUES);
-    setFormErrors({});
-    setAgreement(false);
   };
 
   return (
@@ -199,27 +213,6 @@ function Register() {
       </div>
 
       <ServiceAgreement isOpen={contractOpen} onOpenChange={setContractOpen} />
-      <AppDisplayDialog
-        isOpen={successModalOpen}
-        onOpenChange={setSuccessModalOpen}
-        title={t('register.registerSuccessTitle')}
-        secondaryAction={{
-          label: t('register.stayHere'),
-          onPress: () => {
-            setSuccessModalOpen(false);
-            resetForm();
-          },
-        }}
-        primaryAction={{
-          label: t('register.goToLogin'),
-          onPress: () => {
-            setSuccessModalOpen(false);
-            navigate('/login');
-          },
-        }}
-      >
-        <p>{t('register.registerSuccessDescription')}</p>
-      </AppDisplayDialog>
     </div>
   );
 }
