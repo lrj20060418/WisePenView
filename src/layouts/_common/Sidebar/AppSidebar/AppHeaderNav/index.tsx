@@ -1,8 +1,13 @@
 import { useCurrentChatSessionStore } from '@/components/ChatPanel/_store/useCurrentChatSessionStore';
 import { clearNewChatSessionStore } from '@/components/ChatPanel/_store/useNewChatSessionStore';
+import {
+  APP_HEADER_NAV_ITEMS,
+  APP_HEADER_NAV_KEY,
+  resolveAppHeaderNavKey,
+  type AppHeaderNavKey,
+} from '@/layouts/_common/Sidebar/appSidebarNavigation';
 import { ListBox, ListBoxItem } from '@heroui/react';
 import clsx from 'clsx';
-import { FileText, MessageSquarePlus, Users } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { AppHeaderNavProps } from './index.type';
 import styles from './style.module.less';
@@ -13,24 +18,18 @@ function AppHeaderNav({ collapsed }: AppHeaderNavProps) {
   const currentSessionId = useCurrentChatSessionStore((state) => state.currentSessionId);
   const clearCurrentSession = useCurrentChatSessionStore((state) => state.clearCurrentSession);
 
-  const isDriveActive =
-    location.pathname.startsWith('/app/drive') ||
-    location.pathname.startsWith('/app/workspace') ||
-    location.pathname.startsWith('/app/skill');
-  const isGroupActive = location.pathname.startsWith('/app/my-group');
-  const isChatActive = location.pathname.startsWith('/app/chat');
+  const activeNavKey = resolveAppHeaderNavKey(location.pathname);
   const selectedKeys =
-    isChatActive && !currentSessionId
-      ? ['/app/chat']
-      : isDriveActive
-        ? ['/app/drive']
-        : isGroupActive
-          ? ['/app/my-group']
-          : [];
-  const handleNewChat = () => {
-    clearCurrentSession();
-    clearNewChatSessionStore();
-    navigate('/app/chat');
+    activeNavKey && !(activeNavKey === APP_HEADER_NAV_KEY.CHAT && currentSessionId)
+      ? [activeNavKey]
+      : [];
+
+  const handleNavItemPress = (navKey: AppHeaderNavKey) => {
+    if (navKey === APP_HEADER_NAV_KEY.CHAT) {
+      clearCurrentSession();
+      clearNewChatSessionStore();
+    }
+    navigate(navKey);
   };
 
   return (
@@ -40,39 +39,23 @@ function AppHeaderNav({ collapsed }: AppHeaderNavProps) {
       selectedKeys={selectedKeys}
       className={clsx(styles.headerMenu, collapsed && styles.headerMenuCollapsed)}
     >
-      <ListBoxItem
-        id="/app/chat"
-        textValue="新建对话"
-        className={clsx(styles.menuItem, collapsed && styles.menuItemCollapsed)}
-        onPress={handleNewChat}
-      >
-        <span className={styles.menuIcon}>
-          <MessageSquarePlus size={18} />
-        </span>
-        {!collapsed && <span className={styles.menuLabel}>新建对话</span>}
-      </ListBoxItem>
-      <ListBoxItem
-        id="/app/drive"
-        textValue="文档与云盘"
-        className={clsx(styles.menuItem, collapsed && styles.menuItemCollapsed)}
-        onPress={() => navigate('/app/drive')}
-      >
-        <span className={styles.menuIcon}>
-          <FileText size={18} />
-        </span>
-        {!collapsed && <span className={styles.menuLabel}>文档与云盘</span>}
-      </ListBoxItem>
-      <ListBoxItem
-        id="/app/my-group"
-        textValue="我的小组"
-        className={clsx(styles.menuItem, collapsed && styles.menuItemCollapsed)}
-        onPress={() => navigate('/app/my-group')}
-      >
-        <span className={styles.menuIcon}>
-          <Users size={18} />
-        </span>
-        {!collapsed && <span className={styles.menuLabel}>我的小组</span>}
-      </ListBoxItem>
+      {APP_HEADER_NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <ListBoxItem
+            key={item.key}
+            id={item.key}
+            textValue={item.label}
+            className={clsx(styles.menuItem, collapsed && styles.menuItemCollapsed)}
+            onPress={() => handleNavItemPress(item.key)}
+          >
+            <span className={styles.menuIcon}>
+              <Icon size={18} />
+            </span>
+            {!collapsed && <span className={styles.menuLabel}>{item.label}</span>}
+          </ListBoxItem>
+        );
+      })}
     </ListBox>
   );
 }

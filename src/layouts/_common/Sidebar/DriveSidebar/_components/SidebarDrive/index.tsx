@@ -27,6 +27,10 @@ import Tree from '@/components/Tree';
 import { useDocumentService, useDriveService, useNoteService, useResourceService } from '@/domains';
 import type { DriveNode, FolderNode, RootNode } from '@/domains/Drive';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
+import {
+  APP_HEADER_NAV_KEY,
+  resolveAppHeaderNavKey,
+} from '@/layouts/_common/Sidebar/appSidebarNavigation';
 import { useSidebarDriveExpansionStore } from '@/layouts/_common/Sidebar/DriveSidebar/_store/useSidebarDriveExpansionStore';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
@@ -34,6 +38,7 @@ import { RESOURCE_KIND } from '@/utils/navigation/resourceTarget';
 import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import type { SidebarDriveCreateAction } from './SidebarDriveNodeTitle';
 import SidebarDriveNodeTitle from './SidebarDriveNodeTitle';
@@ -62,6 +67,7 @@ const isResourceNode = (
   node?.type === 'resource' || node?.type === 'link';
 
 function SidebarDrive() {
+  const location = useLocation();
   const driveService = useDriveService();
   const documentService = useDocumentService();
   const noteService = useNoteService();
@@ -86,6 +92,7 @@ function SidebarDrive() {
   const [renameTarget, setRenameTarget] = useState<DriveActionTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DriveActionTarget | null>(null);
   const importTargetRef = useRef<RootNode | FolderNode | null>(null);
+  const activeNavKey = resolveAppHeaderNavKey(location.pathname);
 
   const existingFolderNames = useMemo(() => {
     if (!createFolderParent) return [];
@@ -502,7 +509,7 @@ function SidebarDrive() {
           blockNode
           selectable
           expandAction="click"
-          selectedKeys={selectedKeys}
+          selectedKeys={activeNavKey === APP_HEADER_NAV_KEY.DRIVE ? selectedKeys : []}
           expandedKeys={expandedKeys}
           onSelect={handleSelect}
           onExpand={handleExpand}

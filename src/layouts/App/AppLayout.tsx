@@ -1,5 +1,9 @@
 import { useSystemLayoutStore } from '@/layouts/_common/_store/useSystemLayoutStore';
 import AppSidebar from '@/layouts/_common/Sidebar/AppSidebar';
+import {
+  APP_HEADER_NAV_KEY,
+  resolveAppHeaderNavKey,
+} from '@/layouts/_common/Sidebar/appSidebarNavigation';
 import DriveSidebar from '@/layouts/_common/Sidebar/DriveSidebar';
 import {
   SystemResizableHandle,
@@ -31,10 +35,9 @@ const clampSidebarWidth = (width: number): number =>
 function AppLayout() {
   const appNavigation = useAppNavigation();
   const location = useLocation();
+  const activeNavKey = resolveAppHeaderNavKey(location.pathname);
   const showSessionHistorySidebar =
-    location.pathname === '/app/drive' ||
-    location.pathname === '/app/chat' ||
-    location.pathname.startsWith('/app/chat/');
+    activeNavKey === APP_HEADER_NAV_KEY.CHAT || activeNavKey === APP_HEADER_NAV_KEY.DRIVE;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const storedSidebarWidth = useSystemLayoutStore((state) => state.appSidebarWidth);
   const setSidebarWidth = useSystemLayoutStore((state) => state.setAppSidebarWidth);
