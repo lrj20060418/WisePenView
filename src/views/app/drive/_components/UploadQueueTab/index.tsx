@@ -16,6 +16,10 @@ import { formatFileSize } from '@/utils/format/formatFileSize';
 import { Button, ProgressBar, toast } from '@heroui/react';
 import { useInterval, useMount, useRequest, useUnmount } from 'ahooks';
 import { useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
+import {
+  useUploadQueueProgressStore,
+  type PendingProgressAnchor,
+} from '../../_store/useUploadQueueProgressStore';
 import styles from './style.module.less';
 
 const REFRESH_INTERVAL_MS = 5000;
@@ -39,12 +43,6 @@ const formatFileType = (fileType: string): string => {
 
 type UploadProgressColor = 'accent' | 'warning' | 'danger';
 
-type PendingProgressAnchor = {
-  status: string;
-  startedAt: number;
-  baseProgress: number;
-};
-
 type UploadQueueRow = {
   source: 'local' | 'pending' | 'completed';
   queueRowKey: string;
@@ -67,14 +65,13 @@ export interface UploadQueueTabRef {
 function UploadQueueTab({ ref }: { ref?: Ref<UploadQueueTabRef> }) {
   const documentService = useDocumentService();
   const localUploads = useDriveUploadQueueStore((s) => s.uploads);
+  const progressAnchorsByKey = useUploadQueueProgressStore((s) => s.progressAnchorsByKey);
+  const updateProgressAnchors = useUploadQueueProgressStore((s) => s.updateProgressAnchors);
   const latestPendingListRef = useRef<PendingDocItem[]>([]);
   const canceledDocumentIdsRef = useRef<Set<string>>(new Set());
   const [list, setList] = useState<PendingDocItem[]>([]);
   const [completedRows, setCompletedRows] = useState<UploadQueueRow[]>([]);
   const [displayNow, setDisplayNow] = useState(() => Date.now());
-  const [progressAnchorsByKey, setProgressAnchorsByKey] = useState<
-    Record<string, PendingProgressAnchor>
-  >({});
   const [pollingActive, setPollingActive] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
@@ -115,7 +112,7 @@ function UploadQueueTab({ ref }: { ref?: Ref<UploadQueueTabRef> }) {
         enqueueCompletedRows(completed);
       }
       setDisplayNow(now);
-      setProgressAnchorsByKey((prev) => buildNextPendingProgressAnchors(prev, nextList, now));
+      updateProgressAnchors((prev) => buildNextPendingProgressAnchors(prev, nextList, now));
       setPollingActive(
         nextList.some((item) => !isDocumentTerminalStatus(item.documentStatus.status))
       );
