@@ -62,7 +62,7 @@ function SidebarDriveNodeTitle({
 
   return (
     <span className={styles.nodeTitle}>
-      <span className={styles.nodeMain}>
+      <span className={clsx(styles.nodeMain, node.type === 'root' && styles.nodeMainRoot)}>
         <span className={styles.nodeIcon} aria-hidden="true">
           <EntryIcon
             entryType={node.type}
@@ -111,7 +111,7 @@ function SidebarDriveNodeTitle({
                       className={styles.createMenuItem}
                       onClick={() => onCreateNode(node, 'folder')}
                     >
-                      <FolderPlus size={15} aria-hidden="true" />
+                      <FolderPlus size={15} color="var(--primary)" aria-hidden="true" />
                       <span>新建文件夹</span>
                     </button>
                     {canCreateResource ? (
@@ -121,7 +121,12 @@ function SidebarDriveNodeTitle({
                           className={styles.createMenuItem}
                           onClick={() => onCreateNode(node, 'note')}
                         >
-                          <EntryIcon entryType="resource" resourceIconType="note" size={15} />
+                          <EntryIcon
+                            entryType="resource"
+                            resourceIconType="note"
+                            size={15}
+                            color="var(--primary)"
+                          />
                           <span>新建笔记</span>
                         </button>
                         <button
@@ -129,7 +134,7 @@ function SidebarDriveNodeTitle({
                           className={styles.createMenuItem}
                           onClick={() => onCreateNode(node, 'importNote')}
                         >
-                          <FileInput size={15} aria-hidden="true" />
+                          <FileInput size={15} color="var(--primary)" aria-hidden="true" />
                           <span>导入笔记</span>
                         </button>
                         <button
@@ -137,7 +142,12 @@ function SidebarDriveNodeTitle({
                           className={styles.createMenuItem}
                           onClick={() => onCreateNode(node, 'drawio')}
                         >
-                          <EntryIcon entryType="resource" resourceIconType="drawio" size={15} />
+                          <EntryIcon
+                            entryType="resource"
+                            resourceIconType="drawio"
+                            size={15}
+                            color="var(--primary)"
+                          />
                           <span>新建图表</span>
                         </button>
                         <button
@@ -145,7 +155,12 @@ function SidebarDriveNodeTitle({
                           className={styles.createMenuItem}
                           onClick={() => onCreateNode(node, 'skill')}
                         >
-                          <EntryIcon entryType="resource" resourceIconType="skill" size={15} />
+                          <EntryIcon
+                            entryType="resource"
+                            resourceIconType="skill"
+                            size={15}
+                            color="var(--primary)"
+                          />
                           <span>新建 Skill</span>
                         </button>
                         <button
@@ -153,7 +168,7 @@ function SidebarDriveNodeTitle({
                           className={styles.createMenuItem}
                           onClick={() => onCreateNode(node, 'upload')}
                         >
-                          <CloudUpload size={15} aria-hidden="true" />
+                          <CloudUpload size={15} color="var(--primary)" aria-hidden="true" />
                           <span>上传文件</span>
                         </button>
                       </>
