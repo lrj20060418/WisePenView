@@ -6,27 +6,10 @@ import type { AiDiffDisplayMode } from '@/domains/Note';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import type { CustomBlockNoteEditor } from '../../noteEditorComposition';
 import type { NotePluginRegistry } from '../../registry/types';
-import { applyNoteAiDiffAction } from './action';
+import { applyNoteAiDiffAction, type NoteAiDiffActionRequest } from './action';
 import { resolveNoteAiDiffBlock } from './contentState';
-import type { NoteAiDiffActionRequest } from './extension';
-import { goToAiDiffChange, syncAiDiffExtensionState } from './extension';
+import { syncAiDiffExtensionState } from './extension';
 import { observeAiContent, readAllAiContent } from './store';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function findBlockById(blocks: readonly unknown[], id: string): Record<string, unknown> | null {
-  for (const block of blocks) {
-    if (!isRecord(block)) continue;
-    if (block.id === id) return block;
-    if (Array.isArray(block.children)) {
-      const nested = findBlockById(block.children, id);
-      if (nested) return nested;
-    }
-  }
-  return null;
-}
 
 function hasActiveAiDiff(
   editor: CustomBlockNoteEditor,
@@ -34,7 +17,7 @@ function hasActiveAiDiff(
   aiContentByBlockId: ReturnType<typeof readAllAiContent>
 ): boolean {
   for (const [blockId, aiContent] of aiContentByBlockId) {
-    const block = findBlockById(editor.document, blockId);
+    const block = editor.getBlock(blockId) as unknown as Record<string, unknown> | undefined;
     if (!block || typeof block.type !== 'string') continue;
     const aiDiff = registry.blockPlugins.get(block.type)?.aiDiff;
     if (aiDiff && resolveNoteAiDiffBlock(block, aiContent, aiDiff, registry)) {
@@ -75,10 +58,6 @@ export function useAiDiffSidecar(params: {
     undoManager.stopCapturing();
   });
 
-  const selectChange = useMemoizedFn((changeKey: string) => {
-    goToAiDiffChange(editor.prosemirrorView, changeKey);
-  });
-
   const sync = useMemoizedFn(() => {
     const aiContentByBlockId = readAllAiContent(doc);
     syncAiDiffExtensionState(editor.prosemirrorView, {
@@ -86,7 +65,6 @@ export function useAiDiffSidecar(params: {
       aiContentByBlockId,
       actionsEnabled: !readOnly,
       onAction: applyAction,
-      onSelectChange: selectChange,
     });
     const nextPresence = hasActiveAiDiff(editor, registry, aiContentByBlockId);
     if (lastPresenceRef.current === nextPresence) return;

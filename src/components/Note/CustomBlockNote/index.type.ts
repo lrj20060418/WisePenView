@@ -12,9 +12,12 @@ import type { NoteOutlineItem } from './engines/outline';
 
 export type { NoteOutlineItem } from './engines/outline';
 
+export type NoteEditorAnchor =
+  { kind: 'block'; blockId: string } | { kind: 'inlineComment'; threadId: string };
+
 export interface NoteBodyEditorHandle {
   focus: () => void;
-  navigateToBlock: (id: string) => void;
+  scrollToAnchor: (anchor: NoteEditorAnchor) => void;
   /** 通过系统打印对话框另存为 PDF（克隆 DOM + 打印前临时仅旧文本） */
   exportPdf: (options?: { title?: string; titleRoot?: HTMLElement | null }) => Promise<void>;
   /** 导出正文 Markdown artifact（AIDiff 按仅旧文本投影） */

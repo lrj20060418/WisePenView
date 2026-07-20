@@ -68,6 +68,7 @@ function MathFormulaPreview({ expression, className }: { expression: string; cla
 function MathBlockView(props: MathBlockRenderProps) {
   const readOnly = useNoteEditorReadOnlyContext();
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
   const [value, setValue] = useState(props.block.props.expression);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -115,6 +116,7 @@ function MathBlockView(props: MathBlockRenderProps) {
     if (!props.block.props.autoEdit) return;
     openValueRef.current = props.block.props.expression;
     setValue(props.block.props.expression);
+    isEditingRef.current = true;
     setIsEditing(true);
     props.editor.updateBlock(props.block, {
       props: { ...props.block.props, autoEdit: false },
@@ -158,6 +160,8 @@ function MathBlockView(props: MathBlockRenderProps) {
   };
 
   const commit = (focusNextLine = false) => {
+    if (!isEditingRef.current) return;
+    isEditingRef.current = false;
     props.editor.updateBlock(props.block, {
       props: { ...props.block.props, expression: value.trim() },
     });
@@ -168,6 +172,8 @@ function MathBlockView(props: MathBlockRenderProps) {
   };
 
   const cancel = () => {
+    if (!isEditingRef.current) return;
+    isEditingRef.current = false;
     if (blurCommitTimerRef.current !== null) {
       clearTimeout(blurCommitTimerRef.current);
       blurCommitTimerRef.current = null;
@@ -186,6 +192,7 @@ function MathBlockView(props: MathBlockRenderProps) {
     if (readOnly) return;
     openValueRef.current = props.block.props.expression;
     setValue(props.block.props.expression);
+    isEditingRef.current = true;
     setIsEditing(true);
   };
 
@@ -222,12 +229,14 @@ function MathBlockView(props: MathBlockRenderProps) {
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onCommit={() => commit(true)}
+      onOutsidePress={() => commit()}
       commitEnterUnlessShift
       onCancel={cancel}
       onBlur={handleTextareaBlur}
       rows={3}
       inputRef={inputRef}
       rootRef={popoverRef}
+      anchorRef={shellRef}
     />
   );
 

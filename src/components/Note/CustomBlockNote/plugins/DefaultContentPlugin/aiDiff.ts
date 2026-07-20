@@ -156,29 +156,12 @@ function resolveRichTextDiffPlan(
   return isFullyActionable ? { mode: 'granular', hunks } : { mode: 'content' };
 }
 
-function appendHunkActions(
-  root: HTMLElement,
-  target: Parameters<NonNullable<NoteAiDiffComparisonContext['renderAction']>>[1],
-  context?: NoteAiDiffComparisonContext
-): void {
-  if (!context?.renderAction) return;
-  const actions = document.createElement('span');
-  actions.className = styles.inlineHunkActions;
-  actions.appendChild(context.renderAction('discard', target));
-  actions.appendChild(context.renderAction('accept', target));
-  root.appendChild(actions);
-}
-
 function decorateComparisonHunk(
   root: HTMLElement,
   target: NoteAiDiffActionTarget,
   context?: NoteAiDiffComparisonContext
 ): void {
-  if (context?.decorateHunk) {
-    context.decorateHunk(root, target);
-    return;
-  }
-  appendHunkActions(root, target, context);
+  context?.decorateHunk?.(root, target);
 }
 
 function renderContentHunk(
