@@ -43,12 +43,18 @@
     --text-inverse: #ffffff;
     --info: #3b82f6;
     --error: #ef4444;
-    --diff-added: #e6f4ea;
-    --diff-added-border: #137333;
-    --diff-removed: #fce8e6;
-    --diff-removed-border: #c5221f;
+    --diff-added: #e6efd4;
+    --diff-added-border: color-mix(in srgb, #e6efd4 12%, #4c9a3a 88%);
+    --diff-added-fg: var(--foreground);
+    --diff-added-selected: #b7d18a;
+    --diff-removed: #ffcccc;
+    --diff-removed-border: color-mix(in srgb, #ffcccc 12%, #e04545 88%);
+    --diff-removed-fg: color-mix(in oklab, var(--error) 38%, var(--foreground) 62%);
+    --diff-removed-selected: #ef9a9a;
     --diff-modified: #e8f0fe;
     --diff-modified-border: #1967d2;
+    /* L2 选中：所在行/块浅底（逻辑共用，深色另写） */
+    --diff-row-selected: var(--default-soft);
     --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     --radius: 0.5rem;
     --field-radius: 0.75rem;
@@ -93,12 +99,18 @@
     --text-inverse: #111827;
     --info: #3b82f6;
     --error: #ef4444;
-    --diff-added: #0d3320;
-    --diff-added-border: #137333;
-    --diff-removed: #3d1f1f;
-    --diff-removed-border: #c5221f;
-    --diff-modified: #1a2942;
-    --diff-modified-border: #1967d2;
+    /* AI Diff 深色：参考 Cursor；选中态再提亮一档，对比更明显 */
+    --diff-added: #373d29;
+    --diff-added-border: #6a7a4a;
+    --diff-added-fg: var(--foreground);
+    --diff-added-selected: #627544;
+    --diff-removed: #4b1818;
+    --diff-removed-border: #a04545;
+    --diff-removed-fg: color-mix(in oklab, var(--error) 5%, var(--foreground) 95%);
+    --diff-removed-selected: #8a282c;
+    --diff-modified: #1a2433;
+    --diff-modified-border: #4a7ab5;
+    --diff-row-selected: color-mix(in srgb, var(--foreground) 10%, var(--surface));
     --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     --surface-shadow: 0 0 0 0 transparent inset;
     --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
@@ -718,6 +730,19 @@
     --accent-softer: color-mix(in srgb, var(--accent) 6%, var(--surface));
     --accent-border: color-mix(in srgb, var(--accent) 24%, var(--border));
     --accent-hover: color-mix(in oklab, var(--accent) 88%, #fff);
+
+    /* AI Diff 深色：参考 Cursor；选中态再提亮一档，对比更明显 */
+    --diff-added: #373d29;
+    --diff-added-border: #6a7a4a;
+    --diff-added-fg: var(--foreground);
+    --diff-added-selected: #627544;
+    --diff-removed: #4b1818;
+    --diff-removed-border: #a04545;
+    --diff-removed-fg: color-mix(in oklab, var(--error) 24%, var(--foreground) 76%);
+    --diff-removed-selected: #8a282c;
+    --diff-modified: #1a2433;
+    --diff-modified-border: #4a7ab5;
+    --diff-row-selected: color-mix(in srgb, var(--foreground) 10%, var(--surface));
   }
 
 
@@ -755,5 +780,16 @@
     --text-disabled: inherit;
     --text-inverse: inherit;
     --card-surface: inherit;
+    --diff-added: inherit;
+    --diff-added-border: inherit;
+    --diff-added-fg: inherit;
+    --diff-added-selected: inherit;
+    --diff-removed: inherit;
+    --diff-removed-border: inherit;
+    --diff-removed-fg: inherit;
+    --diff-removed-selected: inherit;
+    --diff-modified: inherit;
+    --diff-modified-border: inherit;
+    --diff-row-selected: inherit;
   }
 }

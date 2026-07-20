@@ -1,5 +1,7 @@
 import { BlockNoteView } from '@blocknote/mantine';
 
+import { useAppTheme } from '@/theme';
+
 import { AiDiffBulkActions } from '../engines/aiDiff/BulkActions';
 import { NoteEditorReadOnlyProvider } from '../engines/editor/readOnly';
 import type { CustomBlockNoteProps } from '../index.type';
@@ -20,6 +22,7 @@ export function NoteEditorSurface({
   runtimeCoordinator: NoteEditorRuntimeCoordinator;
   props: CustomBlockNoteProps;
 }) {
+  const { resolvedTheme } = useAppTheme();
   const {
     collaboration: { doc },
     state: { readOnly },
@@ -43,7 +46,7 @@ export function NoteEditorSurface({
         <BlockNoteView
           className="bodyBlockNoteView"
           editor={editor}
-          theme="light"
+          theme={resolvedTheme}
           formattingToolbar={false}
           slashMenu={false}
           sideMenu={false}

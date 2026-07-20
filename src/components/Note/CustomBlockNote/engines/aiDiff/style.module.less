@@ -493,11 +493,11 @@
   color: color-mix(in srgb, var(--danger) 58%, var(--foreground));
 }
 
-/* 选中改动所在段浅灰底；relative 供工具条贴右缘 */
+/* 选中改动所在段浅底；relative 供工具条贴右缘（颜色由 --diff-row-selected 主题覆写） */
 :global(.bn-block-outer):has([data-ai-diff-selected='true']),
 :global(.bn-block):has([data-ai-diff-selected='true']) {
   position: relative;
-  background: var(--default-soft);
+  background: var(--diff-row-selected);
   border-radius: var(--radius-md);
 }
 
