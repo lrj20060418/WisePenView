@@ -108,8 +108,10 @@ function InlineMathView(
   const autoOpenEdit = inlineContent.props.autoOpenEdit as boolean;
 
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
   const [value, setValue] = useState(expression);
   const shellRef = useRef<HTMLSpanElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const textareaBlurTimerRef = useRef<number | null>(null);
   const [popoverPos, setPopoverPos] = useState<{
@@ -162,6 +164,7 @@ function InlineMathView(
       },
     });
     setValue(openExpr);
+    isEditingRef.current = true;
     setIsEditing(true);
     // 仅在插件将 autoOpenEdit 置为 true 时拉起编辑
   }, [autoOpenEdit]);
@@ -169,6 +172,8 @@ function InlineMathView(
   useFocusPopoverTextarea(isEditing, popoverPos, inputRef);
 
   const cancel = () => {
+    if (!isEditingRef.current) return;
+    isEditingRef.current = false;
     if (textareaBlurTimerRef.current !== null) {
       clearTimeout(textareaBlurTimerRef.current);
       textareaBlurTimerRef.current = null;
@@ -178,6 +183,8 @@ function InlineMathView(
   };
 
   const commit = () => {
+    if (!isEditingRef.current) return;
+    isEditingRef.current = false;
     if (textareaBlurTimerRef.current !== null) {
       clearTimeout(textareaBlurTimerRef.current);
       textareaBlurTimerRef.current = null;
@@ -210,6 +217,7 @@ function InlineMathView(
   const enterEdit = () => {
     if (readOnly) return;
     setValue(expression);
+    isEditingRef.current = true;
     setIsEditing(true);
   };
 
@@ -234,11 +242,14 @@ function InlineMathView(
         setValue(nextValue);
       }}
       onCommit={commit}
+      onOutsidePress={commit}
       commitEnterUnlessShift={false}
       onCancel={cancel}
       onBlur={handleTextareaBlur}
       rows={2}
       inputRef={inputRef}
+      rootRef={popoverRef}
+      anchorRef={shellRef}
     />
   );
 

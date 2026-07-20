@@ -22,23 +22,14 @@ import {
 
 type ApplyAiDiffActionResult = 'applied' | 'missing' | 'unsupported';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+export interface NoteAiDiffActionRequest {
+  blockId: string;
+  action: NoteAiDiffAction;
+  target?: NoteAiDiffActionTarget;
 }
 
-function findBlockById(
-  blocks: readonly unknown[],
-  blockId: string
-): Record<string, unknown> | null {
-  for (const block of blocks) {
-    if (!isRecord(block)) continue;
-    if (block.id === blockId) return block;
-    if (Array.isArray(block.children)) {
-      const nested = findBlockById(block.children, blockId);
-      if (nested) return nested;
-    }
-  }
-  return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function collectBlockIds(block: Record<string, unknown>): string[] {
@@ -101,7 +92,7 @@ export function applyNoteAiDiffAction(params: {
   if (!hasBlockAiContent(doc, blockId)) return 'missing';
 
   const aiContent = readBlockAiContent(doc, blockId);
-  const block = findBlockById(editor.document, blockId);
+  const block = editor.getBlock(blockId) as unknown as Record<string, unknown> | undefined;
   if (!block || typeof block.type !== 'string') return 'missing';
   const aiDiff = registry.blockPlugins.get(block.type)?.aiDiff;
   const projection = aiDiff ? resolveNoteAiDiffBlock(block, aiContent, aiDiff, registry) : null;

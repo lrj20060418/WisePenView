@@ -11,25 +11,23 @@ import { listRichTextChangeTargets } from '../../plugins/DefaultContentPlugin/ai
 import type {
   NoteAiDiffAction,
   NoteAiDiffActionTarget,
-  NoteAiDiffComparisonContext,
   NoteEditorExtension,
   NotePluginRegistry,
 } from '../../registry/types';
+import type { NoteAiDiffActionRequest } from './action';
 import { resolveNoteAiDiffBlock } from './contentState';
+import {
+  createAiDiffReviewWidget,
+  type AiDiffReviewNavigation,
+  type AiDiffReviewUnit,
+} from './reviewWidget';
 import styles from './style.module.less';
-
-export interface NoteAiDiffActionRequest {
-  blockId: string;
-  action: NoteAiDiffAction;
-  target?: NoteAiDiffActionTarget;
-}
 
 interface AiDiffExtensionMeta {
   displayMode?: AiDiffDisplayMode;
   aiContentByBlockId?: ReadonlyMap<string, unknown>;
   actionsEnabled?: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
-  onSelectChange?: (changeKey: string) => void;
   /** 传入显式值（含 null）以更新选中改动；省略则保持 */
   selectedChangeKey?: string | null;
   /**
@@ -44,7 +42,6 @@ interface AiDiffExtensionState {
   aiContentByBlockId: ReadonlyMap<string, unknown>;
   actionsEnabled: boolean;
   onAction?: (request: NoteAiDiffActionRequest) => void;
-  onSelectChange?: (changeKey: string) => void;
   selectedChangeKey: string | null;
   /** 文档顺序的可导航改动 key，供键盘上下切换 */
   changeKeysOrdered: readonly string[];
@@ -52,12 +49,6 @@ interface AiDiffExtensionState {
   pendingSelectIndex: number | null;
   decorations: DecorationSet;
 }
-
-type AiDiffChangeUnit = {
-  key: string;
-  blockId: string;
-  target?: NoteAiDiffActionTarget;
-};
 
 const aiDiffExtensionPluginKey = new PluginKey<AiDiffExtensionState>('noteAiDiffExtension');
 
@@ -90,8 +81,8 @@ function selectAiDiffChange(view: EditorView, changeKey: string | null): void {
   );
 }
 
-function scrollAiDiffChangeIntoView(changeKey: string): void {
-  const byKey = document.querySelector<HTMLElement>(
+function scrollAiDiffChangeIntoView(view: EditorView, changeKey: string): void {
+  const byKey = view.dom.querySelector<HTMLElement>(
     `[data-ai-diff-change-key="${CSS.escape(changeKey)}"]`
   );
   if (byKey) {
@@ -99,16 +90,15 @@ function scrollAiDiffChangeIntoView(changeKey: string): void {
     return;
   }
   const blockId = changeKey.split('::')[0] ?? changeKey;
-  const review = document.querySelector<HTMLElement>(
+  const review = view.dom.querySelector<HTMLElement>(
     `[data-ai-diff-review="${CSS.escape(blockId)}"]`
   );
   review?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-export function goToAiDiffChange(view: EditorView, changeKey: string): void {
+function goToAiDiffChange(view: EditorView, changeKey: string): void {
   selectAiDiffChange(view, changeKey);
   view.focus();
-  window.requestAnimationFrame(() => scrollAiDiffChangeIntoView(changeKey));
 }
 
 /** 方向键切换相邻改动；到边界时吞掉按键避免光标乱跑 */
@@ -177,370 +167,96 @@ function applySelectedAiDiffAction(view: EditorView, action: NoteAiDiffAction): 
   return true;
 }
 
-function buildShortcutKbd(label: string): HTMLElement {
-  const kbd = document.createElement('kbd');
-  kbd.className = styles.shortcutKbd;
-  kbd.textContent = label;
-  return kbd;
+function isAiDiffInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('button, input, textarea, select'));
 }
 
-/** 工具条挂在 review 内，左缘对齐灰块（bn-block）右缘，垂直对齐锚点 */
-function pinToolbarToRowRight(toolbar: HTMLElement, host: HTMLElement, anchor: HTMLElement): void {
-  host.appendChild(toolbar);
-  const sync = () => {
-    const hostRect = host.getBoundingClientRect();
-    const gray = anchor.closest('.bn-block') as HTMLElement | null;
-    const edgeRect = (gray ?? host).getBoundingClientRect();
-    const anchorRect = anchor.getBoundingClientRect();
-    toolbar.style.top = `${anchorRect.top - hostRect.top + anchorRect.height / 2}px`;
-    // 灰块右侧 = 工具条左侧
-    toolbar.style.left = `${edgeRect.right - hostRect.left}px`;
-    toolbar.style.right = 'auto';
-  };
-  sync();
-  window.requestAnimationFrame(sync);
+function isAiDiffReadOnlyTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest('[data-ai-diff-review], [data-ai-diff-current], [data-ai-diff-current-hidden]')
+    )
+  );
 }
 
-function buildLucideIcon(kind: 'check' | 'x', className: string): SVGSVGElement {
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.classList.add(className);
-  const paths = kind === 'check' ? ['M20 6 9 17l-5-5'] : ['M18 6 6 18', 'm6 6 12 12'];
-  paths.forEach((d) => {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', '2.25');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('d', d);
-    icon.appendChild(path);
-  });
-  return icon;
-}
+/** AI Diff 展示内容始终只读；确认键优先于代码块默认的 Enter 编辑行为。 */
+function handleAiDiffKeyDown(view: EditorView, event: KeyboardEvent): boolean {
+  if (isAiDiffInteractiveTarget(event.target)) return false;
 
-function buildActionButton(
-  icon: 'check' | 'x',
-  className: string,
-  request: NoteAiDiffActionRequest,
-  onAction: (request: NoteAiDiffActionRequest) => void,
-  accessibleLabel: string,
-  shortcutLabel: string,
-  titleShortcutLabel = shortcutLabel
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = className;
-  const labeled = `${accessibleLabel}（${titleShortcutLabel}）`;
-  button.title = labeled;
-  button.setAttribute('aria-label', labeled);
-  button.appendChild(buildLucideIcon(icon, styles.actionIcon));
-  button.appendChild(buildShortcutKbd(shortcutLabel));
-  button.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
-  button.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onAction(request);
-  });
-  return button;
-}
-
-function buildChromeButton(
-  label: string,
-  className: string,
-  accessibleLabel: string,
-  onClick: (() => void) | null,
-  disabled = false
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = className;
-  button.textContent = label;
-  button.title = accessibleLabel;
-  button.setAttribute('aria-label', accessibleLabel);
-  button.disabled = disabled;
-  button.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
-  if (onClick) {
-    button.addEventListener('click', (event) => {
+  const state = aiDiffExtensionPluginKey.getState(view.state);
+  if (
+    !state?.actionsEnabled ||
+    state.displayMode !== AI_DIFF_DISPLAY_MODE.COMPARE ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    if (
+      isAiDiffReadOnlyTarget(event.target) &&
+      (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete')
+    ) {
       event.preventDefault();
-      event.stopPropagation();
-      onClick();
-    });
-  }
-  return button;
-}
-
-function buildNavChevronButton(
-  direction: 'up' | 'down',
-  accessibleLabel: string,
-  onClick: (() => void) | null,
-  disabled = false
-): HTMLButtonElement {
-  const button = buildChromeButton('', styles.navButton, accessibleLabel, onClick, disabled);
-  button.replaceChildren();
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.classList.add(styles.navIcon);
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'currentColor');
-  path.setAttribute('stroke-width', '2.25');
-  path.setAttribute('stroke-linecap', 'round');
-  path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('d', direction === 'up' ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6');
-  icon.appendChild(path);
-  button.appendChild(icon);
-  return button;
-}
-
-function buildSegmentToolbar(params: {
-  changeKey: string;
-  blockId: string;
-  target?: NoteAiDiffActionTarget;
-  reviewIndex: number;
-  reviewTotal: number;
-  prevKey: string | null;
-  nextKey: string | null;
-  onAction: (request: NoteAiDiffActionRequest) => void;
-  onSelectChange?: (changeKey: string) => void;
-}): HTMLElement {
-  const {
-    changeKey,
-    blockId,
-    target,
-    reviewIndex,
-    reviewTotal,
-    prevKey,
-    nextKey,
-    onAction,
-    onSelectChange,
-  } = params;
-  const actions = document.createElement('div');
-  actions.className = styles.blockActions;
-  actions.dataset.aiDiffChangeKey = changeKey;
-
-  const navigator = document.createElement('div');
-  navigator.className = styles.segmentNavigator;
-  navigator.dataset.aiDiffNav = 'true';
-  navigator.appendChild(
-    buildNavChevronButton(
-      'up',
-      '上一个修改',
-      prevKey ? () => onSelectChange?.(prevKey) : null,
-      !prevKey
-    )
-  );
-  const counter = document.createElement('span');
-  counter.className = styles.navCounter;
-  counter.textContent = `${reviewIndex} of ${reviewTotal}`;
-  navigator.appendChild(counter);
-  navigator.appendChild(
-    buildNavChevronButton(
-      'down',
-      '下一个修改',
-      nextKey ? () => onSelectChange?.(nextKey) : null,
-      !nextKey
-    )
-  );
-  actions.appendChild(navigator);
-
-  const decision = document.createElement('div');
-  decision.className = styles.segmentDecision;
-  decision.appendChild(
-    buildActionButton(
-      'x',
-      `${styles.blockAction} ${styles.blockDiscard}`,
-      { blockId, action: 'discard', target },
-      onAction,
-      '拒绝此修改',
-      'Esc',
-      'Esc / Backspace'
-    )
-  );
-  decision.appendChild(
-    buildActionButton(
-      'check',
-      `${styles.blockAction} ${styles.blockAccept}`,
-      { blockId, action: 'accept', target },
-      onAction,
-      '接受此修改',
-      'Enter'
-    )
-  );
-  actions.appendChild(decision);
-  return actions;
-}
-
-function createReviewWidget(params: {
-  blockId: string;
-  contentType: string;
-  changeKind: 'create' | 'update' | 'delete';
-  current: Record<string, unknown>;
-  aiBlock: Record<string, unknown>;
-  aiContentEmpty: boolean;
-  displayMode: AiDiffDisplayMode;
-  actionsEnabled: boolean;
-  blockSelected: boolean;
-  showBlockToolbar: boolean;
-  blockUnit?: AiDiffChangeUnit;
-  reviewIndex: number;
-  reviewTotal: number;
-  prevKey: string | null;
-  nextKey: string | null;
-  selectedChangeKey: string | null;
-  changeUnitsForBlock: AiDiffChangeUnit[];
-  unitNav: ReadonlyMap<
-    string,
-    { index: number; total: number; prevKey: string | null; nextKey: string | null }
-  >;
-  onAction?: (request: NoteAiDiffActionRequest) => void;
-  onSelectChange?: (changeKey: string) => void;
-  renderAiContent: (aiBlock: Record<string, unknown>) => HTMLElement;
-  renderComparison?: (
-    current: Record<string, unknown>,
-    aiBlock: Record<string, unknown>,
-    context?: NoteAiDiffComparisonContext
-  ) => HTMLElement;
-}): HTMLElement {
-  const {
-    blockId,
-    contentType,
-    changeKind,
-    current,
-    aiBlock,
-    aiContentEmpty,
-    displayMode,
-    actionsEnabled,
-    blockSelected,
-    showBlockToolbar,
-    blockUnit,
-    reviewIndex,
-    reviewTotal,
-    prevKey,
-    nextKey,
-    selectedChangeKey,
-    changeUnitsForBlock,
-    unitNav,
-    onAction,
-    onSelectChange,
-    renderAiContent,
-    renderComparison,
-  } = params;
-  const root = document.createElement('div');
-  root.className = blockSelected ? `${styles.review} ${styles.reviewSelected}` : styles.review;
-  root.contentEditable = 'false';
-  root.dataset.aiDiffReview = blockId;
-  root.dataset.aiDiffContentType = contentType;
-  root.dataset.aiDiffChangeKind = changeKind;
-  root.dataset.aiDiffDisplayMode = displayMode;
-  if (blockUnit) root.dataset.aiDiffChangeKey = blockUnit.key;
-  if (blockSelected) root.dataset.aiDiffSelected = 'true';
-  const customComparison = Boolean(
-    displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && renderComparison
-  );
-  const useHunkUnits = changeUnitsForBlock.some((unit) => Boolean(unit.target));
-
-  if (!useHunkUnits) {
-    root.addEventListener(
-      'mousedown',
-      (event) => {
-        const target = event.target as HTMLElement | null;
-        if (target?.closest('button')) return;
-        if (blockUnit) onSelectChange?.(blockUnit.key);
-      },
-      true
-    );
+      return true;
+    }
+    return false;
   }
 
-  if (!aiContentEmpty) {
-    const aiContentRoot = document.createElement('div');
-    aiContentRoot.className = customComparison
-      ? styles.comparison
-      : displayMode === AI_DIFF_DISPLAY_MODE.COMPARE
-        ? styles.aiContent
-        : styles.aiContentPlain;
-    aiContentRoot.dataset.aiDiffText = 'true';
-
-    const comparisonContext: NoteAiDiffComparisonContext | undefined =
-      customComparison && actionsEnabled && onAction && useHunkUnits
-        ? {
-            decorateHunk: (element, target) => {
-              const unit = changeUnitsForBlock.find(
-                (item) =>
-                  item.target?.kind === target.kind &&
-                  (target.kind === 'content-hunk' ||
-                    (item.target.kind === 'inline-hunk' &&
-                      target.kind === 'inline-hunk' &&
-                      item.target.index === target.index))
-              );
-              if (!unit) return;
-              const nav = unitNav.get(unit.key);
-              const selected = selectedChangeKey === unit.key;
-              element.dataset.aiDiffChangeKey = unit.key;
-              element.classList.add(styles.inlineHunkSelectable);
-              if (selected) {
-                element.dataset.aiDiffSelected = 'true';
-                element.classList.add(styles.inlineHunkSelected);
-              }
-              element.addEventListener('mousedown', (event) => {
-                event.stopPropagation();
-                const eventTarget = event.target as HTMLElement | null;
-                if (eventTarget?.closest('button')) return;
-                onSelectChange?.(unit.key);
-              });
-              if (selected && nav) {
-                pinToolbarToRowRight(
-                  buildSegmentToolbar({
-                    changeKey: unit.key,
-                    blockId,
-                    target: unit.target,
-                    reviewIndex: nav.index,
-                    reviewTotal: nav.total,
-                    prevKey: nav.prevKey,
-                    nextKey: nav.nextKey,
-                    onAction,
-                    onSelectChange,
-                  }),
-                  root,
-                  element
-                );
-              }
-            },
-          }
-        : undefined;
-
-    aiContentRoot.appendChild(
-      customComparison && renderComparison
-        ? renderComparison(current, aiBlock, comparisonContext)
-        : renderAiContent(aiBlock)
-    );
-    root.appendChild(aiContentRoot);
+  if (event.key === 'Enter' && isAiDiffReadOnlyTarget(event.target)) {
+    if (!event.shiftKey && applySelectedAiDiffAction(view, 'accept')) {
+      event.preventDefault();
+      return true;
+    }
+    event.preventDefault();
+    return true;
   }
 
-  if (showBlockToolbar && !useHunkUnits && actionsEnabled && onAction && blockUnit) {
-    root.appendChild(
-      buildSegmentToolbar({
-        changeKey: blockUnit.key,
-        blockId,
-        target: blockUnit.target,
-        reviewIndex,
-        reviewTotal,
-        prevKey,
-        nextKey,
-        onAction,
-        onSelectChange,
-      })
-    );
+  if (
+    isAiDiffReadOnlyTarget(event.target) &&
+    (event.key === 'Backspace' || event.key === 'Delete')
+  ) {
+    if (
+      event.key === 'Backspace' &&
+      !event.shiftKey &&
+      applySelectedAiDiffAction(view, 'discard')
+    ) {
+      event.preventDefault();
+      return true;
+    }
+    event.preventDefault();
+    return true;
   }
-  return root;
+
+  if (event.shiftKey) return false;
+
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    const handled = navigateAiDiffByArrow(view, event.key === 'ArrowUp' ? 'up' : 'down');
+    if (handled) {
+      event.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
+  if (event.key === 'Enter') {
+    if (!applySelectedAiDiffAction(view, 'accept')) return false;
+    event.preventDefault();
+    return true;
+  }
+
+  if (event.key === 'Escape' || event.key === 'Backspace') {
+    if (!applySelectedAiDiffAction(view, 'discard')) {
+      if (isAiDiffReadOnlyTarget(event.target)) {
+        event.preventDefault();
+        return true;
+      }
+      return false;
+    }
+    event.preventDefault();
+    return true;
+  }
+
+  return false;
 }
 
 function buildDecorations(params: {
@@ -553,21 +269,19 @@ function buildDecorations(params: {
   proseMirrorSchema: unknown;
   registry: NotePluginRegistry;
   runtime: Omit<AiDiffExtensionState, 'decorations' | 'changeKeysOrdered' | 'pendingSelectIndex'>;
+  onSelectChange: (changeKey: string) => void;
 }): {
   decorations: DecorationSet;
   changeKeysOrdered: readonly string[];
 } {
-  const { doc, editorSchema, proseMirrorSchema, registry, runtime } = params;
+  const { doc, editorSchema, proseMirrorSchema, registry, runtime, onSelectChange } = params;
   const decorations: Decoration[] = [];
 
   type PendingReview = {
     blockId: string;
     block: Record<string, unknown> & { type: string };
     projection: NonNullable<ReturnType<typeof resolveNoteAiDiffBlock>>;
-    contentFrom: number;
     contentTo: number;
-    nodePos: number;
-    nodeSize: number;
   };
 
   const pendingReviews: PendingReview[] = [];
@@ -611,6 +325,7 @@ function buildDecorations(params: {
         Decoration.node(pos, pos + node.nodeSize, {
           class: styles.hidden,
           'data-ai-diff-current-hidden': 'true',
+          contenteditable: 'false',
         })
       );
       return false;
@@ -631,13 +346,13 @@ function buildDecorations(params: {
         Decoration.node(contentFrom, contentTo, {
           class: styles.hidden,
           'data-ai-diff-current-hidden': 'true',
+          contenteditable: 'false',
         })
       );
     } else if (runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE) {
-      const selected = runtime.selectedChangeKey?.startsWith(`${blockId}`)
-        ? runtime.selectedChangeKey === blockId ||
-          runtime.selectedChangeKey.startsWith(`${blockId}::`)
-        : false;
+      const selected =
+        runtime.selectedChangeKey === blockId ||
+        runtime.selectedChangeKey?.startsWith(`${blockId}::`) === true;
       decorations.push(
         Decoration.node(contentFrom, contentTo, {
           class: selected ? `${styles.current} ${styles.currentSelected}` : styles.current,
@@ -657,10 +372,7 @@ function buildDecorations(params: {
         blockId,
         block,
         projection,
-        contentFrom,
         contentTo,
-        nodePos: pos,
-        nodeSize: node.nodeSize,
       });
     }
     return true;
@@ -671,7 +383,7 @@ function buildDecorations(params: {
       ? pendingReviews
       : [];
 
-  const changeUnits: AiDiffChangeUnit[] = [];
+  const changeUnits: AiDiffReviewUnit[] = [];
   for (const item of actionableReviews) {
     const aiDiff = registry.blockPlugins.get(item.block.type)?.aiDiff;
     if (!aiDiff) continue;
@@ -697,10 +409,7 @@ function buildDecorations(params: {
     changeUnits.push({ key: item.blockId, blockId: item.blockId });
   }
 
-  const unitNav = new Map<
-    string,
-    { index: number; total: number; prevKey: string | null; nextKey: string | null }
-  >();
+  const unitNav = new Map<string, AiDiffReviewNavigation>();
   const changeTotal = changeUnits.length;
   changeUnits.forEach((unit, index) => {
     unitNav.set(unit.key, {
@@ -714,60 +423,25 @@ function buildDecorations(params: {
   pendingReviews.forEach((item) => {
     const aiDiff = registry.blockPlugins.get(item.block.type)?.aiDiff;
     if (!aiDiff) return;
-    const hasBothSides = !item.projection.currentEmpty && !item.projection.aiContentEmpty;
-    const hasCustomComparison = Boolean(
-      runtime.displayMode === AI_DIFF_DISPLAY_MODE.COMPARE && hasBothSides && aiDiff.comparison
-    );
     const changeUnitsForBlock = changeUnits.filter((unit) => unit.blockId === item.blockId);
-    const blockUnit =
-      changeUnitsForBlock.length === 1 && !changeUnitsForBlock[0]!.target
-        ? changeUnitsForBlock[0]
-        : changeUnitsForBlock.length === 0
-          ? { key: item.blockId, blockId: item.blockId }
-          : undefined;
-    const primaryUnit = blockUnit ?? changeUnitsForBlock[0];
-    const nav = primaryUnit ? unitNav.get(primaryUnit.key) : undefined;
-    const showBlockToolbar = Boolean(
-      blockUnit &&
-      runtime.actionsEnabled &&
-      actionableReviews.some((r) => r.blockId === item.blockId)
-    );
 
     decorations.push(
       Decoration.widget(
         item.contentTo,
         () =>
-          createReviewWidget({
+          createAiDiffReviewWidget({
             blockId: item.blockId,
             contentType: item.block.type,
-            changeKind: item.projection.changeKind,
-            current: item.projection.current,
-            aiBlock: item.projection.aiBlock,
-            aiContentEmpty: item.projection.aiContentEmpty,
+            projection: item.projection,
             displayMode: runtime.displayMode,
             actionsEnabled: runtime.actionsEnabled,
-            blockSelected: Boolean(
-              blockUnit
-                ? runtime.selectedChangeKey === blockUnit.key
-                : changeUnitsForBlock.some((unit) => unit.key === runtime.selectedChangeKey)
-            ),
-            showBlockToolbar,
-            blockUnit,
-            reviewIndex: nav?.index ?? 0,
-            reviewTotal: nav?.total ?? changeTotal,
-            prevKey: nav?.prevKey ?? null,
-            nextKey: nav?.nextKey ?? null,
             selectedChangeKey: runtime.selectedChangeKey,
-            changeUnitsForBlock,
-            unitNav,
+            units: changeUnitsForBlock,
+            navigationByKey: unitNav,
             onAction: runtime.onAction,
-            onSelectChange: runtime.onSelectChange,
-            renderAiContent: (aiBlock) => aiDiff.renderAiContent(aiBlock, registry),
-            renderComparison:
-              hasCustomComparison && aiDiff.comparison
-                ? (current, aiBlock, context) =>
-                    aiDiff.comparison!.render(current, aiBlock, registry, context)
-                : undefined,
+            onSelectChange,
+            aiDiff,
+            registry,
           }),
         { side: 1, stopEvent: () => true }
       )
@@ -811,7 +485,6 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
               aiContentByBlockId: meta?.aiContentByBlockId ?? previous.aiContentByBlockId,
               actionsEnabled: meta?.actionsEnabled ?? previous.actionsEnabled,
               onAction: meta?.onAction ?? previous.onAction,
-              onSelectChange: meta?.onSelectChange ?? previous.onSelectChange,
               selectedChangeKey,
             };
             if (!tr.docChanged && !meta) return previous;
@@ -833,6 +506,7 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
                 proseMirrorSchema: newState.schema,
                 registry,
                 runtime: { ...runtime, selectedChangeKey: key },
+                onSelectChange: (changeKey) => goToAiDiffChange(editor.prosemirrorView, changeKey),
               });
 
             let built = buildWithSelection(selectedChangeKey);
@@ -847,10 +521,6 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
                   null;
                 pendingSelectIndex = null;
                 built = buildWithSelection(selectedChangeKey);
-                if (selectedChangeKey) {
-                  const key = selectedChangeKey;
-                  window.requestAnimationFrame(() => scrollAiDiffChangeIntoView(key));
-                }
               } else {
                 selectedChangeKey = null;
               }
@@ -869,32 +539,7 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
         },
         props: {
           decorations: (state) => aiDiffExtensionPluginKey.getState(state)?.decorations ?? null,
-          handleKeyDown(view, event) {
-            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
-
-            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-              const handled = navigateAiDiffByArrow(view, event.key === 'ArrowUp' ? 'up' : 'down');
-              if (handled) {
-                event.preventDefault();
-                return true;
-              }
-              return false;
-            }
-
-            if (event.key === 'Enter') {
-              if (!applySelectedAiDiffAction(view, 'accept')) return false;
-              event.preventDefault();
-              return true;
-            }
-
-            if (event.key === 'Escape' || event.key === 'Backspace') {
-              if (!applySelectedAiDiffAction(view, 'discard')) return false;
-              event.preventDefault();
-              return true;
-            }
-
-            return false;
-          },
+          handleKeyDown: handleAiDiffKeyDown,
           handleDOMEvents: {
             mousedown(view, event) {
               const state = aiDiffExtensionPluginKey.getState(view.state);
@@ -907,8 +552,7 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
               const changeKey =
                 changeEl?.dataset.aiDiffChangeKey ?? blockEl?.dataset.aiDiffBlockId ?? null;
               if (changeKey) {
-                selectAiDiffChange(view, changeKey);
-                view.focus();
+                goToAiDiffChange(view, changeKey);
                 return false;
               }
               if (state.selectedChangeKey) {
@@ -917,6 +561,32 @@ function createAiDiffExtension(registry: NotePluginRegistry) {
               return false;
             },
           },
+        },
+        view: (view) => {
+          let queuedFrame: number | null = null;
+          const handleKeyDownCapture = (event: KeyboardEvent) => {
+            if (handleAiDiffKeyDown(view, event)) event.stopPropagation();
+          };
+          view.dom.addEventListener('keydown', handleKeyDownCapture, true);
+          return {
+            update: (view, previousState) => {
+              const selectedChangeKey = aiDiffExtensionPluginKey.getState(
+                view.state
+              )?.selectedChangeKey;
+              const previousSelectedChangeKey =
+                aiDiffExtensionPluginKey.getState(previousState)?.selectedChangeKey;
+              if (!selectedChangeKey || selectedChangeKey === previousSelectedChangeKey) return;
+              if (queuedFrame !== null) window.cancelAnimationFrame(queuedFrame);
+              queuedFrame = window.requestAnimationFrame(() => {
+                queuedFrame = null;
+                scrollAiDiffChangeIntoView(view, selectedChangeKey);
+              });
+            },
+            destroy: () => {
+              view.dom.removeEventListener('keydown', handleKeyDownCapture, true);
+              if (queuedFrame !== null) window.cancelAnimationFrame(queuedFrame);
+            },
+          };
         },
       }),
     ],

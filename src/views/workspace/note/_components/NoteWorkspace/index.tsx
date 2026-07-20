@@ -26,6 +26,7 @@ import {
   useNoteSession,
 } from '@/domains/Note';
 import type { User } from '@/domains/User';
+import { useEffectForce } from '@/hooks/useEffectForce';
 import { useResourceDisplayName } from '@/hooks/useResourceDisplayName';
 import { useSmoothFlag } from '@/hooks/useSmoothFlag';
 import { parseErrorMessage } from '@/utils/error';
@@ -170,6 +171,9 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const [hasAiDiffContent, setHasAiDiffContent] = useState(false);
   const [inlineCommentDraft, setInlineCommentDraft] = useState<NoteInlineCommentDraft>();
   const [activeInlineCommentThreadId, setActiveInlineCommentThreadId] = useState<string>();
+  const [inlineCommentScrollTarget, setInlineCommentScrollTarget] = useState<{
+    threadId: string;
+  }>();
   const [isInlineCommentHistoryOpen, setIsInlineCommentHistoryOpen] = useState(false);
   const interactService = useInteractService();
   const inlineCommentService = useInlineCommentService();
@@ -236,7 +240,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
 
   const handleOutlineNavigate = (id: string) => {
     if (id !== NOTE_OUTLINE_TITLE_ID) {
-      bodyEditorRef.current?.navigateToBlock(id);
+      bodyEditorRef.current?.scrollToAnchor({ kind: 'block', blockId: id });
       return;
     }
     const anchor = titleAnchorRef.current;
@@ -341,10 +345,23 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const handleInlineCommentThreadSelect = useCallback(
     (threadId: string) => {
       setActiveInlineCommentThreadId(threadId);
+      setInlineCommentScrollTarget({ threadId });
       setResourceSidePanelMode(resourceId, 'comment');
     },
     [resourceId, setResourceSidePanelMode]
   );
+
+  /**
+   * 执行时机：选中批注并完成侧栏布局更新后，将正文锚点平滑滚动到视口中央。
+   * 不可替代原因：回调会传给子组件，React 不允许它闭包读取 ref；cleanup 无资源需要释放。
+   */
+  useEffectForce(() => {
+    if (!inlineCommentScrollTarget) return;
+    bodyEditorRef.current?.scrollToAnchor({
+      kind: 'inlineComment',
+      threadId: inlineCommentScrollTarget.threadId,
+    });
+  }, [inlineCommentScrollTarget]);
 
   const inlineCommentsBinding = useMemo(
     () => ({

@@ -1,4 +1,4 @@
-import { stableStringify } from '../../engines/aiDiff/stableValue';
+import { stableStringify } from '../../engines/aiDiff/contentState';
 import {
   diffAiTextTokens,
   tokenizeAiDiffText,
