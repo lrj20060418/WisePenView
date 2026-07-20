@@ -1,7 +1,6 @@
 import {
   Button,
   Card,
-  Chip,
   Dropdown,
   Heading,
   Label,
@@ -160,12 +159,24 @@ function ShapeOptionGroup({ label, value, options, onChange }: ShapeOptionGroupP
         orientation="horizontal"
         isDetached
       >
-        {options.map((option) => (
-          <ToggleButton key={option.id} id={option.id} className={styles.shapeOption}>
-            <span className={styles.shapeLabel}>{option.label}</span>
-            <span className={styles.shapeValue}>{option.description}</span>
-          </ToggleButton>
-        ))}
+        {options.map((option) => {
+          const pxLabel = option.description === '0' ? '0px' : option.description;
+          return (
+            <ToggleButton
+              key={option.id}
+              id={option.id}
+              data-radius={option.id}
+              className={styles.shapeOption}
+              aria-label={`${label} ${option.label} ${pxLabel}`}
+            >
+              <span className={styles.shapeCorner} aria-hidden />
+              <span className={styles.shapeMeta}>
+                <span className={styles.shapeLabel}>{option.label}</span>
+                <span className={styles.shapeValue}>{pxLabel}</span>
+              </span>
+            </ToggleButton>
+          );
+        })}
       </ToggleButtonGroup>
     </div>
   );
@@ -196,6 +207,48 @@ function SchemeOption({ option }: SchemeOptionProps) {
   );
 }
 
+function ThemeVariantPreview() {
+  return (
+    <div className={styles.variantPreview}>
+      <span className={styles.variantPreviewTitle}>Button Variants</span>
+      <div className={styles.variantRow}>
+        <span className={styles.variantRowLabel}>Accent</span>
+        <div className={styles.variantRowActions}>
+          <Button size="sm" variant="primary">
+            Solid
+          </Button>
+          <Button size="sm" variant="secondary" className={styles.variantSoftAccent}>
+            Soft
+          </Button>
+          <Button size="sm" variant="outline">
+            Outline
+          </Button>
+          <Button size="sm" variant="ghost">
+            Ghost
+          </Button>
+        </div>
+      </div>
+      <div className={styles.variantRow}>
+        <span className={styles.variantRowLabel}>Gray</span>
+        <div className={styles.variantRowActions}>
+          <Button size="sm" variant="secondary">
+            Solid
+          </Button>
+          <Button size="sm" variant="tertiary">
+            Soft
+          </Button>
+          <Button size="sm" variant="outline" className={styles.variantOutlineGray}>
+            Outline
+          </Button>
+          <Button size="sm" variant="ghost" className={styles.variantGhostGray}>
+            Ghost
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ThemePreviewSection() {
   return (
     <section className={styles.section}>
@@ -204,13 +257,8 @@ function ThemePreviewSection() {
       </Heading>
       <div className={styles.previewGrid}>
         <Card className={styles.previewCard}>
-          <Card.Header className={styles.previewHeader}>
-            <Card.Title>HeroUI 组件</Card.Title>
-            <Chip size="sm" variant="soft">
-              <Chip.Label>Soft</Chip.Label>
-            </Chip>
-          </Card.Header>
           <Card.Content className={styles.previewBody}>
+            <ThemeVariantPreview />
             <div className={styles.previewActions}>
               <Button variant="primary">Primary</Button>
               <Button variant="secondary">Secondary</Button>
@@ -250,7 +298,6 @@ function ThemePreviewSection() {
         <div className={styles.previewDialog}>
           <div className={styles.previewDialogHeader}>
             <span>Modal / Table 外壳</span>
-            <span className={styles.previewDialogBadge}>Token</span>
           </div>
           <div className={styles.previewTable}>
             <div className={styles.previewTableRow}>

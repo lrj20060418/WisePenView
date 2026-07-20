@@ -132,6 +132,8 @@
 }
 
 .shapeControls {
+  --shape-gap: 6px;
+  --shape-cols: 6;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md, 16px);
@@ -146,41 +148,181 @@
 
 .shapeGroup {
   display: flex;
-  overflow-x: auto;
-  gap: var(--space-xs, 8px);
-  padding-bottom: 2px;
+  flex-wrap: nowrap;
+  gap: var(--shape-gap);
+  width: 100%;
 }
 
 .shapeOption:global(.toggle-button) {
   display: flex;
-  flex: 0 0 4.5rem;
+  flex: 0 0
+    calc((100% - (var(--shape-cols) - 1) * var(--shape-gap)) / var(--shape-cols));
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   align-items: center;
-  width: 4.5rem;
-  height: auto;
-  min-height: 3rem;
-  padding: var(--space-xs, 8px);
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc((100% - (var(--shape-cols) - 1) * var(--shape-gap)) / var(--shape-cols));
+  min-width: 0;
+  height: 3.75rem;
+  min-height: 3.75rem;
+  max-height: 3.75rem;
+  padding: 6px 2px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-md, 8px);
   background: var(--surface);
+  color: var(--foreground);
+  box-shadow: none;
+
+  > * {
+    pointer-events: none;
+  }
 
   &[data-selected='true'],
   &[aria-pressed='true'] {
     border-color: var(--accent);
     background: var(--accent-soft);
-    color: var(--accent-soft-foreground);
+    box-shadow: 0 0 0 2px var(--accent-softer);
+  }
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
+.shapeCorner {
+  box-sizing: border-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-top: 2.5px solid var(--accent);
+  border-left: 2.5px solid var(--accent);
+  border-top-left-radius: 0;
+}
+
+.shapeOption:global(.toggle-button)[data-selected='true'] .shapeCorner,
+.shapeOption:global(.toggle-button)[aria-pressed='true'] .shapeCorner {
+  border-top-color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.shapeOption:global(.toggle-button)[data-radius='none'] .shapeCorner {
+  border-top-left-radius: 0;
+}
+
+.shapeOption:global(.toggle-button)[data-radius='extra-small'] .shapeCorner {
+  border-top-left-radius: 0.125rem;
+}
+
+.shapeOption:global(.toggle-button)[data-radius='small'] .shapeCorner {
+  border-top-left-radius: 0.25rem;
+}
+
+.shapeOption:global(.toggle-button)[data-radius='medium'] .shapeCorner {
+  border-top-left-radius: 0.5rem;
+}
+
+.shapeOption:global(.toggle-button)[data-radius='large'] .shapeCorner {
+  border-top-left-radius: 0.75rem;
+}
+
+.shapeOption:global(.toggle-button)[data-radius='extra-large'] .shapeCorner {
+  border-top-left-radius: 1rem;
+}
+
+.shapeMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  line-height: 1.1;
+}
+
 .shapeLabel {
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-xs, 12px);
   font-weight: 600;
+  color: var(--foreground);
 }
 
 .shapeValue {
-  font-size: var(--font-size-xs, 12px);
+  font-size: 10px;
+  font-weight: 500;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.shapeOption:global(.toggle-button)[data-selected='true'] .shapeLabel,
+.shapeOption:global(.toggle-button)[aria-pressed='true'] .shapeLabel {
+  color: var(--foreground);
+}
+
+.shapeOption:global(.toggle-button)[data-selected='true'] .shapeValue,
+.shapeOption:global(.toggle-button)[aria-pressed='true'] .shapeValue {
+  color: var(--muted);
+}
+
+.variantPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm, 12px);
+  padding: var(--space-sm, 12px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius, 8px);
+  background: var(--surface);
+}
+
+.variantPreviewTitle {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.variantRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs, 8px) var(--space-sm, 12px);
+}
+
+.variantRowLabel {
+  flex: 0 0 3.5rem;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.variantRowActions {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-xs, 8px);
+  min-width: 0;
+}
+
+/* Soft Accent：Button 无 soft 变体，用 token 对齐用法表 */
+.variantSoftAccent:global(.button) {
+  background: var(--accent-soft) !important;
+  color: var(--accent-soft-foreground) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.variantSoftAccent:global(.button):hover,
+.variantSoftAccent:global(.button)[data-hovered='true'] {
+  background: var(--accent-soft-hover) !important;
+}
+
+.variantOutlineGray:global(.button) {
+  color: var(--muted) !important;
+  border-color: var(--default-border) !important;
+}
+
+.variantGhostGray:global(.button) {
+  color: var(--muted) !important;
 }
 
 .previewGrid {
@@ -191,13 +333,6 @@
 
 .previewCard {
   min-width: 0;
-}
-
-.previewHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm, 12px);
 }
 
 .previewBody {
@@ -240,14 +375,6 @@
   font-size: var(--font-size-sm, 14px);
   font-weight: 600;
   color: var(--overlay-foreground);
-}
-
-.previewDialogBadge {
-  border-radius: var(--radius-field);
-  background: var(--default-soft);
-  padding: 2px var(--space-xs, 8px);
-  font-size: var(--font-size-xs, 12px);
-  color: var(--default-soft-foreground);
 }
 
 .previewTable {
