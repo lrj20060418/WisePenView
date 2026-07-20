@@ -1,3 +1,4 @@
+import { renderHighlightedLine, tokenizeCodeLines } from './highlight';
 import { getCodeBlockLanguageLabel } from './language';
 import { buildCodeLineDiff, type CodeLineDiffEntry } from './lineDiff';
 import styles from './style.module.less';
@@ -66,7 +67,10 @@ function createLineNumber(entry: CodeLineDiffEntry): HTMLSpanElement {
   return lineNumber;
 }
 
-function createDiffLine(entry: CodeLineDiffEntry): HTMLSpanElement {
+function createDiffLine(entry: CodeLineDiffEntry): {
+  line: HTMLSpanElement;
+  content: HTMLSpanElement;
+} {
   const line = document.createElement('span');
   line.className = [
     styles.diffLine,
@@ -86,20 +90,68 @@ function createDiffLine(entry: CodeLineDiffEntry): HTMLSpanElement {
   content.className = styles.lineContent;
   content.textContent = entry.text || '\u200B';
   line.append(marker, createLineNumber(entry), content);
-  return line;
+  return { line, content };
+}
+
+function scheduleLineHighlight(params: {
+  root: HTMLElement;
+  language: string;
+  oldCode: string;
+  newCode: string;
+  rows: Array<{ entry: CodeLineDiffEntry; content: HTMLSpanElement }>;
+}): void {
+  const { root, language, oldCode, newCode, rows } = params;
+  void (async () => {
+    const [oldTokens, newTokens] = await Promise.all([
+      tokenizeCodeLines(oldCode, language),
+      tokenizeCodeLines(newCode, language),
+    ]);
+    if (!root.isConnected) return;
+    for (const { entry, content } of rows) {
+      if (!content.isConnected) return;
+      const tokens =
+        entry.kind === 'delete'
+          ? oldTokens[(entry.oldLineNumber ?? 1) - 1]
+          : entry.kind === 'insert'
+            ? newTokens[(entry.newLineNumber ?? 1) - 1]
+            : (newTokens[(entry.newLineNumber ?? 1) - 1] ??
+              oldTokens[(entry.oldLineNumber ?? 1) - 1]);
+      renderHighlightedLine(content, tokens, entry.text);
+    }
+  })();
 }
 
 /** 使用代码块原生 DOM 契约渲染只读 AI 候选。 */
 export function CodeBlockAiContentView(aiBlock: Record<string, unknown>): HTMLElement {
   const language = readLanguage(aiBlock);
+  const codeText = readCode(aiBlock);
   const code = document.createElement('code');
-  code.className = styles.plainCode;
-  code.textContent = readCode(aiBlock);
-  return createCodeBlockShell({
+  code.className = `${styles.plainCode} shiki`;
+  code.textContent = codeText;
+  const root = createCodeBlockShell({
     language,
     languageLabel: getCodeBlockLanguageLabel(language),
     code,
   });
+  void (async () => {
+    const lines = await tokenizeCodeLines(codeText, language);
+    if (!code.isConnected) return;
+    code.replaceChildren();
+    if (lines.length === 0) {
+      code.textContent = codeText;
+      return;
+    }
+    lines.forEach((tokens, index) => {
+      const line = document.createElement('span');
+      line.className = styles.plainLine;
+      renderHighlightedLine(line, tokens, codeText.split('\n')[index] ?? '');
+      code.appendChild(line);
+      if (index < lines.length - 1) {
+        code.appendChild(document.createTextNode('\n'));
+      }
+    });
+  })();
+  return root;
 }
 
 /** 对比模式隐藏原代码块，改为在同一个代码块内逐行展示新旧差异。 */
@@ -108,14 +160,27 @@ export function CodeBlockAiDiffComparisonView(
   aiBlock: Record<string, unknown>
 ): HTMLElement {
   const aiLanguage = readLanguage(aiBlock);
+  const oldCode = readCode(current);
+  const newCode = readCode(aiBlock);
   const code = document.createElement('code');
   code.className = styles.lineList;
-  buildCodeLineDiff(readCode(current), readCode(aiBlock)).forEach((entry) => {
-    code.appendChild(createDiffLine(entry));
+  const rows: Array<{ entry: CodeLineDiffEntry; content: HTMLSpanElement }> = [];
+  buildCodeLineDiff(oldCode, newCode).forEach((entry) => {
+    const { line, content } = createDiffLine(entry);
+    code.appendChild(line);
+    rows.push({ entry, content });
   });
-  return createCodeBlockShell({
+  const root = createCodeBlockShell({
     language: aiLanguage,
     languageLabel: getCodeBlockLanguageLabel(aiLanguage),
     code,
   });
+  scheduleLineHighlight({
+    root,
+    language: aiLanguage,
+    oldCode,
+    newCode,
+    rows,
+  });
+  return root;
 }

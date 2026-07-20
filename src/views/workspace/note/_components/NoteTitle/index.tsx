@@ -9,6 +9,7 @@ import { useImperativeHandle, useRef, type KeyboardEvent, type Ref } from 'react
 import { useNewNoteStore } from '@/components/Note/_store/useNewNoteStore';
 import { getProseMirrorRoot } from '@/components/Note/CustomBlockNote/engines/editor/dom';
 import { useNoteService } from '@/domains';
+import { useAppTheme } from '@/theme';
 
 import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
@@ -87,6 +88,7 @@ function NoteTitle({
   onSaveStatusChange,
   ref,
 }: NoteTitleProps & { ref?: Ref<NoteTitleHandle> }) {
+  const { resolvedTheme } = useAppTheme();
   const noteService = useNoteService();
   const latestIdRef = useRef(id);
   const titleDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -288,7 +290,7 @@ function NoteTitle({
     <div className={styles.wrapper} onKeyDownCapture={handleKeyDown}>
       <BlockNoteView
         editor={editor}
-        theme="light"
+        theme={resolvedTheme}
         sideMenu={false}
         slashMenu={false}
         formattingToolbar={false}

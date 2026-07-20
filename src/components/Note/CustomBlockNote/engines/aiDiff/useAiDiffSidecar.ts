@@ -9,7 +9,7 @@ import type { NotePluginRegistry } from '../../registry/types';
 import { applyNoteAiDiffAction } from './action';
 import { resolveNoteAiDiffBlock } from './contentState';
 import type { NoteAiDiffActionRequest } from './extension';
-import { syncAiDiffExtensionState } from './extension';
+import { goToAiDiffChange, syncAiDiffExtensionState } from './extension';
 import { observeAiContent, readAllAiContent } from './store';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,6 +75,10 @@ export function useAiDiffSidecar(params: {
     undoManager.stopCapturing();
   });
 
+  const selectChange = useMemoizedFn((changeKey: string) => {
+    goToAiDiffChange(editor.prosemirrorView, changeKey);
+  });
+
   const sync = useMemoizedFn(() => {
     const aiContentByBlockId = readAllAiContent(doc);
     syncAiDiffExtensionState(editor.prosemirrorView, {
@@ -82,6 +86,7 @@ export function useAiDiffSidecar(params: {
       aiContentByBlockId,
       actionsEnabled: !readOnly,
       onAction: applyAction,
+      onSelectChange: selectChange,
     });
     const nextPresence = hasActiveAiDiff(editor, registry, aiContentByBlockId);
     if (lastPresenceRef.current === nextPresence) return;
