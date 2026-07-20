@@ -18,6 +18,8 @@ export interface AiDiffTextConfig {
   maxGapTokens: number;
   maxMergedCharacters: number;
   maxMatrixCells: number;
+  /** 单段可展示的细粒度 hunk 上限，超出则整段对比 */
+  maxHunksPerBlock: number;
 }
 
 export interface AiDiffTextToken {

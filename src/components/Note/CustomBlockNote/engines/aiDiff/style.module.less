@@ -2,54 +2,113 @@
   display: none !important;
 }
 
+/*
+ * 行高 / 段距：跟随 Note 编辑器（.bn-block-content / .bn-inline-content）。
+ * 仅「新旧对比」可加 diff 特化边距与高亮；仅新 / 仅旧不加。
+ */
+
+/* —— 对比模式：旧文本高亮（decoration 挂在原 block-content 上） —— */
 .current {
-  background: var(--error-soft);
-  color: var(--text-tertiary);
-  text-decoration: line-through;
+  background: var(--diff-removed);
+  color: var(--diff-removed-fg);
+  border-left: 2px solid var(--diff-removed-border);
+  padding-left: 0.28em;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  /* 不改行高，沿用编辑器 */
+  line-height: inherit;
+  font-size: inherit;
+  cursor: pointer;
 }
 
 .review {
   position: relative;
-  display: flex;
-  align-self: flex-start;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  width: fit-content;
-  min-width: 0;
+  display: block;
+  align-self: stretch;
+  width: 100%;
   max-width: 100%;
-  margin: 2px 0;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  cursor: pointer;
 }
 
-.aiContent,
+/* 对比模式：需要段尾工具条叠层时再 flex */
+.review[data-ai-diff-display-mode='compare'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* 仅新：零 diff 间距，排版等同正文 */
+.review[data-ai-diff-display-mode='newOnly'] {
+  display: block;
+}
+
 .aiContentPlain {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* 对比模式：新文本 / 行内对比容器 */
+.aiContent,
+.comparison {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .aiContent {
   box-sizing: border-box;
   width: fit-content;
-  padding: 1px 3px;
-  border-radius: var(--radius-sm);
-  background: var(--success-soft);
+  /* 仅水平内边距，不抬高行盒 */
+  padding: 0 0.28em;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--diff-added);
+  border-left: 2px solid var(--diff-added-border);
+  /* 新增块正文与默认字体同色，不随底色偏绿 */
+  color: var(--foreground);
 }
 
-.comparison {
-  flex: 0 1 auto;
-  min-width: 0;
+/* 整段新增：绿底拉满行宽，与整段删除的红底一致 */
+.review[data-ai-diff-change-kind='create'] {
+  width: 100%;
+  align-self: stretch;
+}
+
+.review[data-ai-diff-change-kind='create'] > .aiContent {
+  width: 100%;
   max-width: 100%;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  align-self: stretch;
 }
 
-.review[data-ai-diff-content-type='codeBlock'],
-.review[data-ai-diff-content-type='math'],
-.review[data-ai-diff-content-type='table'] {
+/* 对比模式：代码 / 公式 / 表 列排布；块贴齐无缝 */
+.review[data-ai-diff-display-mode='compare'][data-ai-diff-content-type='codeBlock'],
+.review[data-ai-diff-display-mode='compare'][data-ai-diff-content-type='math'],
+.review[data-ai-diff-display-mode='compare'][data-ai-diff-content-type='table'] {
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 0;
   max-width: 100%;
 }
 
@@ -72,18 +131,16 @@
   width: 100%;
 }
 
-.review[data-ai-diff-content-type='math'] .aiContent {
-  padding: 0;
-}
-
 .review[data-ai-diff-content-type='table'] {
-  align-items: flex-end;
-  width: fit-content;
+  /* 表体可收窄，容器仍拉满，保证段尾工具条贴编辑区最右 */
+  align-items: flex-start;
+  width: 100%;
+  align-self: stretch;
 }
 
 .review[data-ai-diff-change-kind='delete'] {
   align-self: stretch;
-  width: auto;
+  width: 100%;
 }
 
 .review[data-ai-diff-content-type='table'] .aiContent,
@@ -92,21 +149,46 @@
   width: fit-content;
 }
 
+/* 表格：高亮贴表边，外壳不再额外 padding */
+.review[data-ai-diff-content-type='table'] .aiContent {
+  padding: 0;
+  background: transparent;
+  border-left: none;
+  border-radius: 0;
+}
+
+.review[data-ai-diff-content-type='table'] .aiContent :global(.tableWrapper-inner) {
+  box-sizing: border-box;
+  width: fit-content;
+  padding: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--diff-added);
+  border-left: 2px solid var(--diff-added-border);
+}
+
 .current[data-content-type='table'] {
   width: fit-content;
   max-width: 100%;
   background: transparent;
   color: inherit;
-  pointer-events: none;
+  /* 允许点击选中；单元格内交互仍由子元素规则关掉 */
+  pointer-events: auto;
   text-decoration: none;
+  border-left: none;
+  padding-left: 0;
 }
 
 .current[data-content-type='math'] {
   width: 100%;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   color: inherit;
   pointer-events: none;
   text-decoration: none;
+}
+
+.review[data-ai-diff-display-mode='compare'][data-ai-diff-content-type='math'] .aiContent {
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .current[data-content-type='table'] :global(.table-widgets-container),
@@ -127,133 +209,310 @@
 .current[data-content-type='table'] :global(.tableWrapper-inner) {
   box-sizing: border-box;
   width: fit-content;
-  padding: 3px;
-  border-radius: var(--radius-sm);
-  background: var(--error-soft);
+  padding: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--diff-removed);
+  border-left: 2px solid var(--diff-removed-border);
 }
 
-.inlineComparison,
-.inlineHunk {
+.inlineComparison {
   display: inline;
 }
 
 .styledText code {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
 }
 
+/* 行内 hunk：对比模式专用高亮；行高仍随编辑器 */
 .inlineHunk {
   position: relative;
+  display: inline;
+  max-width: 100%;
+  line-height: inherit;
+  font-size: inherit;
 }
 
 .inlineDelete,
 .inlineAdd {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+  /* 只用水平 padding，避免抬高整行行距 */
+  padding: 0 0.2em;
+  border-radius: var(--radius-xs);
+  line-height: inherit;
+  font-size: inherit;
 }
 
 .inlineDelete {
-  background: var(--error-soft);
-  color: var(--text-tertiary);
-  text-decoration: line-through;
+  background: var(--diff-removed);
+  color: var(--diff-removed-fg);
 }
 
 .inlineAdd {
-  background: var(--success-soft);
-  color: inherit;
+  background: var(--diff-added);
+  color: var(--foreground);
 }
 
-.actions {
-  bottom: 0;
-  left: 100%;
-}
-
-.actionButton {
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+.inlineHunkSelectable {
   cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
 }
 
-.actions,
-.inlineHunkActions {
+/* 选中：淡色高亮加深 */
+.inlineHunkSelected .inlineDelete {
+  background: var(--diff-removed-selected);
+}
+
+.inlineHunkSelected .inlineAdd {
+  background: var(--diff-added-selected);
+}
+
+.currentSelected {
+  background: var(--diff-removed-selected);
+}
+
+.reviewSelected > .aiContent {
+  background: var(--diff-added-selected);
+}
+
+.reviewSelected[data-ai-diff-content-type='table'] .aiContent :global(.tableWrapper-inner) {
+  background: var(--diff-added-selected);
+}
+
+.currentSelected[data-content-type='table'] :global(.tableWrapper-inner) {
+  background: var(--diff-removed-selected);
+}
+
+/* 代码块：选中时加深行级红/绿（对比视图挂在 .comparison 内，不走 .aiContent） */
+.reviewSelected[data-ai-diff-content-type='codeBlock'] :global([data-diff-kind='delete']),
+.review[data-ai-diff-selected='true'][data-ai-diff-content-type='codeBlock']
+  :global([data-diff-kind='delete']) {
+  background: var(--diff-removed-selected);
+}
+
+.reviewSelected[data-ai-diff-content-type='codeBlock'] :global([data-diff-kind='insert']),
+.review[data-ai-diff-selected='true'][data-ai-diff-content-type='codeBlock']
+  :global([data-diff-kind='insert']) {
+  background: var(--diff-added-selected);
+}
+
+/* 同一 hunk 内 delete→add 贴齐：邻边直角，左右内边距对称，避免绿块显大 */
+.inlineHunk .inlineDelete:has(+ .inlineAdd) {
+  border-radius: var(--radius-xs) 0 0 var(--radius-xs);
+  padding-left: 0.16em;
+  padding-right: 0.16em;
+}
+
+.inlineHunk .inlineDelete + .inlineAdd {
+  margin-left: 0;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  padding-left: 0.16em;
+  padding-right: 0.16em;
+}
+
+/* —— 段右侧工具条：左缘对齐灰块右缘，垂直对齐当前改动 —— */
+.blockActions {
   position: absolute;
-  z-index: 20;
+  z-index: 30;
+  top: 50%;
+  left: 100%;
+  right: auto;
+  bottom: auto;
+  margin-left: var(--space-xs);
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  justify-content: flex-end;
+  gap: var(--space-2xs);
   padding: 3px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: var(--overlay);
   box-shadow: var(--shadow-md);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
   white-space: nowrap;
+  transform: translateY(-50%);
+  transition:
+    opacity var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
 }
 
-.inlineHunkActions {
-  bottom: 0;
-  left: 100%;
-}
-
-.review:hover > .actions,
-.review:focus-within > .actions,
-.current:hover + .review > .actions,
-.current:focus-within + .review > .actions,
-:global(.bn-block):has(> .review[data-ai-diff-review]):hover
-  > .review[data-ai-diff-review]
-  > .actions,
-.inlineHunk:hover > .inlineHunkActions,
-.inlineHunk:focus-within > .inlineHunkActions {
+/* 选中态：显示工具条（在灰块右侧外侧） */
+.reviewSelected > .blockActions,
+.review[data-ai-diff-selected='true'] > .blockActions {
   opacity: 1;
   pointer-events: auto;
 }
 
-.reviewAction {
-  width: 20px;
-  height: 20px;
+.segmentNavigator {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  color: var(--muted);
+}
+
+.navButton {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   padding: 0;
+  border: none;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 0;
+  transition:
+    background var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease;
 }
 
-.reviewAccept {
-  border-color: var(--success);
-  background: var(--success-soft);
-  color: var(--success);
+.navIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
-.reviewDiscard {
-  border-color: var(--error);
-  background: var(--error-soft);
-  color: var(--error);
+.actionIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
-.accept {
-  border-color: var(--success);
-  background: var(--success);
-  color: var(--text-inverse);
-}
-
-.discard {
+.navButton:hover:not(:disabled) {
   background: var(--surface-tertiary);
   color: var(--foreground);
 }
 
+.navButton:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.navCounter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.75em;
+  height: 24px;
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  user-select: none;
+}
+
+.segmentDecision {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.blockAction {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  line-height: 1;
+  transition:
+    background var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease;
+}
+
+.shortcutKbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.78;
+  font-size: var(--font-size-2xs);
+  font-family: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.blockAction:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* 接受/拒绝：偏中性底 + 淡色字，避免过亮抢视线 */
+.blockAccept {
+  border-color: color-mix(in srgb, var(--success) 16%, var(--border));
+  background: color-mix(in srgb, var(--success) 7%, var(--surface-secondary));
+  color: color-mix(in srgb, var(--success) 52%, var(--muted));
+}
+
+.blockAccept:hover {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface-secondary));
+  border-color: color-mix(in srgb, var(--success) 28%, var(--border));
+  color: color-mix(in srgb, var(--success) 62%, var(--foreground));
+}
+
+.blockDiscard {
+  border-color: color-mix(in srgb, var(--danger) 16%, var(--border));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-secondary));
+  color: color-mix(in srgb, var(--danger) 48%, var(--muted));
+}
+
+.blockDiscard:hover {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface-secondary));
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
+  color: color-mix(in srgb, var(--danger) 58%, var(--foreground));
+}
+
+/* 选中改动所在段浅灰底；relative 供工具条贴右缘 */
+:global(.bn-block-outer):has([data-ai-diff-selected='true']),
+:global(.bn-block):has([data-ai-diff-selected='true']) {
+  position: relative;
+  background: var(--default-soft);
+  border-radius: var(--radius-md);
+}
+
+/* —— L3 全文 —— */
 .bulkActions {
   position: absolute;
   right: var(--space-lg);
   bottom: var(--space-lg);
   z-index: 30;
   display: inline-flex;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  background: var(--overlay);
-  box-shadow: var(--shadow-md);
+  align-items: center;
+  padding: var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--overlay) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--overlay-shadow);
 }

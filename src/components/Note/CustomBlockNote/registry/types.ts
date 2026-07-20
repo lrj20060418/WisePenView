@@ -75,7 +75,9 @@ export type NoteAiDiffActionTarget =
   { kind: 'inline-hunk'; index: number } | { kind: 'content-hunk' };
 
 export interface NoteAiDiffComparisonContext {
-  renderAction: (action: NoteAiDiffAction, target: NoteAiDiffActionTarget) => HTMLElement;
+  renderAction?: (action: NoteAiDiffAction, target: NoteAiDiffActionTarget) => HTMLElement;
+  /** 为每个可确认 hunk 挂上选中态 / 工具条 */
+  decorateHunk?: (element: HTMLElement, target: NoteAiDiffActionTarget) => void;
 }
 
 export interface NoteAiDiffProjection {

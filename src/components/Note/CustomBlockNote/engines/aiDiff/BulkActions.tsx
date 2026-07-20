@@ -1,3 +1,4 @@
+import { Button, ButtonGroup } from '@heroui/react';
 import { createPortal } from 'react-dom';
 import type * as Y from 'yjs';
 
@@ -37,30 +38,24 @@ export function AiDiffBulkActions({
 
   return createPortal(
     <div className={styles.bulkActions} contentEditable={false}>
-      <button
-        type="button"
-        aria-label="保留全部 AI 修改"
-        className={`${styles.actionButton} ${styles.accept}`}
-        onMouseDown={preventEditorInteraction}
-        onClick={(event) => {
-          preventEditorInteraction(event);
-          apply('accept');
-        }}
-      >
-        全部保留
-      </button>
-      <button
-        type="button"
-        aria-label="撤销全部 AI 修改"
-        className={`${styles.actionButton} ${styles.discard}`}
-        onMouseDown={preventEditorInteraction}
-        onClick={(event) => {
-          preventEditorInteraction(event);
-          apply('discard');
-        }}
-      >
-        全部撤销
-      </button>
+      <ButtonGroup size="sm" aria-label="全部 AI Diff 操作">
+        <Button
+          variant="secondary"
+          aria-label="撤销全部 AI 修改"
+          onMouseDown={preventEditorInteraction}
+          onPress={() => apply('discard')}
+        >
+          全部撤销
+        </Button>
+        <Button
+          variant="primary"
+          aria-label="保留全部 AI 修改"
+          onMouseDown={preventEditorInteraction}
+          onPress={() => apply('accept')}
+        >
+          全部保留
+        </Button>
+      </ButtonGroup>
     </div>,
     portalContainer
   );

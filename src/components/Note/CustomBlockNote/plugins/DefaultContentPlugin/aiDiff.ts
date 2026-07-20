@@ -7,6 +7,7 @@ import {
 } from '../../engines/aiDiff/wordDiff';
 import type { NoteRichTextAiDiffConfig } from '../../noteConfig';
 import type {
+  NoteAiDiffActionTarget,
   NoteAiDiffComparisonContext,
   NoteBlockAiDiff,
   NoteInlineAiDiff,
@@ -134,6 +135,9 @@ function resolveRichTextDiffPlan(
   const hunks = diffInlineContent(current.content, aiBlock.content, config);
   if (!hunks) return { mode: 'content' };
   const actionableHunks = hunks.filter((hunk) => hunk.mode === 'hunk');
+  if (actionableHunks.length > config.maxHunksPerBlock) {
+    return { mode: 'content' };
+  }
   const isFullyActionable =
     actionableHunks.length > 0 &&
     actionableHunks.every(
@@ -154,15 +158,27 @@ function resolveRichTextDiffPlan(
 
 function appendHunkActions(
   root: HTMLElement,
-  target: Parameters<NoteAiDiffComparisonContext['renderAction']>[1],
+  target: Parameters<NonNullable<NoteAiDiffComparisonContext['renderAction']>>[1],
   context?: NoteAiDiffComparisonContext
 ): void {
-  if (!context) return;
+  if (!context?.renderAction) return;
   const actions = document.createElement('span');
   actions.className = styles.inlineHunkActions;
   actions.appendChild(context.renderAction('discard', target));
   actions.appendChild(context.renderAction('accept', target));
   root.appendChild(actions);
+}
+
+function decorateComparisonHunk(
+  root: HTMLElement,
+  target: NoteAiDiffActionTarget,
+  context?: NoteAiDiffComparisonContext
+): void {
+  if (context?.decorateHunk) {
+    context.decorateHunk(root, target);
+    return;
+  }
+  appendHunkActions(root, target, context);
 }
 
 function renderContentHunk(
@@ -183,7 +199,7 @@ function renderContentHunk(
   inserted.appendChild(renderInlineChildren(aiBlock.content, registry));
 
   hunkRoot.append(deleted, inserted);
-  appendHunkActions(hunkRoot, { kind: 'content-hunk' }, context);
+  decorateComparisonHunk(hunkRoot, { kind: 'content-hunk' }, context);
   return hunkRoot;
 }
 
@@ -226,11 +242,30 @@ function renderRichTextComparison(
       replacementOffset = rendered.replacementOffset;
       hunkRoot.appendChild(rendered.element);
     }
-    appendHunkActions(hunkRoot, { kind: 'inline-hunk', index: hunkIndex }, context);
+    decorateComparisonHunk(hunkRoot, { kind: 'inline-hunk', index: hunkIndex }, context);
     root.appendChild(hunkRoot);
     hunkIndex += 1;
   }
   return root;
+}
+
+/** 列出富文本块内可独立确认的改动单元（供导航 / 选中粒度使用） */
+export function listRichTextChangeTargets(
+  current: Record<string, unknown>,
+  aiBlock: Record<string, unknown>,
+  config: NoteRichTextAiDiffConfig
+): NoteAiDiffActionTarget[] {
+  const textDiffConfig: AiDiffTextConfig = {
+    ...config.hunk,
+    ...config.limits,
+  };
+  const plan = resolveRichTextDiffPlan(current, aiBlock, textDiffConfig);
+  if (plan.mode === 'content') {
+    return [{ kind: 'content-hunk' }];
+  }
+  return plan.hunks
+    .filter((hunk) => hunk.mode === 'hunk')
+    .map((_, index) => ({ kind: 'inline-hunk' as const, index }));
 }
 
 export const textInlineAiDiff: NoteInlineAiDiff = {

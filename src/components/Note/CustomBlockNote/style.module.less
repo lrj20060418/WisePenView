@@ -137,7 +137,12 @@
   }
 
   :global(.bn-editor .bn-block-content:not([data-content-type='heading']) .bn-inline-content),
-  :global(.bn-editor .bn-block-content:not([data-content-type='heading']) .bn-inline-content *) {
+  :global(.bn-editor .bn-block-content:not([data-content-type='heading']) .bn-inline-content *),
+  /* AI Diff 仅新/对比正文：与编辑器同一行高，不含工具条按钮 */
+  :global(.bn-editor .bn-block-content:not([data-content-type='heading']) [data-ai-diff-text]),
+  :global(
+      .bn-editor .bn-block-content:not([data-content-type='heading']) [data-ai-diff-text] *:not(button)
+    ) {
     line-height: 1.8 !important;
   }
 
@@ -464,7 +469,14 @@
 }
 
 :global(.bn-drag-preview .bn-block-content:not([data-content-type='heading']) .bn-inline-content),
-:global(.bn-drag-preview .bn-block-content:not([data-content-type='heading']) .bn-inline-content *) {
+:global(.bn-drag-preview .bn-block-content:not([data-content-type='heading']) .bn-inline-content *),
+:global(.bn-drag-preview .bn-block-content:not([data-content-type='heading']) [data-ai-diff-text]),
+:global(
+    .bn-drag-preview
+      .bn-block-content:not([data-content-type='heading'])
+      [data-ai-diff-text]
+      *:not(button)
+  ) {
   line-height: 1.8 !important;
 }
 

@@ -4,6 +4,7 @@ export interface NoteRichTextAiDiffConfig {
     maxGapCharacters: number;
     maxGapTokens: number;
     maxMergedCharacters: number;
+    maxHunksPerBlock: number;
   };
   limits: {
     maxMatrixCells: number;
@@ -21,10 +22,11 @@ export const noteConfig = {
   aiDiff: {
     richText: {
       hunk: {
-        highChangeRatio: 0.6,
-        maxGapCharacters: 5,
-        maxGapTokens: 3,
-        maxMergedCharacters: 100,
+        highChangeRatio: 0.55,
+        maxGapCharacters: 2,
+        maxGapTokens: 1,
+        maxMergedCharacters: 48,
+        maxHunksPerBlock: 12,
       },
       limits: {
         maxMatrixCells: 250_000,

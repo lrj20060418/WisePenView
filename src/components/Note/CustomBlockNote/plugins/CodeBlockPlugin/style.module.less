@@ -15,6 +15,10 @@
   display: block;
 }
 
+.plainLine {
+  display: inline;
+}
+
 .lineList {
   display: block;
   width: calc(100% + 40px);
@@ -64,20 +68,28 @@
   padding: 0 20px 0 var(--space-sm);
   line-height: 22px;
   white-space: pre;
+  color: inherit;
+}
+
+.lineContent:global(.shiki),
+.lineContent:global(.shiki) span {
+  background: transparent !important;
 }
 
 .deleteLine {
-  background: color-mix(in srgb, var(--error-soft) 78%, transparent);
+  background: var(--diff-removed);
+  border-left: 2px solid var(--diff-removed-border);
 }
 
 .deleteLine .lineMarker {
-  color: var(--error);
+  color: var(--diff-removed-border);
 }
 
 .insertLine {
-  background: color-mix(in srgb, var(--success-soft) 82%, transparent);
+  background: var(--diff-added);
+  border-left: 2px solid var(--diff-added-border);
 }
 
 .insertLine .lineMarker {
-  color: var(--success);
+  color: var(--diff-added-border);
 }

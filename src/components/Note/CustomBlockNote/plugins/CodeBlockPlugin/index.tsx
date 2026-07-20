@@ -6,9 +6,8 @@ import { createRoot } from 'react-dom/client';
 import type { NoteBlockPlugin } from '../../registry/types';
 import { CodeBlockAiContentView, CodeBlockAiDiffComparisonView } from './AiDiffView';
 import { CodeBlockToolbar } from './CodeBlockToolbar';
+import { getCodeBlockHighlighter } from './highlight';
 import { getCodeBlockLanguageOptions } from './language';
-
-const CODE_BLOCK_THEME = 'github-light';
 
 const collapsedCodeBlockIds = new Set<string>();
 
@@ -20,25 +19,9 @@ function syncPreCollapsed(preElement: HTMLPreElement, collapsed: boolean) {
   delete preElement.dataset.collapsed;
 }
 
-async function createLightCodeBlockHighlighter() {
-  const highlighter = await codeBlockOptions.createHighlighter();
-  const getLoadedThemes = highlighter.getLoadedThemes.bind(highlighter);
-
-  // BlockNote 0.47 的 Shiki parser 默认使用 loadedThemes[0]，这里把浅色主题前置。
-  highlighter.getLoadedThemes = () => {
-    const themes = getLoadedThemes();
-    if (!themes.includes(CODE_BLOCK_THEME)) {
-      return themes;
-    }
-    return [CODE_BLOCK_THEME, ...themes.filter((theme) => theme !== CODE_BLOCK_THEME)];
-  };
-
-  return highlighter;
-}
-
 const baseCodeBlockSpec = createCodeBlockSpec({
   ...codeBlockOptions,
-  createHighlighter: createLightCodeBlockHighlighter,
+  createHighlighter: getCodeBlockHighlighter,
   defaultLanguage: 'text',
 });
 

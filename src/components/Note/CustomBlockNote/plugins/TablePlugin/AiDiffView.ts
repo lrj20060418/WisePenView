@@ -113,7 +113,9 @@ function makeTableReadOnly(root: HTMLElement): HTMLElement {
     event.preventDefault();
     event.stopPropagation();
   });
+  // 不拦截 mousedown/pointerdown：父级 review 需用其做「选中」；仅挡会触发编辑的移动类事件
   TABLE_EDITOR_EVENTS.forEach((eventName) => {
+    if (eventName === 'mousedown' || eventName === 'pointerdown') return;
     root.addEventListener(eventName, (event) => event.stopPropagation());
   });
   return root;
