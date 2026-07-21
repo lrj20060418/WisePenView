@@ -62,7 +62,7 @@ function SidebarDriveNodeTitle({
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const handleCreate = (action: SidebarDriveCreateAction) => {
     setCreateMenuOpen(false);
-    onCreateNode(node, action);
+    if (node.type === 'root' || node.type === 'folder') onCreateNode(node, action);
   };
 
   return (

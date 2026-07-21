@@ -4,7 +4,7 @@ import { UnsavedChangesDialog } from '@/components/Overlay';
 import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
 import VersionDropdown from '@/components/VersionDropdown';
 import { useAgentService, useChatService, useSkillService } from '@/domains';
-import type { AgentAsset, AgentSpec } from '@/domains/Agent';
+import type { AgentAsset, AgentDetail, AgentSpec } from '@/domains/Agent';
 import type { ChatAgentOption } from '@/domains/Chat';
 import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
