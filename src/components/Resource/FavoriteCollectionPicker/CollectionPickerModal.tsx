@@ -5,7 +5,7 @@ import { Button, Input, ListBox, ListBoxItem, TextField } from '@heroui/react';
 import { Plus, X } from 'lucide-react';
 import styles from './style.module.less';
 
-interface CollectionPickerModalProps {
+export interface CollectionPickerModalProps {
   collections: FavoriteCollection[];
   selectedIds: string[];
   newCollectionName: string;

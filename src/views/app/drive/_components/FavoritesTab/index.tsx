@@ -1,14 +1,11 @@
 import { Empty, Spin } from '@/components/Feedback';
-import { useInteractService } from '@/domains';
 import type { FavoriteCollection } from '@/domains/Interact';
-import { parseErrorMessage } from '@/utils/error';
-import { toast } from '@heroui/react';
-import { useRequest } from 'ahooks';
 import { useState } from 'react';
 import DeleteCollectionModal from './DeleteCollectionModal';
 import EditCollectionModal from './EditCollectionModal';
 import FavoriteCollectionList from './components/FavoriteCollectionList';
 import FavoriteResourceTable from './components/FavoriteResourceTable';
+import { useFavoriteCollections } from './hooks/useFavoriteCollections';
 import styles from './style.module.less';
 
 function resolveDefaultCollection(
@@ -18,32 +15,36 @@ function resolveDefaultCollection(
 }
 
 function FavoritesTab() {
-  const interactService = useInteractService();
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
   const [editingCollection, setEditingCollection] = useState<
     FavoriteCollection | null | undefined
   >();
   const [deletingCollection, setDeletingCollection] = useState<FavoriteCollection>();
-  const {
-    data: collections,
-    loading,
-    refresh,
-  } = useRequest(() => interactService.listFavoriteCollections(), {
-    onError: (error) => toast.danger(parseErrorMessage(error)),
-  });
+  const { collections, hasLoaded, loading, refresh } = useFavoriteCollections();
 
-  const collectionList = collections ?? [];
-  const defaultCollection = resolveDefaultCollection(collectionList);
+  const defaultCollection = resolveDefaultCollection(collections);
   const activeCollection =
-    collectionList.find((collection) => collection.collectionId === selectedCollectionId) ??
+    collections.find((collection) => collection.collectionId === selectedCollectionId) ??
     defaultCollection;
 
-  if (loading && !collections) {
-    return <Spin />;
+  if (loading && !hasLoaded) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.feedbackState}>
+          <Spin />
+        </div>
+      </div>
+    );
   }
 
   if (!activeCollection) {
-    return <Empty description="暂无收藏夹" />;
+    return (
+      <div className={styles.container}>
+        <div className={styles.feedbackState}>
+          <Empty description="暂无收藏夹" />
+        </div>
+      </div>
+    );
   }
 
   const handleCollectionChanged = () => {
@@ -55,7 +56,7 @@ function FavoritesTab() {
       <div className={styles.favoriteFrame}>
         <div className={styles.splitLayout}>
           <FavoriteCollectionList
-            collections={collectionList}
+            collections={collections}
             selectedCollectionId={activeCollection.collectionId}
             onSelect={setSelectedCollectionId}
             onCreate={() => setEditingCollection(null)}

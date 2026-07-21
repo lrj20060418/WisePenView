@@ -1,78 +1,22 @@
-import type { DriveTableRow } from '@/components/Drive/TableDrive/index.type';
 import TableDriveSelectionPanel from '@/components/Drive/TableDrive/parts/SelectionPanel';
 import EntryIcon from '@/components/Icons/EntryIcon';
+import FavoriteCollectionPicker from '@/components/Resource/FavoriteCollectionPicker';
 import DataTable from '@/components/Table/DataTable';
-import type {
-  DataTableColumn,
-  DataTableRowPressContext,
-} from '@/components/Table/DataTable/index.type';
+import type { DataTableColumn } from '@/components/Table/DataTable/index.type';
 import TableRowActions from '@/components/Table/shared/TableRowActions';
 import type { TableRowActionItem } from '@/components/Table/shared/TableRowActions/index.type';
-import type { DriveNode } from '@/domains/Drive';
-import { buildDriveNodeScope } from '@/domains/Drive';
 import type { FavoriteItem } from '@/domains/Interact';
-import type { ResourceItem } from '@/domains/Resource';
-import { useOpenInWorkspace } from '@/hooks/useOpenInWorkspace';
-import { formatFileSize } from '@/utils/format/formatFileSize';
 import { formatTimestampToDate } from '@/utils/format/formatTime';
-import CollectionPickerModal from '@/views/workspace/_components/ResourceFavoriteAction/CollectionPickerModal';
-import { useCollectionPickerController } from '@/views/workspace/_components/ResourceFavoriteAction/hooks/useCollectionPickerController';
-import { useState } from 'react';
-import { useFavoriteResources } from '../hooks/useFavoriteResources';
+import { useFavoriteResourceTableController } from '../hooks/useFavoriteResourceTableController';
 import styles from '../style.module.less';
 import UnfavoriteResourceModal from './UnfavoriteResourceModal';
 
 interface FavoriteResourceTableProps {
-  collectionId?: string;
+  collectionId: string;
   collectionName: string;
   collectionItemCount: number;
   onCollectionChanged: () => void;
   emptyDescription: string;
-}
-
-interface FavoriteCollectionPickerProps {
-  resourceId: string;
-  onOpenChange: (open: boolean) => void;
-  onConfirmed: () => void;
-}
-
-function FavoriteCollectionPicker({
-  resourceId,
-  onOpenChange,
-  onConfirmed,
-}: FavoriteCollectionPickerProps) {
-  const controller = useCollectionPickerController({
-    resourceId,
-    onOpenChange,
-    onConfirmed: () => onConfirmed(),
-  });
-  return <CollectionPickerModal {...controller} />;
-}
-
-function toFavoriteTableRow(resource: ResourceItem): DriveTableRow {
-  const node: DriveNode = {
-    type: 'resource',
-    id: `favorite:${resource.resourceId}`,
-    parentId: 'favorite-root',
-    scope: buildDriveNodeScope(),
-    resourceId: resource.resourceId,
-    title: resource.resourceName,
-    resourceType: resource.resourceType,
-    resourceIconType: resource.resourceIconType ?? 'file',
-    size: resource.size,
-    folderTagId: '',
-  };
-
-  return {
-    id: node.id,
-    name: resource.resourceName,
-    entryType: 'resource',
-    resourceType: resource.resourceType,
-    resourceIconType: resource.resourceIconType,
-    sizeLabel: formatFileSize(resource.size),
-    typeLabel: resource.resourceType ?? '资源',
-    node,
-  };
 }
 
 function FavoriteResourceTable({
@@ -82,54 +26,7 @@ function FavoriteResourceTable({
   onCollectionChanged,
   emptyDescription,
 }: FavoriteResourceTableProps) {
-  const openInWorkspace = useOpenInWorkspace();
-  const { list, total, page, pageSize, totalPage, loading, setPage, refresh } =
-    useFavoriteResources(collectionId);
-  const [unfavoriteItem, setUnfavoriteItem] = useState<FavoriteItem>();
-  const [manageFavoriteItem, setManageFavoriteItem] = useState<FavoriteItem>();
-  const [selectedResourceId, setSelectedResourceId] = useState<string>();
-  const selectedItem = list.find((item) => item.resourceId === selectedResourceId);
-  const selectedRow = selectedItem?.resourceInfo
-    ? toFavoriteTableRow(selectedItem.resourceInfo)
-    : undefined;
-
-  const openResource = (item: FavoriteItem) => {
-    if (!item.resourceInfo) return;
-    openInWorkspace({
-      resourceId: item.resourceId,
-      resourceType: item.resourceInfo.resourceType,
-      resourceName: item.resourceInfo.resourceName,
-      driveLocation: { scope: buildDriveNodeScope() },
-    });
-  };
-
-  const handleRowSelect = (item: FavoriteItem, _context: DataTableRowPressContext) => {
-    setSelectedResourceId(item.resourceId);
-  };
-
-  const openSelectedResource = (node: DriveNode) => {
-    if (node.type !== 'resource' && node.type !== 'link') return;
-    openInWorkspace({
-      resourceId: node.resourceId,
-      resourceType: node.resourceType,
-      resourceName: node.title,
-      driveLocation: { scope: buildDriveNodeScope() },
-    });
-  };
-
-  const handleRowAction = (item: FavoriteItem, key: string) => {
-    if (key === 'open') {
-      openResource(item);
-      return;
-    }
-    if (key === 'manage') {
-      if (item.resourceInfo) setManageFavoriteItem(item);
-      return;
-    }
-    if (key === 'remove') {
-      setUnfavoriteItem(item);
-    }
-  };
+  const controller = useFavoriteResourceTableController({ collectionId, onCollectionChanged });
 
   const columns: DataTableColumn<FavoriteItem>[] = [
     {
@@ -198,7 +95,7 @@ function FavoriteResourceTable({
           <TableRowActions
             ariaLabel={`${item.resourceInfo?.resourceName ?? '该资源'}操作`}
             actions={actions}
-            onAction={(key) => handleRowAction(item, key)}
+            onAction={(key) => controller.onRowAction(item, key)}
           />
         );
       },
@@ -216,22 +113,24 @@ function FavoriteResourceTable({
         </header>
         <DataTable
           ariaLabel="已收藏资源"
-          items={list}
+          items={controller.list}
           rowKey="resourceId"
-          selectedRowKey={selectedResourceId}
-          onRowSelect={handleRowSelect}
-          onRowActivate={openResource}
+          selectedRowKey={controller.selectedResourceId}
+          onRowSelect={controller.onRowSelect}
+          onRowActivate={controller.onRowActivate}
           columns={columns}
-          loading={loading}
+          loading={controller.loading}
           emptyText="暂无收藏内容"
           emptyDescription={emptyDescription}
-          totalCount={total}
+          totalCount={controller.total}
           pagination={{
-            total,
-            current: page,
-            pageSize,
+            total: controller.total,
+            current: controller.page,
+            pageSize: controller.pageSize,
             onChange: (nextPage) =>
-              setPage(Math.min(Math.max(1, nextPage), Math.max(1, totalPage))),
+              controller.setPage(
+                Math.min(Math.max(1, nextPage), Math.max(1, controller.totalPage))
+              ),
           }}
           className={styles.resourceTable}
         />
@@ -239,41 +138,34 @@ function FavoriteResourceTable({
       <aside className={styles.detailPanel}>
         <TableDriveSelectionPanel
           mode="favorite"
-          selectedRow={selectedRow}
-          selectedCount={selectedRow ? 1 : 0}
+          selectedRow={controller.selectedRow}
+          selectedCount={controller.selectedRow ? 1 : 0}
           onEnter={() => undefined}
-          onOpen={openSelectedResource}
+          onOpen={controller.onDetailOpen}
           onRename={() => undefined}
           onMove={() => undefined}
           onDelete={() => undefined}
           onRemoveFavorite={() => {
-            if (selectedItem) setUnfavoriteItem(selectedItem);
+            if (controller.selectedItem) controller.onRequestUnfavorite(controller.selectedItem);
           }}
         />
       </aside>
       <UnfavoriteResourceModal
-        item={unfavoriteItem}
+        item={controller.unfavoriteItem}
+        collectionId={collectionId}
         onOpenChange={(open) => {
-          if (!open) setUnfavoriteItem(undefined);
+          if (!open) controller.onCloseUnfavorite();
         }}
-        onSuccess={() => {
-          setSelectedResourceId(undefined);
-          void refresh();
-          onCollectionChanged();
-        }}
+        onSuccess={controller.onUnfavoriteSuccess}
       />
-      {manageFavoriteItem?.resourceInfo ? (
+      {controller.manageFavoriteItem?.resourceInfo ? (
         <FavoriteCollectionPicker
-          key={manageFavoriteItem.resourceId}
-          resourceId={manageFavoriteItem.resourceId}
+          key={controller.manageFavoriteItem.resourceId}
+          resourceId={controller.manageFavoriteItem.resourceId}
           onOpenChange={(open) => {
-            if (!open) setManageFavoriteItem(undefined);
+            if (!open) controller.onCloseManageFavorite();
           }}
-          onConfirmed={() => {
-            setManageFavoriteItem(undefined);
-            void refresh();
-            onCollectionChanged();
-          }}
+          onConfirmed={controller.onManageFavoriteSuccess}
         />
       ) : null}
     </div>

@@ -7,24 +7,31 @@ import { useRequest } from 'ahooks';
 
 interface UnfavoriteResourceModalProps {
   item: FavoriteItem | undefined;
+  collectionId: string;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-function UnfavoriteResourceModal({ item, onOpenChange, onSuccess }: UnfavoriteResourceModalProps) {
+function UnfavoriteResourceModal({
+  item,
+  collectionId,
+  onOpenChange,
+  onSuccess,
+}: UnfavoriteResourceModalProps) {
   const interactService = useInteractService();
   const { loading, run: unfavorite } = useRequest(
-    () => {
-      if (!item) return Promise.resolve();
+    async () => {
+      if (!item) return;
+      const collectionIds = await interactService.getFavoriteCollectionIds(item.resourceId);
       return interactService.updateFavoriteCollections({
         resourceId: item.resourceId,
-        collectionIds: [],
+        collectionIds: collectionIds.filter((id) => id !== collectionId),
       });
     },
     {
       manual: true,
       onSuccess: () => {
-        toast.success('已取消收藏');
+        toast.success('已移出收藏夹');
         onSuccess();
         onOpenChange(false);
       },
@@ -37,9 +44,9 @@ function UnfavoriteResourceModal({ item, onOpenChange, onSuccess }: UnfavoriteRe
       isOpen={Boolean(item)}
       onOpenChange={onOpenChange}
       type="danger"
-      title="取消收藏"
-      description={`确定要取消收藏「${item?.resourceInfo?.resourceName ?? '该资源'}」吗？`}
-      confirmText="取消收藏"
+      title="移出收藏夹"
+      description={`确定要将「${item?.resourceInfo?.resourceName ?? '该资源'}」移出当前收藏夹吗？`}
+      confirmText="移出"
       isConfirmLoading={loading}
       onConfirm={unfavorite}
     />
