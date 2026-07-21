@@ -14,6 +14,7 @@ import { ArrowDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import HistoryLoader from './HistoryLoader';
 import Message from './Message';
+import MessageHistoryNavigator from './MessageHistoryNavigator';
 import MessageScrollFollowProvider from './MessageScrollFollowProvider';
 import Welcome from './Welcome';
 import styles from './style.module.less';
@@ -94,7 +95,11 @@ function MessageListContent({
                 />
 
                 {messages.map((message) => (
-                  <MessageScrollerItem key={message.id} messageId={message.id}>
+                  <MessageScrollerItem
+                    key={message.id}
+                    messageId={message.id}
+                    scrollAnchor={message.role === 'user'}
+                  >
                     <Message
                       message={message}
                       model={model}
@@ -116,6 +121,9 @@ function MessageListContent({
         <ArrowDown size={14} />
         <span className={styles.srOnly}>滚动到底部</span>
       </MessageScrollerButton>
+      <div className={styles.historyNavigator}>
+        <MessageHistoryNavigator messages={messages} />
+      </div>
     </MessageScroller>
   );
 }
