@@ -116,7 +116,7 @@ export const codeBlockPlugin = {
     },
   },
   capabilities: {
-    markdownImport: { support: 'default' },
+    markdownImport: { support: 'custom' },
     markdownExport: { support: 'default' },
     aiDiff: { support: 'custom' },
     plainText: { support: 'default' },
