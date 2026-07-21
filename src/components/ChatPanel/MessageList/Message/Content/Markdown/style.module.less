@@ -1,9 +1,3 @@
-.plainText {
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
 .markdown {
   white-space: normal;
   word-break: break-word;
@@ -44,7 +38,9 @@
   }
 
   :global(code) {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
     font-size: var(--font-size-sm);
   }
 
@@ -56,7 +52,6 @@
 
   :global(table) {
     width: 100%;
-    margin: 0 0 var(--space-sm);
     border-collapse: collapse;
   }
 
@@ -65,4 +60,35 @@
     padding: var(--space-2xs) var(--space-xs);
     border: 1px solid var(--border-light);
   }
+}
+
+.tableWrapper {
+  width: 100%;
+  margin: 0 0 var(--space-sm);
+  overflow-x: auto;
+}
+
+.tableAlignLeft {
+  text-align: left;
+}
+
+.tableAlignCenter {
+  text-align: center;
+}
+
+.tableAlignRight {
+  text-align: right;
+}
+
+.taskListItem {
+  list-style: none;
+}
+
+.taskCheckbox {
+  margin-right: var(--space-2xs);
+}
+
+.footnotes {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }
