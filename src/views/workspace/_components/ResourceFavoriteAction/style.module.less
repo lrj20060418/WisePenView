@@ -29,7 +29,7 @@
 .pickerBody {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .pickerLoading {
@@ -40,34 +40,31 @@
 }
 
 .collectionList {
-  display: flex;
-  max-height: 300px;
-  flex-direction: column;
-  gap: var(--space-xs);
+  max-height: 240px;
   overflow-y: auto;
 }
 
 .collectionItem {
-  padding: var(--space-sm);
-  border-radius: var(--radius-md);
+  min-height: 36px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-xl);
 }
 
-.collectionItem:hover {
-  background: var(--surface-secondary);
+.collectionItem[data-selected='true'],
+.collectionItem[data-selected='true']:hover {
+  background: var(--accent-softer);
+}
+
+.collectionItem[data-selected='true'][data-hovered='true'] {
+  background: var(--accent-soft);
 }
 
 .collectionContent {
-  display: inline-flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: var(--space-sm);
-}
-
-.collectionText {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 2px;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .collectionLabel,
@@ -78,26 +75,80 @@
 }
 
 .collectionLabel {
+  min-width: 0;
+  flex: 1;
   color: var(--foreground);
   font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
 .collectionCount {
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: var(--font-size-xs);
 }
 
-.createRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
 .createInput {
+  display: block;
   min-width: 0;
   flex: 1;
 }
 
+.collectionItem,
+.inlineCreateRow,
 .newCollectionButton {
-  align-self: flex-start;
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+}
+
+.inlineCreateRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: 0 var(--space-xs) 0 var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xl);
+  background: var(--accent-softer);
+}
+
+.inlineCreateRow:focus-within {
+  border-color: var(--focus);
+}
+
+.inlineCreateRow :global(input) {
+  height: 34px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cancelCreateButton {
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.cancelCreateButton:hover,
+.cancelCreateButton:focus-visible {
+  color: var(--danger);
+  background: transparent;
+}
+
+.newCollectionButton {
+  width: 100%;
+  justify-content: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-xl);
+  color: var(--foreground);
+  background: transparent;
 }

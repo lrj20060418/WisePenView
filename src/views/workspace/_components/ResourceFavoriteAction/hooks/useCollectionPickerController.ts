@@ -77,6 +77,7 @@ export function useCollectionPickerController({
   };
 
   const handleCreateCollection = () => {
+    if (loadingCreate) return;
     const collectionName = newCollectionName.trim();
     if (!collectionName) {
       toast.warning('请输入收藏夹名称');

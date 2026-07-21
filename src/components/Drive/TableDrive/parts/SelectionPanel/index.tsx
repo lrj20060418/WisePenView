@@ -46,6 +46,7 @@ import NodeInfoSection from './parts/NodeInfoSection';
 import styles from './style.module.less';
 
 const EMPTY_HINT = '选中左侧文件或文件夹以查看详情';
+const FAVORITE_EMPTY_HINT = '选中左侧资源以查看详情';
 const TAG_ACCESS_PERMISSION_SIDEBAR_OPTIONS = TAG_PERMISSION_PRESETS;
 
 const formatTagMountPermissionSummary = (
@@ -74,6 +75,7 @@ function toActionTarget(node: DriveNode): DriveActionTarget | null {
 function TableDriveSelectionPanel({
   selectedRow,
   selectedCount = 0,
+  mode = 'drive',
   groupId,
   isTrashView = false,
   canManageTagPermission = false,
@@ -84,11 +86,13 @@ function TableDriveSelectionPanel({
   onRename,
   onMove,
   onDelete,
+  onRemoveFavorite,
   onManageTagAccessPermission,
   onManageTagMountPermission,
   onManageResourcePermission,
   onTagPermissionChange,
 }: TableDriveSelectionPanelProps) {
+  const isFavoriteMode = mode === 'favorite';
   const tagService = useTagService();
   const resourceService = useResourceService();
   const savingPresetKeyRef = useRef<TagPermissionPresetKey | null>(null);
@@ -110,7 +114,10 @@ function TableDriveSelectionPanel({
   const isFile = node?.type === 'resource' || node?.type === 'link';
   const canModifyActionTarget = actionTarget != null && !isDriveSystemFolderNode(actionTarget);
   const canRename =
-    actionTarget != null && !isDriveSystemFolderNode(actionTarget) && actionTarget.type !== 'link';
+    !isFavoriteMode &&
+    actionTarget != null &&
+    !isDriveSystemFolderNode(actionTarget) &&
+    actionTarget.type !== 'link';
   const deleteActionLabel = groupId
     ? '移除'
     : isTrashView
@@ -130,10 +137,11 @@ function TableDriveSelectionPanel({
     }) as ResourcePermissionResourceType;
   }, [node, selectedRow?.name]);
   const canShowTagPermission = Boolean(
-    canManageTagPermission && groupId && folderTagId && selectedCount <= 1
+    !isFavoriteMode && canManageTagPermission && groupId && folderTagId && selectedCount <= 1
   );
   const canShowResourcePermission = Boolean(
     canManageTagPermission &&
+    !isFavoriteMode &&
     groupId &&
     resourceId &&
     resourcePermissionResourceType &&
@@ -416,7 +424,9 @@ function TableDriveSelectionPanel({
       <aside className={styles.panel} aria-label="选中节点详情">
         <div className={styles.content}>
           <div className={styles.header} aria-hidden="true" />
-          <div className={styles.emptyState}>{EMPTY_HINT}</div>
+          <div className={styles.emptyState}>
+            {isFavoriteMode ? FAVORITE_EMPTY_HINT : EMPTY_HINT}
+          </div>
         </div>
       </aside>
     );
@@ -602,7 +612,29 @@ function TableDriveSelectionPanel({
             ) : null}
           </div>
 
-          {actionTarget ? (
+          {actionTarget && isFavoriteMode ? (
+            <div className={styles.actions}>
+              <Button
+                variant="secondary"
+                size="sm"
+                className={styles.actionBtn}
+                onPress={() => onRemoveFavorite?.(actionTarget)}
+              >
+                移出收藏夹
+              </Button>
+              {isFile ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={styles.actionBtn}
+                  onPress={() => onOpen(node)}
+                >
+                  打开
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {actionTarget && !isFavoriteMode ? (
             <div className={styles.actions}>
               {canModifyActionTarget ? (
                 <>
