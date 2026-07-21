@@ -55,6 +55,11 @@ function AppFormDialog({
     onSubmit?.(event);
   };
 
+  const handleSubmitCapture = (event: FormEvent<HTMLDivElement>) => {
+    // 先阻止浏览器默认 GET 提交，避免子内容拦截冒泡时将表单字段写入当前 URL。
+    event.preventDefault();
+  };
+
   const renderFooterContent = (): ReactNode => {
     if (footer === false || footer === null) return null;
     if (footer !== undefined) return footer;
@@ -94,32 +99,36 @@ function AppFormDialog({
           <Modal.Dialog
             className={clsx(styles.dialog, className, dialogClassName, classNames?.dialog)}
           >
-            <Form
-              id={formId}
-              className={clsx(styles.form, formClassName, classNames?.form)}
-              onSubmit={handleSubmit}
-            >
-              <Modal.Header className={clsx(styles.header, headerClassName, classNames?.header)}>
-                <Modal.Heading className={clsx(styles.heading, classNames?.heading)}>
-                  {title}
-                </Modal.Heading>
-                {description ? (
-                  <div className={clsx(styles.description, classNames?.description)}>
-                    {description}
-                  </div>
+            <div className={styles.formCapture} onSubmitCapture={handleSubmitCapture}>
+              <Form
+                id={formId}
+                className={clsx(styles.form, formClassName, classNames?.form)}
+                onSubmit={handleSubmit}
+              >
+                <Modal.Header className={clsx(styles.header, headerClassName, classNames?.header)}>
+                  <Modal.Heading className={clsx(styles.heading, classNames?.heading)}>
+                    {title}
+                  </Modal.Heading>
+                  {description ? (
+                    <div className={clsx(styles.description, classNames?.description)}>
+                      {description}
+                    </div>
+                  ) : null}
+                </Modal.Header>
+
+                <Modal.Body className={clsx(styles.body, bodyClassName, classNames?.body)}>
+                  {children}
+                </Modal.Body>
+
+                {footerContent != null ? (
+                  <Modal.Footer
+                    className={clsx(styles.footer, footerClassName, classNames?.footer)}
+                  >
+                    {footerContent}
+                  </Modal.Footer>
                 ) : null}
-              </Modal.Header>
-
-              <Modal.Body className={clsx(styles.body, bodyClassName, classNames?.body)}>
-                {children}
-              </Modal.Body>
-
-              {footerContent != null ? (
-                <Modal.Footer className={clsx(styles.footer, footerClassName, classNames?.footer)}>
-                  {footerContent}
-                </Modal.Footer>
-              ) : null}
-            </Form>
+              </Form>
+            </div>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

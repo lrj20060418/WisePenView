@@ -1,5 +1,3 @@
-@import '@/styles/scrollbar.module.less';
-
 .shell {
   --chat-code-copy-btn-size: 32px;
   position: relative;
@@ -10,21 +8,25 @@
   }
 }
 
-.copyBtn {
+.copyButton {
   position: absolute;
   top: var(--space-xs);
   right: var(--space-xs);
   z-index: 1;
-  color: var(--text-tertiary);
-
-  &:hover {
-    color: var(--accent);
-    background-color: color-mix(in srgb, var(--surface-tertiary) 70%, transparent);
-  }
+  background-color: color-mix(in srgb, var(--surface-tertiary) 70%, transparent);
 }
 
-.copyBtnCopied {
-  color: var(--success);
+.language {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-sm);
+  z-index: 1;
+  color: var(--text-tertiary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
 }
 
 .pre {
@@ -34,20 +36,23 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   background-color: var(--surface-secondary);
-  overflow-x: auto;
-  overscroll-behavior: contain;
-  .appSubtleScrollbar();
 
   :global(code) {
     display: block;
     padding: 0;
     border-radius: 0;
     background: transparent;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
     font-size: var(--font-size-xs);
     line-height: 1.6;
-    white-space: pre;
-    word-break: normal;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
+}
+
+.codeLine {
+  display: block;
 }

@@ -1,16 +1,15 @@
 import { Spin } from '@/components/Feedback';
-import { Marker, MarkerContent, MarkerIcon } from '@/components/_shadcn';
+import { Marker, MarkerContent, MarkerIcon, useMessageScroller } from '@/components/_shadcn';
 import markerStyles from '@/components/_shadcn/marker.module.less';
+import { useEffectForce } from '@/hooks/useEffectForce';
 import { getToolName, type DynamicToolUIPart, type ToolUIPart } from 'ai';
 import { AlertCircle, Ban, Check, Clock, Wrench } from 'lucide-react';
+import { useRef } from 'react';
 import styles from './ToolCallBlock.module.less';
 
 type RenderableToolPart = ToolUIPart | DynamicToolUIPart;
 
-function getToolStatus(part: RenderableToolPart): {
-  label: string;
-  loading: boolean;
-} {
+function getToolStatus(part: RenderableToolPart): { label: string; loading: boolean } {
   switch (part.state) {
     case 'input-streaming':
       return { label: '正在准备工具输入', loading: true };
@@ -19,10 +18,7 @@ function getToolStatus(part: RenderableToolPart): {
     case 'approval-requested':
       return { label: '等待批准', loading: false };
     case 'approval-responded':
-      return {
-        label: part.approval.approved ? '已批准' : '未批准',
-        loading: false,
-      };
+      return { label: part.approval.approved ? '已批准' : '未批准', loading: false };
     case 'output-available':
       return { label: '调用完成', loading: false };
     case 'output-error':
@@ -33,8 +29,20 @@ function getToolStatus(part: RenderableToolPart): {
 }
 
 function ToolCallBlock({ part }: { part: RenderableToolPart }) {
-  const toolName = getToolName(part);
   const status = getToolStatus(part);
+  const previousStateRef = useRef<typeof part.state | null>(null);
+  const { scrollToEndUnlessUserInterrupted } = useMessageScroller();
+
+  /**
+   * 工具块首次出现或状态切换时，后续结果与正文可能在同一批次渲染。
+   * 下滚时是否保留用户当前阅读位置由消息滚动控制器统一处理。
+   */
+  useEffectForce(() => {
+    const stateChanged = previousStateRef.current !== part.state;
+    previousStateRef.current = part.state;
+
+    if (stateChanged) scrollToEndUnlessUserInterrupted();
+  }, [part.state, scrollToEndUnlessUserInterrupted]);
 
   return (
     <div className={styles.wrapper} data-tool-call-id={part.toolCallId}>
@@ -55,7 +63,7 @@ function ToolCallBlock({ part }: { part: RenderableToolPart }) {
           )}
         </MarkerIcon>
         <MarkerContent className={status.loading ? markerStyles.shimmer : undefined}>
-          {toolName}：{status.label}
+          {getToolName(part)}：{status.label}
         </MarkerContent>
       </Marker>
     </div>
