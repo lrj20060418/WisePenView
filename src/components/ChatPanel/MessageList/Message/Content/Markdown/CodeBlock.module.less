@@ -18,6 +18,19 @@
   background-color: color-mix(in srgb, var(--surface-tertiary) 70%, transparent);
 }
 
+.language {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-sm);
+  z-index: 1;
+  color: var(--text-tertiary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+}
+
 .pre {
   margin: 0;
   padding: var(--space-sm);
@@ -42,4 +55,8 @@
     white-space: pre;
     word-break: normal;
   }
+}
+
+.codeLine {
+  display: block;
 }

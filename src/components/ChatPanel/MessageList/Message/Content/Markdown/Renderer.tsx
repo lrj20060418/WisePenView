@@ -1,5 +1,8 @@
 import type { ParsedBlock, RootContent } from '@incremark/core';
-import { Fragment, memo, type ReactNode } from 'react';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import { CornerUpLeft } from 'lucide-react';
+import { Fragment, memo, type MouseEvent, type ReactNode } from 'react';
 import CodeBlock from './CodeBlock';
 import type { MarkdownRenderContext } from './runtime';
 import styles from './style.module.less';
@@ -19,6 +22,88 @@ interface MarkdownRendererProps {
   showFootnotes: boolean;
 }
 
+type RuntimeMathNode = { type: 'inlineMath' | 'math'; value: string };
+
+const SUPERSCRIPT_PATTERN = /(?<!\\)\^([^\s^\n](?:[^^\n]*[^\s^\n])?)\^/g;
+
+function renderTextWithSuperscripts(value: string, key: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+  let index = 0;
+
+  while ((match = SUPERSCRIPT_PATTERN.exec(value))) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <Fragment key={`${key}-text-${index}`}>{value.slice(lastIndex, match.index)}</Fragment>
+      );
+    }
+    nodes.push(
+      <sup key={`${key}-sup-${index}`} className={styles.inlineSuperscript}>
+        {match[1]}
+      </sup>
+    );
+    lastIndex = match.index + match[0].length;
+    index += 1;
+  }
+
+  if (lastIndex === 0) return [value];
+  if (lastIndex < value.length) {
+    nodes.push(<Fragment key={`${key}-text-${index}`}>{value.slice(lastIndex)}</Fragment>);
+  }
+  return nodes;
+}
+
+/** GFM 会先把单波浪数字解析成删除线节点，这里还原为常用下标语义。 */
+function readNumericSubscript(node: Extract<RootContent, { type: 'delete' }>): string | undefined {
+  const [child] = node.children;
+  if (node.children.length !== 1 || child?.type !== 'text') return undefined;
+  return /^\d+(?:[.,]\d+)?$/.test(child.value) ? child.value : undefined;
+}
+
+/** Incremark 运行时会产出数学节点，但当前公开 RootContent 类型尚未声明它们。 */
+function readMathExpression(
+  node: RootContent | RuntimeMathNode,
+  type: 'inlineMath' | 'math'
+): string | undefined {
+  return node.type === type && 'value' in node && typeof node.value === 'string'
+    ? node.value
+    : undefined;
+}
+
+function renderMathHtml(expression: string, displayMode: boolean): string | null {
+  try {
+    return katex.renderToString(expression, {
+      displayMode,
+      output: 'htmlAndMathml',
+      throwOnError: false,
+      trust: false,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function renderMathFormula(expression: string, displayMode: boolean, key?: string): ReactNode {
+  const html = renderMathHtml(expression, displayMode);
+
+  if (html) {
+    return (
+      <span
+        key={key}
+        className={displayMode ? styles.mathBlock : styles.mathInline}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+
+  return (
+    <code key={key} className={styles.mathFallback}>
+      {expression}
+    </code>
+  );
+}
+
 /** 保持原有 URL 安全边界，拒绝脚本及 data 等可执行协议。 */
 function transformUrl(value: string): string | null {
   const colon = value.indexOf(':');
@@ -33,6 +118,21 @@ function transformUrl(value: string): string | null {
 
   if (isRelative || SAFE_PROTOCOL.test(value.slice(0, colon))) return value;
   return null;
+}
+
+function handleFootnoteNavigation(event: MouseEvent<HTMLAnchorElement>) {
+  const { hash } = event.currentTarget;
+  const target = document.getElementById(hash.slice(1));
+  if (!target) return;
+
+  event.preventDefault();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({
+    behavior: reducedMotion ? 'auto' : 'smooth',
+    block: 'center',
+    inline: 'nearest',
+  });
+  window.history.pushState(null, '', hash);
 }
 
 function resolveDefinition(
@@ -55,15 +155,29 @@ function renderInlineNode(
   renderContext: MarkdownRenderContext,
   key: string
 ): ReactNode {
+  const inlineMathExpression = readMathExpression(node, 'inlineMath');
+  if (inlineMathExpression != null) {
+    return renderMathFormula(inlineMathExpression, false, key);
+  }
+
   switch (node.type) {
     case 'text':
-      return <Fragment key={key}>{node.value}</Fragment>;
+      return <Fragment key={key}>{renderTextWithSuperscripts(node.value, key)}</Fragment>;
     case 'strong':
       return <strong key={key}>{renderInlineNodes(node.children, renderContext, key)}</strong>;
     case 'emphasis':
       return <em key={key}>{renderInlineNodes(node.children, renderContext, key)}</em>;
-    case 'delete':
+    case 'delete': {
+      const subscript = readNumericSubscript(node);
+      if (subscript != null) {
+        return (
+          <sub key={key} className={styles.inlineSubscript}>
+            {subscript}
+          </sub>
+        );
+      }
       return <del key={key}>{renderInlineNodes(node.children, renderContext, key)}</del>;
+    }
     case 'inlineCode':
       return <code key={key}>{node.value}</code>;
     case 'break':
@@ -119,9 +233,13 @@ function renderInlineNode(
     case 'footnoteReference': {
       const fragmentId = encodeURIComponent(node.identifier);
       return (
-        <sup key={key}>
-          <a id={`fnref-${fragmentId}`} href={`#fn-${fragmentId}`}>
-            [{node.identifier}]
+        <sup key={key} className={styles.footnoteReference}>
+          <a
+            id={`fnref-${fragmentId}`}
+            href={`#fn-${fragmentId}`}
+            onClick={handleFootnoteNavigation}
+          >
+            {node.identifier}
           </a>
         </sup>
       );
@@ -248,6 +366,11 @@ function renderBlockNode(
   renderContext: MarkdownRenderContext,
   key: string
 ): ReactNode {
+  const mathExpression = readMathExpression(node, 'math');
+  if (mathExpression != null) {
+    return renderMathFormula(mathExpression, true);
+  }
+
   switch (node.type) {
     case 'paragraph':
       return <p>{renderInlineNodes(node.children, renderContext, key)}</p>;
@@ -304,8 +427,13 @@ function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderCon
               {definition.children.map((child, index) =>
                 renderBlockNode(child, renderContext, `footnote-${fragmentId}-${index}`)
               )}
-              <a href={`#fnref-${fragmentId}`} aria-label="返回脚注引用">
-                返回
+              <a
+                href={`#fnref-${fragmentId}`}
+                aria-label="返回脚注引用"
+                onClick={handleFootnoteNavigation}
+                className={styles.footnoteBackLink}
+              >
+                <CornerUpLeft size={12} aria-hidden="true" />
               </a>
             </li>
           );

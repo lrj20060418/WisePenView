@@ -67,7 +67,7 @@ function createSnapshot(
 export function createMarkdownRuntime(content: string, streaming: boolean): MarkdownRuntime {
   const parser = createIncremarkParser({
     gfm: true,
-    math: false,
+    math: { tex: true },
     containers: false,
     htmlTree: false,
   });
