@@ -87,7 +87,6 @@ function RenameNodeModal({ isOpen, node, groupId, onOpenChange, onSuccess }: Ren
       <FormField
         aria-label="节点名称"
         label="名称"
-        name="nodeName"
         className={styles.input}
         value={name}
         autoFocus
