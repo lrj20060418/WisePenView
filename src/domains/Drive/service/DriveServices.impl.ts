@@ -890,7 +890,8 @@ export const createDriveServices = (
   const renameNode: IDriveService['renameNode'] = async (params) => {
     const { nodeId, newName } = params;
     const source = getNodeOrThrow(nodeId);
-    const groupId = normalizeTagGroupId(params.groupId) ?? getNodeGroupId(nodeId);
+    // 重命名必须以目标节点所属 scope 为准，避免侧栏切换作用域后将个人目录误提交到小组。
+    const groupId = source.scope.type === 'group' ? source.scope.groupId : undefined;
     if (source.type === 'folder') {
       if (source.systemType) {
         throw createClientError(FRONTEND_CLIENT_ERROR.DRIVE_NODE_UNSUPPORTED_RENAME);

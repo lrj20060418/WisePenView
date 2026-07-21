@@ -160,7 +160,6 @@ function DriveCreate({
           <FormField
             aria-label="文件夹名称"
             label="文件夹名称"
-            name="folderName"
             value={title}
             onChange={(value) => {
               setTitle(value);
@@ -184,13 +183,7 @@ function DriveCreate({
           isSubmitting={loading}
           isDismissable={!loading}
         >
-          <FormField
-            aria-label="图表名称"
-            label="图表名称"
-            name="drawioName"
-            value={title}
-            onChange={setTitle}
-          >
+          <FormField aria-label="图表名称" label="图表名称" value={title} onChange={setTitle}>
             <Input placeholder={DEFAULT_DRAWIO_TITLE} autoFocus />
           </FormField>
         </AppFormDialog>

@@ -129,7 +129,6 @@ function SessionMenuItem({ session, onUpdated, onDeleted }: SessionMenuItemProps
         <FormField
           aria-label="对话标题"
           label="对话标题"
-          name="sessionTitle"
           value={editingTitle}
           autoFocus
           onChange={(value) => {
