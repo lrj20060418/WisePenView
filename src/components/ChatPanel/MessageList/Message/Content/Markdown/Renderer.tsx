@@ -1,10 +1,12 @@
+import CodeBlock from '@/components/Code/CodeBlock';
+import MermaidBlock from '@/components/Code/MermaidBlock';
+import { isMermaidLanguage } from '@/components/Code/MermaidBlock/language';
 import type { ParsedBlock, RootContent } from '@incremark/core';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { CornerUpLeft } from 'lucide-react';
 import { Fragment, memo, type MouseEvent, type ReactNode } from 'react';
-import CodeBlock from './CodeBlock';
-import type { MarkdownRenderContext } from './runtime';
+import { MARKDOWN_UNDERLINE_URL, type MarkdownRenderContext } from './runtime';
 import styles from './style.module.less';
 
 const SAFE_PROTOCOL = /^(https?|ircs?|mailto|xmpp)$/i;
@@ -14,17 +16,20 @@ type MarkdownDefinitions = MarkdownRenderContext['definitions'];
 interface MarkdownBlockProps {
   block: ParsedBlock;
   renderContext: MarkdownRenderContext;
+  streaming: boolean;
 }
 
 interface MarkdownRendererProps {
   blocks: ParsedBlock[];
   renderContext: MarkdownRenderContext;
   showFootnotes: boolean;
+  streaming: boolean;
 }
 
 type RuntimeMathNode = { type: 'inlineMath' | 'math'; value: string };
 
 const SUPERSCRIPT_PATTERN = /(?<!\\)\^([^\s^\n](?:[^^\n]*[^\s^\n])?)\^/g;
+const HIGHLIGHT_PATTERN = /(?<![=\\])==(?=\S)([\s\S]*?\S)==(?![=])/g;
 
 function renderTextWithSuperscripts(value: string, key: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -50,6 +55,40 @@ function renderTextWithSuperscripts(value: string, key: string): ReactNode[] {
   if (lastIndex === 0) return [value];
   if (lastIndex < value.length) {
     nodes.push(<Fragment key={`${key}-text-${index}`}>{value.slice(lastIndex)}</Fragment>);
+  }
+  return nodes;
+}
+
+function renderTextWithInlineStyles(value: string, key: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+  let index = 0;
+
+  while ((match = HIGHLIGHT_PATTERN.exec(value))) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <Fragment key={`${key}-text-${index}`}>
+          {renderTextWithSuperscripts(value.slice(lastIndex, match.index), `${key}-${index}`)}
+        </Fragment>
+      );
+    }
+    nodes.push(
+      <mark key={`${key}-highlight-${index}`} className={styles.inlineHighlight}>
+        {renderTextWithSuperscripts(match[1], `${key}-${index}`)}
+      </mark>
+    );
+    lastIndex = match.index + match[0].length;
+    index += 1;
+  }
+
+  if (lastIndex === 0) return renderTextWithSuperscripts(value, key);
+  if (lastIndex < value.length) {
+    nodes.push(
+      <Fragment key={`${key}-text-${index}`}>
+        {renderTextWithSuperscripts(value.slice(lastIndex), `${key}-${index}`)}
+      </Fragment>
+    );
   }
   return nodes;
 }
@@ -120,6 +159,25 @@ function transformUrl(value: string): string | null {
   return null;
 }
 
+/** 聊天消息只允许跳转到站外 HTTP(S) 地址，目录锚点和站内路径保持为普通文本。 */
+function transformExternalUrl(value: string): string | null {
+  const href = transformUrl(value);
+  if (!href) return null;
+
+  try {
+    const url = new URL(href);
+    if (
+      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+      url.origin === window.location.origin
+    ) {
+      return null;
+    }
+    return href;
+  } catch {
+    return null;
+  }
+}
+
 function handleFootnoteNavigation(event: MouseEvent<HTMLAnchorElement>) {
   const { hash } = event.currentTarget;
   const target = document.getElementById(hash.slice(1));
@@ -162,7 +220,7 @@ function renderInlineNode(
 
   switch (node.type) {
     case 'text':
-      return <Fragment key={key}>{renderTextWithSuperscripts(node.value, key)}</Fragment>;
+      return <Fragment key={key}>{renderTextWithInlineStyles(node.value, key)}</Fragment>;
     case 'strong':
       return <strong key={key}>{renderInlineNodes(node.children, renderContext, key)}</strong>;
     case 'emphasis':
@@ -183,8 +241,15 @@ function renderInlineNode(
     case 'break':
       return <br key={key} />;
     case 'link': {
-      const href = transformUrl(node.url);
       const children = renderInlineNodes(node.children, renderContext, key);
+      if (node.url === MARKDOWN_UNDERLINE_URL) {
+        return (
+          <span key={key} className={styles.inlineUnderline}>
+            {children}
+          </span>
+        );
+      }
+      const href = transformExternalUrl(node.url);
       if (!href) return <Fragment key={key}>{children}</Fragment>;
       return (
         <a key={key} href={href} title={node.title ?? undefined}>
@@ -194,7 +259,7 @@ function renderInlineNode(
     }
     case 'linkReference': {
       const definition = resolveDefinition(node.identifier, renderContext.definitions);
-      const href = definition ? transformUrl(definition.url) : null;
+      const href = definition ? transformExternalUrl(definition.url) : null;
       const children = renderInlineNodes(node.children, renderContext, key);
       if (!href) return <Fragment key={key}>{children}</Fragment>;
       return (
@@ -285,7 +350,8 @@ function renderHeading(
 function renderList(
   node: Extract<RootContent, { type: 'list' }>,
   renderContext: MarkdownRenderContext,
-  keyPrefix: string
+  keyPrefix: string,
+  streaming: boolean
 ): ReactNode {
   const items = node.children.map((item, index) => {
     const isTaskItem = typeof item.checked === 'boolean';
@@ -300,7 +366,7 @@ function renderList(
           />
         ) : null}
         {item.children.map((child, childIndex) =>
-          renderBlockNode(child, renderContext, `${keyPrefix}-${index}-${childIndex}`)
+          renderBlockNode(child, renderContext, `${keyPrefix}-${index}-${childIndex}`, streaming)
         )}
       </li>
     );
@@ -364,7 +430,8 @@ function renderTable(
 function renderBlockNode(
   node: RootContent,
   renderContext: MarkdownRenderContext,
-  key: string
+  key: string,
+  streaming: boolean
 ): ReactNode {
   const mathExpression = readMathExpression(node, 'math');
   if (mathExpression != null) {
@@ -380,17 +447,22 @@ function renderBlockNode(
       return (
         <blockquote>
           {node.children.map((child, index) =>
-            renderBlockNode(child, renderContext, `${key}-${index}`)
+            renderBlockNode(child, renderContext, `${key}-${index}`, streaming)
           )}
         </blockquote>
       );
     case 'list':
-      return renderList(node, renderContext, key);
+      return renderList(node, renderContext, key, streaming);
     case 'table':
       return renderTable(node, renderContext, key);
     case 'thematicBreak':
       return <hr />;
     case 'code':
+      if (isMermaidLanguage(node.lang ?? undefined)) {
+        return (
+          <MermaidBlock code={node.value} language={node.lang ?? undefined} streaming={streaming} />
+        );
+      }
       return <CodeBlock code={node.value} language={node.lang ?? undefined} />;
     case 'html':
       return <>{node.value}</>;
@@ -402,13 +474,16 @@ function renderBlockNode(
   }
 }
 
-function MarkdownBlockView({ block, renderContext }: MarkdownBlockProps) {
-  return renderBlockNode(block.node, renderContext, `block-${block.id}`);
+function MarkdownBlockView({ block, renderContext, streaming }: MarkdownBlockProps) {
+  return renderBlockNode(block.node, renderContext, `block-${block.id}`, streaming);
 }
 
 const MarkdownBlock = memo(
   MarkdownBlockView,
-  (previous, next) => previous.block === next.block && previous.renderContext === next.renderContext
+  (previous, next) =>
+    previous.block === next.block &&
+    previous.renderContext === next.renderContext &&
+    previous.streaming === next.streaming
 );
 
 function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderContext }) {
@@ -425,7 +500,7 @@ function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderCon
           return (
             <li key={identifier} id={`fn-${fragmentId}`}>
               {definition.children.map((child, index) =>
-                renderBlockNode(child, renderContext, `footnote-${fragmentId}-${index}`)
+                renderBlockNode(child, renderContext, `footnote-${fragmentId}-${index}`, false)
               )}
               <a
                 href={`#fnref-${fragmentId}`}
@@ -443,11 +518,21 @@ function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderCon
   );
 }
 
-function MarkdownRenderer({ blocks, renderContext, showFootnotes }: MarkdownRendererProps) {
+function MarkdownRenderer({
+  blocks,
+  renderContext,
+  showFootnotes,
+  streaming,
+}: MarkdownRendererProps) {
   return (
     <>
       {blocks.map((block) => (
-        <MarkdownBlock key={block.id} block={block} renderContext={renderContext} />
+        <MarkdownBlock
+          key={block.id}
+          block={block}
+          renderContext={renderContext}
+          streaming={streaming}
+        />
       ))}
       {showFootnotes ? <MarkdownFootnotes renderContext={renderContext} /> : null}
     </>
