@@ -5,6 +5,18 @@ import {
   type ParsedBlock,
 } from '@incremark/core';
 
+const MARKDOWN_UNDERLINE_PATTERN = /(?<![_\\])__(?=\S)([^\n]*?\S)__(?!_)/g;
+
+/** 用内部链接保留双下划线语义，避免与解析器的粗体节点混淆。 */
+export const MARKDOWN_UNDERLINE_URL = 'wisepen-internal:markdown-underline';
+
+function normalizeMarkdownUnderline(content: string): string {
+  return content.replace(
+    MARKDOWN_UNDERLINE_PATTERN,
+    (_, value: string) => `[${value}](${MARKDOWN_UNDERLINE_URL})`
+  );
+}
+
 export interface MarkdownRenderContext {
   definitions: IncrementalUpdate['definitions'];
   footnoteDefinitions: IncrementalUpdate['footnoteDefinitions'];
@@ -65,17 +77,18 @@ function createSnapshot(
 }
 
 export function createMarkdownRuntime(content: string, streaming: boolean): MarkdownRuntime {
+  const normalizedContent = normalizeMarkdownUnderline(content);
   const parser = createIncremarkParser({
     gfm: true,
     math: { tex: true },
     containers: false,
     htmlTree: false,
   });
-  let update = parser.append(content);
+  let update = parser.append(normalizedContent);
   if (!streaming) update = parser.finalize();
 
   const snapshot = createSnapshot(parser, update);
-  return { parser, content, streaming, snapshot };
+  return { parser, content: normalizedContent, streaming, snapshot };
 }
 
 /** 流式文本保持旧内容前缀时只追加差量；历史替换或重新生成时重建解析状态。 */
@@ -84,18 +97,19 @@ export function updateMarkdownRuntime(
   content: string,
   streaming: boolean
 ): MarkdownSnapshot | null {
-  const contentChanged = content !== runtime.content;
+  const normalizedContent = normalizeMarkdownUnderline(content);
+  const contentChanged = normalizedContent !== runtime.content;
   let update: IncrementalUpdate | null = null;
 
   if (streaming && !runtime.streaming) {
     runtime.parser.reset();
-    update = runtime.parser.append(content);
+    update = runtime.parser.append(normalizedContent);
   } else if (contentChanged) {
-    if (runtime.streaming && content.startsWith(runtime.content)) {
-      update = runtime.parser.append(content.slice(runtime.content.length));
+    if (runtime.streaming && normalizedContent.startsWith(runtime.content)) {
+      update = runtime.parser.append(normalizedContent.slice(runtime.content.length));
     } else {
       runtime.parser.reset();
-      update = runtime.parser.append(content);
+      update = runtime.parser.append(normalizedContent);
     }
   }
 
@@ -103,7 +117,7 @@ export function updateMarkdownRuntime(
     update = runtime.parser.finalize();
   }
 
-  runtime.content = content;
+  runtime.content = normalizedContent;
   runtime.streaming = streaming;
   if (!update) return null;
 
