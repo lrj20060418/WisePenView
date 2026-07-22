@@ -12,7 +12,7 @@ function AppIconButton({
   onPress,
 }: AppIconButtonProps) {
   return (
-    <Tooltip>
+    <Tooltip delay={0}>
       <Tooltip.Trigger>
         <button
           type="button"
