@@ -37,7 +37,10 @@ function AppLayout() {
   const location = useLocation();
   const activeNavKey = resolveAppHeaderNavKey(location.pathname);
   const showSessionHistorySidebar =
-    activeNavKey === APP_HEADER_NAV_KEY.CHAT || activeNavKey === APP_HEADER_NAV_KEY.DRIVE;
+    activeNavKey === APP_HEADER_NAV_KEY.CHAT ||
+    activeNavKey === APP_HEADER_NAV_KEY.DRIVE ||
+    activeNavKey === APP_HEADER_NAV_KEY.GROUP ||
+    !activeNavKey;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const storedSidebarWidth = useSystemLayoutStore((state) => state.appSidebarWidth);
   const setSidebarWidth = useSystemLayoutStore((state) => state.setAppSidebarWidth);
