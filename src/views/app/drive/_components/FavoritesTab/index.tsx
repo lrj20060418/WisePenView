@@ -61,6 +61,7 @@ function FavoritesTab() {
             selectedKey={view.mode}
             onSelectionChange={(key) => setView({ mode: key })}
             size="sm"
+            variant="pill"
           />
         )}
         {view.mode !== 'collectionDetail' ? (
