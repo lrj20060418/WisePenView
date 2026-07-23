@@ -300,10 +300,10 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     groupId,
     rootId,
     initialNodeId,
+    onCurrentNodeChange,
     scope,
     actions,
     onTrashViewChange,
-    onUploadSuccess,
     showToolbarTrash = true,
   },
   ref
@@ -379,9 +379,10 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       setSelectedRowKeys(new Set());
       updateDraggingRowKeys(new Set());
       setActiveDragRowId(null);
+      onCurrentNodeChange?.(nodeId);
       enterFolder(nodeId);
     },
-    [enterFolder, updateDraggingRowKeys]
+    [enterFolder, onCurrentNodeChange, updateDraggingRowKeys]
   );
   const handleClickNode = useClickNode({
     enterFolder: handleEnterFolder,
@@ -622,7 +623,6 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     scope: resolvedScope.scope,
     actions,
     refresh: refreshDrive,
-    onUploadSuccess,
     targetTagId,
     isTrashView,
   });
@@ -634,7 +634,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
         ) : null}
         {showUploadToGroup ? (
           <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
-            上传到小组
+            从个人云盘添加
           </Button>
         ) : null}
         {!isTrashView ? (

@@ -18,7 +18,6 @@ export interface TableDriveActionConfig {
     canCreateDrawio?: boolean;
     canCreateSkill?: boolean;
     canCreateAgent?: boolean;
-    canUploadDocument?: boolean;
     canUploadToGroup?: boolean;
     canManageTagPermission?: boolean;
   };
@@ -34,12 +33,12 @@ export interface TableDriveProps {
   rootId?: string;
   /** 从路由进入云盘时需要直接打开的目录节点 */
   initialNodeId?: string;
+  /** 当前目录由外部导航承载时，通知外部写入新的目录位置。 */
+  onCurrentNodeChange?: (nodeId: string) => void;
   scope?: DriveScope;
   actions?: TableDriveActionConfig;
   /** 回收站视图变化时通知页面级 header 按钮状态 */
   onTrashViewChange?: (isTrashView: boolean) => void;
-  /** 文档上传成功后回调（如同步刷新上传队列） */
-  onUploadSuccess?: () => void;
   /** 是否在表头工具栏展示回收站按钮；页面级 header 接管时为 false */
   showToolbarTrash?: boolean;
   /** 小组页等场景去掉列表左侧内边距 */
