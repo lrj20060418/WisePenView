@@ -1,11 +1,11 @@
-import CodeBlock from '@/components/Code/CodeBlock';
-import MermaidBlock from '@/components/Code/MermaidBlock';
-import { isMermaidLanguage } from '@/components/Code/MermaidBlock/language';
 import type { ParsedBlock, RootContent } from '@incremark/core';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { CornerUpLeft } from 'lucide-react';
-import { Fragment, memo, type MouseEvent, type ReactNode } from 'react';
+import { createContext, Fragment, memo, useContext, type MouseEvent, type ReactNode } from 'react';
+import CodeBlock from './CodeBlock';
+import MermaidBlock from './MermaidBlock';
+import { isMermaidLanguage } from './MermaidBlock/language';
 import { MARKDOWN_UNDERLINE_URL, type MarkdownRenderContext } from './runtime';
 import styles from './style.module.less';
 
@@ -17,13 +17,30 @@ interface MarkdownBlockProps {
   block: ParsedBlock;
   renderContext: MarkdownRenderContext;
   streaming: boolean;
+  linkMode: MarkdownLinkMode;
+  isLastBlock: boolean;
 }
+
+export type MarkdownLinkMode = 'external' | 'safe';
+
+export interface MarkdownResourceResolver {
+  /** 返回 undefined 时保留 Markdown 的默认 URL 处理；null 会阻止渲染该资源。 */
+  resolveUrl?: (url: string, kind: 'link' | 'image') => string | null | undefined;
+  /** 返回 true 时由调用方接管链接跳转。 */
+  onLinkClick?: (url: string) => boolean;
+}
+
+const MarkdownResourceResolverContext = createContext<MarkdownResourceResolver | undefined>(
+  undefined
+);
 
 interface MarkdownRendererProps {
   blocks: ParsedBlock[];
   renderContext: MarkdownRenderContext;
   showFootnotes: boolean;
   streaming: boolean;
+  linkMode: MarkdownLinkMode;
+  resourceResolver?: MarkdownResourceResolver;
 }
 
 type RuntimeMathNode = { type: 'inlineMath' | 'math'; value: string };
@@ -178,6 +195,71 @@ function transformExternalUrl(value: string): string | null {
   }
 }
 
+function resolveLinkUrl(value: string, linkMode: MarkdownLinkMode): string | null {
+  return linkMode === 'external' ? transformExternalUrl(value) : transformUrl(value);
+}
+
+function resolveResourceUrl(
+  value: string,
+  kind: 'link' | 'image',
+  linkMode: MarkdownLinkMode,
+  resourceResolver?: MarkdownResourceResolver
+): string | null {
+  const defaultUrl = kind === 'link' ? resolveLinkUrl(value, linkMode) : transformUrl(value);
+  if (!defaultUrl) return null;
+
+  const resolvedUrl = resourceResolver?.resolveUrl?.(defaultUrl, kind);
+  return resolvedUrl === undefined ? defaultUrl : resolvedUrl;
+}
+
+function MarkdownLink({
+  children,
+  url,
+  title,
+  linkMode,
+}: {
+  children: ReactNode;
+  url: string;
+  title?: string;
+  linkMode: MarkdownLinkMode;
+}) {
+  const resourceResolver = useContext(MarkdownResourceResolverContext);
+  const href = resolveResourceUrl(url, 'link', linkMode, resourceResolver);
+  if (!href) return <>{children}</>;
+
+  return (
+    <a
+      href={href}
+      title={title}
+      target={href.startsWith('blob:') ? '_blank' : undefined}
+      rel={href.startsWith('blob:') ? 'noreferrer' : undefined}
+      onClick={(event) => {
+        if (resourceResolver?.onLinkClick?.(url)) event.preventDefault();
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+function MarkdownImage({
+  url,
+  alt,
+  title,
+  linkMode,
+}: {
+  url: string;
+  alt: string;
+  title?: string;
+  linkMode: MarkdownLinkMode;
+}) {
+  const resourceResolver = useContext(MarkdownResourceResolverContext);
+  const src = resolveResourceUrl(url, 'image', linkMode, resourceResolver);
+  if (!src) return <>{alt}</>;
+
+  return <img src={src} alt={alt} title={title} loading="lazy" />;
+}
+
 function handleFootnoteNavigation(event: MouseEvent<HTMLAnchorElement>) {
   const { hash } = event.currentTarget;
   const target = document.getElementById(hash.slice(1));
@@ -203,15 +285,19 @@ function resolveDefinition(
 function renderInlineNodes(
   nodes: readonly RootContent[],
   renderContext: MarkdownRenderContext,
-  keyPrefix: string
+  keyPrefix: string,
+  linkMode: MarkdownLinkMode
 ): ReactNode[] {
-  return nodes.map((node, index) => renderInlineNode(node, renderContext, `${keyPrefix}-${index}`));
+  return nodes.map((node, index) =>
+    renderInlineNode(node, renderContext, `${keyPrefix}-${index}`, linkMode)
+  );
 }
 
 function renderInlineNode(
   node: RootContent,
   renderContext: MarkdownRenderContext,
-  key: string
+  key: string,
+  linkMode: MarkdownLinkMode
 ): ReactNode {
   const inlineMathExpression = readMathExpression(node, 'inlineMath');
   if (inlineMathExpression != null) {
@@ -222,9 +308,11 @@ function renderInlineNode(
     case 'text':
       return <Fragment key={key}>{renderTextWithInlineStyles(node.value, key)}</Fragment>;
     case 'strong':
-      return <strong key={key}>{renderInlineNodes(node.children, renderContext, key)}</strong>;
+      return (
+        <strong key={key}>{renderInlineNodes(node.children, renderContext, key, linkMode)}</strong>
+      );
     case 'emphasis':
-      return <em key={key}>{renderInlineNodes(node.children, renderContext, key)}</em>;
+      return <em key={key}>{renderInlineNodes(node.children, renderContext, key, linkMode)}</em>;
     case 'delete': {
       const subscript = readNumericSubscript(node);
       if (subscript != null) {
@@ -234,14 +322,14 @@ function renderInlineNode(
           </sub>
         );
       }
-      return <del key={key}>{renderInlineNodes(node.children, renderContext, key)}</del>;
+      return <del key={key}>{renderInlineNodes(node.children, renderContext, key, linkMode)}</del>;
     }
     case 'inlineCode':
       return <code key={key}>{node.value}</code>;
     case 'break':
       return <br key={key} />;
     case 'link': {
-      const children = renderInlineNodes(node.children, renderContext, key);
+      const children = renderInlineNodes(node.children, renderContext, key, linkMode);
       if (node.url === MARKDOWN_UNDERLINE_URL) {
         return (
           <span key={key} className={styles.inlineUnderline}>
@@ -249,49 +337,48 @@ function renderInlineNode(
           </span>
         );
       }
-      const href = transformExternalUrl(node.url);
-      if (!href) return <Fragment key={key}>{children}</Fragment>;
       return (
-        <a key={key} href={href} title={node.title ?? undefined}>
+        <MarkdownLink key={key} url={node.url} title={node.title ?? undefined} linkMode={linkMode}>
           {children}
-        </a>
+        </MarkdownLink>
       );
     }
     case 'linkReference': {
       const definition = resolveDefinition(node.identifier, renderContext.definitions);
-      const href = definition ? transformExternalUrl(definition.url) : null;
-      const children = renderInlineNodes(node.children, renderContext, key);
-      if (!href) return <Fragment key={key}>{children}</Fragment>;
+      const children = renderInlineNodes(node.children, renderContext, key, linkMode);
+      if (!definition) return <Fragment key={key}>{children}</Fragment>;
       return (
-        <a key={key} href={href} title={definition?.title ?? undefined}>
+        <MarkdownLink
+          key={key}
+          url={definition.url}
+          title={definition.title ?? undefined}
+          linkMode={linkMode}
+        >
           {children}
-        </a>
+        </MarkdownLink>
       );
     }
     case 'image': {
-      const src = transformUrl(node.url);
-      if (!src) return <Fragment key={key}>{node.alt ?? ''}</Fragment>;
       return (
-        <img
+        <MarkdownImage
           key={key}
-          src={src}
+          url={node.url}
           alt={node.alt ?? ''}
           title={node.title ?? undefined}
-          loading="lazy"
+          linkMode={linkMode}
         />
       );
     }
     case 'imageReference': {
       const definition = resolveDefinition(node.identifier, renderContext.definitions);
-      const src = definition ? transformUrl(definition.url) : null;
-      if (!src) return <Fragment key={key}>{node.alt ?? ''}</Fragment>;
+      if (!definition) return <Fragment key={key}>{node.alt ?? ''}</Fragment>;
       return (
-        <img
+        <MarkdownImage
           key={key}
-          src={src}
+          url={definition.url}
           alt={node.alt ?? ''}
           title={definition?.title ?? undefined}
-          loading="lazy"
+          linkMode={linkMode}
         />
       );
     }
@@ -315,7 +402,9 @@ function renderInlineNode(
     default:
       if ('children' in node && Array.isArray(node.children)) {
         return (
-          <Fragment key={key}>{renderInlineNodes(node.children, renderContext, key)}</Fragment>
+          <Fragment key={key}>
+            {renderInlineNodes(node.children, renderContext, key, linkMode)}
+          </Fragment>
         );
       }
       if ('value' in node && typeof node.value === 'string') {
@@ -328,9 +417,10 @@ function renderInlineNode(
 function renderHeading(
   node: Extract<RootContent, { type: 'heading' }>,
   renderContext: MarkdownRenderContext,
-  key: string
+  key: string,
+  linkMode: MarkdownLinkMode
 ): ReactNode {
-  const children = renderInlineNodes(node.children, renderContext, key);
+  const children = renderInlineNodes(node.children, renderContext, key, linkMode);
   switch (node.depth) {
     case 1:
       return <h1>{children}</h1>;
@@ -351,7 +441,8 @@ function renderList(
   node: Extract<RootContent, { type: 'list' }>,
   renderContext: MarkdownRenderContext,
   keyPrefix: string,
-  streaming: boolean
+  streaming: boolean,
+  linkMode: MarkdownLinkMode
 ): ReactNode {
   const items = node.children.map((item, index) => {
     const isTaskItem = typeof item.checked === 'boolean';
@@ -366,7 +457,13 @@ function renderList(
           />
         ) : null}
         {item.children.map((child, childIndex) =>
-          renderBlockNode(child, renderContext, `${keyPrefix}-${index}-${childIndex}`, streaming)
+          renderBlockNode(
+            child,
+            renderContext,
+            `${keyPrefix}-${index}-${childIndex}`,
+            streaming,
+            linkMode
+          )
         )}
       </li>
     );
@@ -379,7 +476,8 @@ function renderList(
 function renderTable(
   node: Extract<RootContent, { type: 'table' }>,
   renderContext: MarkdownRenderContext,
-  keyPrefix: string
+  keyPrefix: string,
+  linkMode: MarkdownLinkMode
 ): ReactNode {
   const [head, ...body] = node.children;
   const getAlignClass = (index: number): string | undefined => {
@@ -398,7 +496,12 @@ function renderTable(
             <tr>
               {head.children.map((cell, index) => (
                 <th key={`${keyPrefix}-head-${index}`} className={getAlignClass(index)}>
-                  {renderInlineNodes(cell.children, renderContext, `${keyPrefix}-head-${index}`)}
+                  {renderInlineNodes(
+                    cell.children,
+                    renderContext,
+                    `${keyPrefix}-head-${index}`,
+                    linkMode
+                  )}
                 </th>
               ))}
             </tr>
@@ -415,7 +518,8 @@ function renderTable(
                   {renderInlineNodes(
                     cell.children,
                     renderContext,
-                    `${keyPrefix}-row-${rowIndex}-${cellIndex}`
+                    `${keyPrefix}-row-${rowIndex}-${cellIndex}`,
+                    linkMode
                   )}
                 </td>
               ))}
@@ -431,7 +535,8 @@ function renderBlockNode(
   node: RootContent,
   renderContext: MarkdownRenderContext,
   key: string,
-  streaming: boolean
+  streaming: boolean,
+  linkMode: MarkdownLinkMode
 ): ReactNode {
   const mathExpression = readMathExpression(node, 'math');
   if (mathExpression != null) {
@@ -440,21 +545,21 @@ function renderBlockNode(
 
   switch (node.type) {
     case 'paragraph':
-      return <p>{renderInlineNodes(node.children, renderContext, key)}</p>;
+      return <p>{renderInlineNodes(node.children, renderContext, key, linkMode)}</p>;
     case 'heading':
-      return renderHeading(node, renderContext, key);
+      return renderHeading(node, renderContext, key, linkMode);
     case 'blockquote':
       return (
         <blockquote>
           {node.children.map((child, index) =>
-            renderBlockNode(child, renderContext, `${key}-${index}`, streaming)
+            renderBlockNode(child, renderContext, `${key}-${index}`, streaming, linkMode)
           )}
         </blockquote>
       );
     case 'list':
-      return renderList(node, renderContext, key, streaming);
+      return renderList(node, renderContext, key, streaming, linkMode);
     case 'table':
-      return renderTable(node, renderContext, key);
+      return renderTable(node, renderContext, key, linkMode);
     case 'thematicBreak':
       return <hr />;
     case 'code':
@@ -470,12 +575,26 @@ function renderBlockNode(
     case 'footnoteDefinition':
       return null;
     default:
-      return renderInlineNode(node, renderContext, key);
+      return renderInlineNode(node, renderContext, key, linkMode);
   }
 }
 
-function MarkdownBlockView({ block, renderContext, streaming }: MarkdownBlockProps) {
-  return renderBlockNode(block.node, renderContext, `block-${block.id}`, streaming);
+function MarkdownBlockView({
+  block,
+  renderContext,
+  streaming,
+  linkMode,
+  isLastBlock,
+}: MarkdownBlockProps) {
+  return (
+    <div
+      className={isLastBlock ? styles.lastBlock : undefined}
+      data-markdown-last-block={isLastBlock ? 'true' : undefined}
+      data-markdown-start-offset={block.startOffset}
+    >
+      {renderBlockNode(block.node, renderContext, `block-${block.id}`, streaming, linkMode)}
+    </div>
+  );
 }
 
 const MarkdownBlock = memo(
@@ -483,10 +602,18 @@ const MarkdownBlock = memo(
   (previous, next) =>
     previous.block === next.block &&
     previous.renderContext === next.renderContext &&
-    previous.streaming === next.streaming
+    previous.streaming === next.streaming &&
+    previous.linkMode === next.linkMode &&
+    previous.isLastBlock === next.isLastBlock
 );
 
-function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderContext }) {
+function MarkdownFootnotes({
+  renderContext,
+  linkMode,
+}: {
+  renderContext: MarkdownRenderContext;
+  linkMode: MarkdownLinkMode;
+}) {
   if (renderContext.footnoteReferenceOrder.length === 0) return null;
 
   return (
@@ -500,7 +627,13 @@ function MarkdownFootnotes({ renderContext }: { renderContext: MarkdownRenderCon
           return (
             <li key={identifier} id={`fn-${fragmentId}`}>
               {definition.children.map((child, index) =>
-                renderBlockNode(child, renderContext, `footnote-${fragmentId}-${index}`, false)
+                renderBlockNode(
+                  child,
+                  renderContext,
+                  `footnote-${fragmentId}-${index}`,
+                  false,
+                  linkMode
+                )
               )}
               <a
                 href={`#fnref-${fragmentId}`}
@@ -523,19 +656,25 @@ function MarkdownRenderer({
   renderContext,
   showFootnotes,
   streaming,
+  linkMode,
+  resourceResolver,
 }: MarkdownRendererProps) {
   return (
-    <>
-      {blocks.map((block) => (
+    <MarkdownResourceResolverContext.Provider value={resourceResolver}>
+      {blocks.map((block, index) => (
         <MarkdownBlock
           key={block.id}
           block={block}
           renderContext={renderContext}
           streaming={streaming}
+          linkMode={linkMode}
+          isLastBlock={index === blocks.length - 1}
         />
       ))}
-      {showFootnotes ? <MarkdownFootnotes renderContext={renderContext} /> : null}
-    </>
+      {showFootnotes ? (
+        <MarkdownFootnotes renderContext={renderContext} linkMode={linkMode} />
+      ) : null}
+    </MarkdownResourceResolverContext.Provider>
   );
 }
 

@@ -6,7 +6,12 @@
 
   :global(h1),
   :global(h2),
-  :global(h3),
+  :global(h3) {
+    margin: 0 0 var(--space-md);
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
   :global(h4),
   :global(h5),
   :global(h6) {
@@ -45,21 +50,8 @@
     line-height: 1.571;
   }
 
-  :global(h1:last-child),
-  :global(h2:last-child),
-  :global(h3:last-child),
-  :global(h4:last-child),
-  :global(h5:last-child),
-  :global(h6:last-child) {
-    margin-bottom: 0;
-  }
-
   :global(p) {
     margin: 0 0 var(--space-md);
-  }
-
-  :global(p:last-child) {
-    margin-bottom: 0;
   }
 
   :global(strong) {
@@ -70,6 +62,13 @@
     color: var(--link, var(--accent));
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  :global(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 0 var(--space-md);
   }
 
   :global(ul),
@@ -152,6 +151,16 @@
   }
 }
 
+.lastBlock > :global(h1),
+.lastBlock > :global(h2),
+.lastBlock > :global(h3),
+.lastBlock > :global(h4),
+.lastBlock > :global(h5),
+.lastBlock > :global(h6),
+.lastBlock > :global(p) {
+  margin-bottom: 0;
+}
+
 .mathInline {
   display: inline-block;
   line-height: 1;
@@ -175,7 +184,7 @@
   }
 }
 
-.mathBlock:last-child {
+:global([data-markdown-last-block='true']) .mathBlock {
   margin-bottom: 0;
 }
 

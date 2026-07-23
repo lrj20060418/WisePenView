@@ -1,9 +1,9 @@
 .shell {
   position: relative;
-  margin: 0 0 var(--space-sm);
+  margin: 0 0 var(--space-md);
 }
 
-.shell:last-child {
+:global([data-markdown-last-block='true']) .shell {
   margin-bottom: 0;
 }
 

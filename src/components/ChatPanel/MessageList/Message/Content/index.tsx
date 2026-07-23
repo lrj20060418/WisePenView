@@ -1,4 +1,4 @@
-import MarkdownContent from './Markdown';
+import Markdown from '@/components/Markdown';
 import styles from './style.module.less';
 
 interface MessageContentProps {
@@ -8,7 +8,7 @@ interface MessageContentProps {
 }
 
 function MessageContent({ content, markdown = false, streaming = false }: MessageContentProps) {
-  if (markdown) return <MarkdownContent content={content} streaming={streaming} />;
+  if (markdown) return <Markdown content={content} streaming={streaming} linkMode="external" />;
   return <div className={styles.plainText}>{content}</div>;
 }
 
