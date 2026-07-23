@@ -77,7 +77,11 @@ export interface FolderTableProps<T extends FolderTableRow> {
   /** 已展开的文件夹 id */
   expandedRowKeys?: string[];
   onExpandedChange?: (keys: string[]) => void;
-  /** 单击行激活（例如进入文件夹 / 打开资源） */
+  /** 浏览态选中的行 id。 */
+  selectedRowKey?: string;
+  /** 浏览态单击行，仅更新选中态。 */
+  onRowSelect?: (row: T) => void;
+  /** 浏览态双击行激活（例如进入文件夹 / 打开资源）。 */
   onRowActivate?: (row: T) => void;
   /** 包装名称列的图标与名称内容，用于在业务层扩展交互能力 */
   renderNameContent?: (content: ReactNode, row: T, ctx: FolderTableRowContext<T>) => ReactNode;
@@ -100,7 +104,9 @@ export interface FolderTableProps<T extends FolderTableRow> {
   onSortChange?: (descriptor: SortDescriptor) => void;
   /** 始终固定在同级排序最前方的行 */
   isPinnedFirst?: (row: T) => boolean;
-  /** hover checkbox 多选；产生选择后行点击切换勾选，清空后恢复行激活。 */
+  /** 是否进入编辑态；由父组件根据勾选状态派生，编辑态内仅允许勾选。 */
+  isEditMode?: boolean;
+  /** 编辑态内的多选勾选。 */
   checkboxSelection?: FolderTableCheckboxSelection;
   /** 选择后的操作区（通常配合 checkboxSelection）。 */
   selectionFooter?: ReactNode;

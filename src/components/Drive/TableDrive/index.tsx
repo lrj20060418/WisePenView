@@ -32,7 +32,7 @@ import {
 } from '@dnd-kit/core';
 import { Button, toast, type SortDescriptor } from '@heroui/react';
 import { useMount, useRequest, useUpdateEffect } from 'ahooks';
-import { Trash2 } from 'lucide-react';
+import { FolderOpen, PanelRightClose, PanelRightOpen, Pencil, Trash2 } from 'lucide-react';
 import {
   forwardRef,
   useCallback,
@@ -276,6 +276,121 @@ function DriveDragOverlay({ row, count }: { row: DriveTableRow; count: number })
   );
 }
 
+interface DriveDetailPanelProps {
+  selectedRow?: DriveTableRow;
+  isEditMode: boolean;
+  selectedCount: number;
+  groupId?: string;
+  isTrashView: boolean;
+  onActivate: (row: DriveTableRow) => void;
+  onRename: (node: DriveActionTarget) => void;
+  onMove: (node: DriveActionTarget) => void;
+  onDelete: (node: DriveActionTarget) => void;
+}
+
+function DriveDetailPanel({
+  selectedRow,
+  isEditMode,
+  selectedCount,
+  groupId,
+  isTrashView,
+  onActivate,
+  onRename,
+  onMove,
+  onDelete,
+}: DriveDetailPanelProps) {
+  if (isEditMode) {
+    return (
+      <div className={styles.detailContent}>
+        <div className={styles.detailHeader}>
+          <span className={styles.detailTitle}>编辑模式</span>
+        </div>
+        <div className={styles.detailBody}>
+          <p className={styles.detailHint}>已选中 {selectedCount} 项，可在表格底部执行批量操作。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedRow || selectedRow.node.type === 'loading') {
+    return (
+      <div className={styles.detailContent}>
+        <div className={styles.detailHeader}>
+          <span className={styles.detailTitle}>详情</span>
+        </div>
+        <div className={styles.detailEmpty}>单击文件或文件夹以查看详情</div>
+      </div>
+    );
+  }
+
+  const actionTarget = toDriveActionTarget(selectedRow.node);
+  const modifiableActionTarget =
+    actionTarget && !isDriveSystemFolderNode(actionTarget) ? actionTarget : undefined;
+  const activateLabel =
+    selectedRow.node.type === 'root' || selectedRow.node.type === 'folder' ? '进入' : '打开';
+  const deleteLabel = groupId
+    ? '移除'
+    : isTrashView
+      ? '永久删除'
+      : selectedRow.node.type === 'link'
+        ? '删除链接'
+        : '移入回收站';
+
+  return (
+    <div className={styles.detailContent}>
+      <div className={styles.detailHeader}>
+        <span className={styles.detailIcon} aria-hidden="true">
+          <EntryIcon
+            entryType={selectedRow.entryType}
+            folderIconType={selectedRow.folderIconType}
+            resourceType={selectedRow.resourceType}
+            resourceIconType={selectedRow.resourceIconType}
+          />
+        </span>
+        <div className={styles.detailTitleBlock}>
+          <span className={styles.detailTitle}>{selectedRow.name}</span>
+          <span className={styles.detailType}>{selectedRow.typeLabel}</span>
+        </div>
+      </div>
+      <div className={styles.detailBody}>
+        <dl className={styles.detailMeta}>
+          <div>
+            <dt>节点 ID</dt>
+            <dd>{selectedRow.node.id}</dd>
+          </div>
+          <div>
+            <dt>大小</dt>
+            <dd>{selectedRow.sizeLabel ?? '—'}</dd>
+          </div>
+        </dl>
+      </div>
+      <div className={styles.detailActions}>
+        <Button variant="primary" size="sm" onPress={() => onActivate(selectedRow)}>
+          <FolderOpen size={16} aria-hidden="true" />
+          {activateLabel}
+        </Button>
+        {modifiableActionTarget?.type !== 'link' && modifiableActionTarget ? (
+          <Button variant="secondary" size="sm" onPress={() => onRename(modifiableActionTarget)}>
+            <Pencil size={16} aria-hidden="true" />
+            重命名
+          </Button>
+        ) : null}
+        {modifiableActionTarget ? (
+          <Button variant="secondary" size="sm" onPress={() => onMove(modifiableActionTarget)}>
+            移动
+          </Button>
+        ) : null}
+        {modifiableActionTarget ? (
+          <Button variant="danger" size="sm" onPress={() => onDelete(modifiableActionTarget)}>
+            <Trash2 size={16} aria-hidden="true" />
+            {deleteLabel}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableDrive(
   {
     groupId,
@@ -310,6 +425,8 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     scope: resolvedScope.scope,
   });
   const [checkedRowKeys, setCheckedRowKeys] = useState<Set<string>>(new Set());
+  const [selectedRowId, setSelectedRowId] = useState<string>();
+  const [isDetailPanelCollapsed, setIsDetailPanelCollapsed] = useState(false);
   const [draggingRowKeys, setDraggingRowKeys] = useState<Set<string>>(new Set());
   const [activeDragRowId, setActiveDragRowId] = useState<string | null>(null);
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor | undefined>();
@@ -357,6 +474,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
   const handleEnterFolder = useCallback(
     (nodeId: string) => {
       setCheckedRowKeys(new Set());
+      setSelectedRowId(undefined);
       updateDraggingRowKeys(new Set());
       setActiveDragRowId(null);
       onCurrentNodeChange?.(nodeId);
@@ -369,6 +487,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
   });
   const rows = useMemo(() => dataSource.map((node) => toDriveTableRow(node)), [dataSource]);
   const rowMap = useMemo(() => buildDriveTableRowMap(rows), [rows]);
+  const selectedRow = selectedRowId ? rowMap.get(selectedRowId) : undefined;
   const selectedActionTargets = useMemo(() => {
     const targets: DriveActionTarget[] = [];
     checkedRowKeys.forEach((rowId) => {
@@ -422,7 +541,12 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
   const checkboxSelection = useMemo(
     () => ({
       selectedKeys: checkedRowKeys,
-      onSelectionChange: setCheckedRowKeys,
+      onSelectionChange: (keys: Set<string>) => {
+        setCheckedRowKeys(keys);
+        if (keys.size > 0) {
+          setSelectedRowId(undefined);
+        }
+      },
       hiddenKeys: sharedRowKeys,
     }),
     [checkedRowKeys, sharedRowKeys]
@@ -545,7 +669,6 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     runBatchDelete,
   ]);
   const isEditMode = checkedRowKeys.size > 0;
-
   const openTrash = useCallback(async () => {
     if (!canOpenTrash) {
       return;
@@ -620,23 +743,38 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
         {!isEditMode && showCreateMenu ? (
           <CreateMenu items={createMenuItems} onSelect={handleCreateMenuSelect} />
         ) : null}
-        {showUploadToGroup ? (
+        {!isEditMode && showUploadToGroup ? (
           <Button variant="secondary" size="sm" onPress={openUploadToGroup}>
             从个人云盘添加
           </Button>
         ) : null}
-        {showToolbarTrash && canOpenTrash ? (
+        {!isEditMode && showToolbarTrash && canOpenTrash ? (
           <Button variant={isTrashView ? 'primary' : 'secondary'} size="sm" onPress={openTrash}>
             <Trash2 size={16} aria-hidden="true" />
             {isTrashView ? '返回云盘' : '回收站'}
           </Button>
         ) : null}
+        <Button
+          variant="ghost"
+          size="sm"
+          isIconOnly
+          className={styles.detailPanelToggle}
+          aria-label={isDetailPanelCollapsed ? '展开详情侧栏' : '收起详情侧栏'}
+          onPress={() => setIsDetailPanelCollapsed((collapsed) => !collapsed)}
+        >
+          {isDetailPanelCollapsed ? (
+            <PanelRightOpen size={16} aria-hidden="true" />
+          ) : (
+            <PanelRightClose size={16} aria-hidden="true" />
+          )}
+        </Button>
       </div>
     ),
     [
       createMenuItems,
       handleCreateMenuSelect,
       isEditMode,
+      isDetailPanelCollapsed,
       isTrashView,
       openUploadToGroup,
       openTrash,
@@ -676,8 +814,15 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     [handleClickNode]
   );
 
+  const handleRowSelect = useCallback((row: DriveTableRow) => {
+    if (row.node.type !== 'loading') {
+      setSelectedRowId(row.id);
+    }
+  }, []);
+
   const resolveRowActions = useCallback(
     (row: DriveTableRow): FolderTableRowAction<DriveTableRow>[] => {
+      if (isEditMode) return [];
       const actionTarget = toDriveActionTarget(row.node);
       if (!actionTarget) return [];
       if (actionTarget.type === 'folder' && actionTarget.systemType === 'shared') return [];
@@ -769,6 +914,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
       handleOpenMove,
       handleOpenRename,
       isTrashView,
+      isEditMode,
       openResourcePermission,
       openTagAccessPermission,
       openTagMountPermission,
@@ -792,6 +938,9 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      if (isEditMode) {
+        return;
+      }
       const rowId = event.active.data.current?.rowId;
       if (typeof rowId !== 'string') {
         return;
@@ -812,7 +961,7 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
         setCheckedRowKeys(nextDraggingRowKeys);
       }
     },
-    [checkedRowKeys, movingByDrag, resolveDragSourceIds, rowMap, updateDraggingRowKeys]
+    [checkedRowKeys, isEditMode, movingByDrag, resolveDragSourceIds, rowMap, updateDraggingRowKeys]
   );
 
   const handleDragEnd = useCallback(
@@ -878,13 +1027,15 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     (content: ReactNode, row: DriveTableRow) => (
       <DriveDndNameContent
         row={row}
-        draggableDisabled={movingByDrag || !isDriveDragSource(row)}
-        droppableDisabled={movingByDrag || draggingRowKeys.size === 0 || !isDriveMoveTarget(row)}
+        draggableDisabled={isEditMode || movingByDrag || !isDriveDragSource(row)}
+        droppableDisabled={
+          isEditMode || movingByDrag || draggingRowKeys.size === 0 || !isDriveMoveTarget(row)
+        }
       >
         {content}
       </DriveDndNameContent>
     ),
-    [draggingRowKeys.size, movingByDrag]
+    [draggingRowKeys.size, isEditMode, movingByDrag]
   );
 
   return (
@@ -897,27 +1048,53 @@ const TableDrive = forwardRef<TableDriveHandle, TableDriveProps>(function TableD
     >
       <main className={styles.listArea}>
         <div className={styles.driveFrame}>
-          <FolderTable<DriveTableRow>
-            ariaLabel="云盘文件列表"
-            items={rows}
-            columns={DRIVE_TABLE_COLUMNS}
-            loading={loading}
-            breadcrumb={breadcrumb}
-            toolbar={toolbar}
-            expandedRowKeys={expandedRowKeys}
-            onExpandedChange={handleExpandedChange}
-            onRowActivate={handleRowActivate}
-            renderNameContent={renderNameContent}
-            totalCount={currentDirectoryItemCount}
-            summary={`当前目录共 ${currentDirectoryItemCount} 项`}
-            className={styles.table}
-            sortDescriptor={sortDescriptor}
-            onSortChange={handleSortChange}
-            isPinnedFirst={isDrivePinnedFirstRow}
-            rowActions={resolveRowActions}
-            checkboxSelection={checkboxSelection}
-            selectionFooter={selectionFooter}
-          />
+          <div className={styles.driveBody}>
+            <div className={styles.tablePanel}>
+              <FolderTable<DriveTableRow>
+                ariaLabel="云盘文件列表"
+                items={rows}
+                columns={DRIVE_TABLE_COLUMNS}
+                loading={loading}
+                breadcrumb={breadcrumb}
+                toolbar={toolbar}
+                expandedRowKeys={expandedRowKeys}
+                onExpandedChange={handleExpandedChange}
+                selectedRowKey={selectedRow?.id}
+                onRowSelect={handleRowSelect}
+                onRowActivate={handleRowActivate}
+                renderNameContent={renderNameContent}
+                totalCount={currentDirectoryItemCount}
+                summary={`当前目录共 ${currentDirectoryItemCount} 项`}
+                className={styles.table}
+                sortDescriptor={sortDescriptor}
+                onSortChange={handleSortChange}
+                isPinnedFirst={isDrivePinnedFirstRow}
+                rowActions={resolveRowActions}
+                isEditMode={isEditMode}
+                checkboxSelection={checkboxSelection}
+                selectionFooter={selectionFooter}
+              />
+            </div>
+            <aside
+              className={styles.detailPanel}
+              data-collapsed={isDetailPanelCollapsed ? 'true' : undefined}
+              aria-label="节点详情侧栏"
+            >
+              {!isDetailPanelCollapsed ? (
+                <DriveDetailPanel
+                  selectedRow={selectedRow}
+                  isEditMode={isEditMode}
+                  selectedCount={checkedRowKeys.size}
+                  groupId={finalGroupId}
+                  isTrashView={isTrashView}
+                  onActivate={handleRowActivate}
+                  onRename={handleOpenRename}
+                  onMove={handleOpenMove}
+                  onDelete={handleOpenDelete}
+                />
+              ) : null}
+            </aside>
+          </div>
         </div>
         {ModalHost}
         <RenameNodeModal

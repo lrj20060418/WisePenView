@@ -200,11 +200,6 @@
   :global(.table__cell) {
     background: var(--accent-softer);
   }
-
-  .checkboxCellInner :global(.checkbox) {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 .shell[data-edit-mode='true'] {
@@ -215,17 +210,14 @@
 }
 
 @media (hover: hover) {
-  .bodyRow:global(.table__row:hover),
-  .bodyRow:global(.table__row[data-hovered='true']),
-  .bodyRow:global(.table__row:focus-within) {
+  .bodyRow:global(.table__row:hover) {
     .checkboxCellInner :global(.checkbox) {
       opacity: 1;
       pointer-events: auto;
     }
   }
 
-  .selectedRow:global(.table__row:hover),
-  .selectedRow:global(.table__row[data-hovered='true']) {
+  .selectedRow:global(.table__row:hover) {
     :global(.table__cell) {
       background: var(--accent-soft);
     }

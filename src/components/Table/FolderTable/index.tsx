@@ -171,6 +171,7 @@ interface FolderTableBodyRowProps<T extends FolderTableRow> {
   checkboxHidden: boolean;
   onCheckboxChange: (rowId: string, selected: boolean, shiftKey: boolean) => void;
   isLoadMoreRow: boolean;
+  isCheckboxSelected: boolean;
   isSelected: boolean;
   showCheckboxSelection: boolean;
   renderCellContent: (
@@ -193,6 +194,7 @@ function areBodyRowPropsEqual<T extends FolderTableRow>(
     prev.checkboxHidden === next.checkboxHidden &&
     prev.onCheckboxChange === next.onCheckboxChange &&
     prev.isLoadMoreRow === next.isLoadMoreRow &&
+    prev.isCheckboxSelected === next.isCheckboxSelected &&
     prev.isSelected === next.isSelected &&
     prev.showCheckboxSelection === next.showCheckboxSelection &&
     prev.renderCellContent === next.renderCellContent &&
@@ -206,6 +208,7 @@ function FolderTableBodyRowBase<T extends FolderTableRow>({
   checkboxHidden,
   onCheckboxChange,
   isLoadMoreRow,
+  isCheckboxSelected,
   isSelected,
   showCheckboxSelection,
   renderCellContent,
@@ -243,12 +246,12 @@ function FolderTableBodyRowBase<T extends FolderTableRow>({
             >
               <TableSelectionCheckbox
                 ariaLabel={t('aria.selectRow', { id: rowId })}
-                isSelected={isSelected}
+                isSelected={isCheckboxSelected}
                 isDisabled={checkboxDisabled}
                 onClick={(event) => {
                   const shiftKey = event.shiftKey;
                   event.stopPropagation();
-                  const nextSelected = !isSelected;
+                  const nextSelected = !isCheckboxSelected;
                   onCheckboxChange(rowId, nextSelected, shiftKey);
                 }}
               />
@@ -295,6 +298,8 @@ function FolderTable<T extends FolderTableRow>({
   toolbar,
   expandedRowKeys = [],
   onExpandedChange,
+  selectedRowKey,
+  onRowSelect,
   onRowActivate,
   renderNameContent,
   rowActions,
@@ -310,6 +315,7 @@ function FolderTable<T extends FolderTableRow>({
   sortDescriptor,
   onSortChange,
   isPinnedFirst,
+  isEditMode = false,
   checkboxSelection,
   selectionFooter,
 }: FolderTableProps<T>) {
@@ -328,11 +334,14 @@ function FolderTable<T extends FolderTableRow>({
   const eqColumnCount = countFolderEqColumns(columns);
 
   const expandedKeySet = useMemo(() => new Set(expandedRowKeys), [expandedRowKeys]);
-  const selectedRowKeySet = useMemo(
+  const selectedEditRowKeySet = useMemo(
     () => new Set(checkboxSelection ? [...checkboxSelection.selectedKeys].map(String) : []),
     [checkboxSelection]
   );
-  const isEditMode = Boolean(checkboxSelection && selectedRowKeySet.size > 0);
+  const selectedRowKeySet = useMemo(
+    () => (isEditMode ? selectedEditRowKeySet : new Set(selectedRowKey ? [selectedRowKey] : [])),
+    [isEditMode, selectedEditRowKeySet, selectedRowKey]
+  );
 
   const sortedItems = useMemo(
     () =>
@@ -421,7 +430,7 @@ function FolderTable<T extends FolderTableRow>({
         return;
       }
 
-      const nextKeys = new Set(selectedRowKeySet);
+      const nextKeys = new Set(selectedEditRowKeySet);
       const anchorId = selectionAnchorRef.current;
       const anchorIndex = anchorId ? selectableVisibleRowIds.indexOf(anchorId) : -1;
       const rowIndex = selectableVisibleRowIds.indexOf(rowId);
@@ -445,14 +454,14 @@ function FolderTable<T extends FolderTableRow>({
       selectionAnchorRef.current = rowId;
       checkboxSelection.onSelectionChange(nextKeys);
     },
-    [checkboxSelection, disabledKeys, hiddenKeys, selectableVisibleRowIds, selectedRowKeySet]
+    [checkboxSelection, disabledKeys, hiddenKeys, selectableVisibleRowIds, selectedEditRowKeySet]
   );
 
   const handleToggleAll = useCallback(() => {
     if (!checkboxSelection) {
       return;
     }
-    const nextKeys = new Set(selectedRowKeySet);
+    const nextKeys = new Set(selectedEditRowKeySet);
     selectableVisibleRowIds.forEach((id) => {
       if (allVisibleSelected) {
         nextKeys.delete(id);
@@ -462,7 +471,7 @@ function FolderTable<T extends FolderTableRow>({
     });
     selectionAnchorRef.current = undefined;
     checkboxSelection.onSelectionChange(nextKeys);
-  }, [allVisibleSelected, checkboxSelection, selectableVisibleRowIds, selectedRowKeySet]);
+  }, [allVisibleSelected, checkboxSelection, selectableVisibleRowIds, selectedEditRowKeySet]);
 
   const handleScroll = useCallback(
     (event: UIEvent<HTMLElement>) => {
@@ -518,7 +527,7 @@ function FolderTable<T extends FolderTableRow>({
             descendantIds.add(row.id);
           }
           if (descendantIds.size > 0) {
-            const nextSelectedKeys = new Set(selectedRowKeySet);
+            const nextSelectedKeys = new Set(selectedEditRowKeySet);
             let selectionChanged = false;
             descendantIds.forEach((id) => {
               selectionChanged = nextSelectedKeys.delete(id) || selectionChanged;
@@ -537,7 +546,7 @@ function FolderTable<T extends FolderTableRow>({
         : [...expandedRowKeys, rowId];
       onExpandedChange(next);
     },
-    [checkboxSelection, expandedRowKeys, onExpandedChange, selectedRowKeySet, visibleRows]
+    [checkboxSelection, expandedRowKeys, onExpandedChange, selectedEditRowKeySet, visibleRows]
   );
 
   const handleRowAction = useCallback(
@@ -548,7 +557,16 @@ function FolderTable<T extends FolderTableRow>({
     [rowActions]
   );
 
-  const handleRowPress = useCallback((row: T) => onRowActivate?.(row), [onRowActivate]);
+  const handleRowPress = useCallback(
+    (row: T) => {
+      if (onRowSelect) {
+        onRowSelect(row);
+        return;
+      }
+      onRowActivate?.(row);
+    },
+    [onRowActivate, onRowSelect]
+  );
 
   const handleDelegatedRowPress = useCallback(
     (rowId: string, shiftKey: boolean) => {
@@ -557,12 +575,12 @@ function FolderTable<T extends FolderTableRow>({
         return;
       }
       if (isEditMode) {
-        handleCheckboxChange(rowId, !selectedRowKeySet.has(rowId), shiftKey);
+        handleCheckboxChange(rowId, !selectedEditRowKeySet.has(rowId), shiftKey);
         return;
       }
       handleRowPress(row as T);
     },
-    [handleCheckboxChange, handleRowPress, isEditMode, selectedRowKeySet, visibleRowMap]
+    [handleCheckboxChange, handleRowPress, isEditMode, selectedEditRowKeySet, visibleRowMap]
   );
 
   const handleBodyClick = useCallback(
@@ -577,6 +595,23 @@ function FolderTable<T extends FolderTableRow>({
       handleDelegatedRowPress(target.rowId, event.shiftKey);
     },
     [handleDelegatedRowPress]
+  );
+
+  const handleBodyDoubleClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (event.defaultPrevented || isEditMode || !onRowSelect) {
+        return;
+      }
+      const target = getDelegatedRowTarget(event);
+      if (!target) {
+        return;
+      }
+      const row = visibleRowMap.get(target.rowId);
+      if (row) {
+        onRowActivate?.(row as T);
+      }
+    },
+    [isEditMode, onRowActivate, onRowSelect, visibleRowMap]
   );
 
   const handleBodyKeyDown = useCallback(
@@ -703,6 +738,7 @@ function FolderTable<T extends FolderTableRow>({
           ref={scrollRef}
           className={styles.scrollContainer}
           onClick={handleBodyClick}
+          onDoubleClick={handleBodyDoubleClick}
           onKeyDown={handleBodyKeyDown}
           {...scrollContainerProps}
         >
@@ -783,6 +819,7 @@ function FolderTable<T extends FolderTableRow>({
                     const rowId = row.id;
                     const isLoadMoreRow = row.entryType === 'loading';
                     const isSelected = selectedRowKeySet.has(rowId);
+                    const isCheckboxSelected = selectedEditRowKeySet.has(rowId);
 
                     return (
                       <FolderTableBodyRow
@@ -792,6 +829,7 @@ function FolderTable<T extends FolderTableRow>({
                         checkboxHidden={hiddenKeys.has(rowId)}
                         onCheckboxChange={handleCheckboxChange}
                         isLoadMoreRow={isLoadMoreRow}
+                        isCheckboxSelected={isCheckboxSelected}
                         isSelected={isSelected}
                         showCheckboxSelection={showCheckboxSelection}
                         renderCellContent={renderCellContent}
