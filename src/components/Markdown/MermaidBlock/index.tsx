@@ -1,7 +1,7 @@
-import { CodeBlockFrame, HighlightedCode } from '@/components/Code/CodeBlock';
 import SegmentedTabs from '@/components/SegmentedTabs';
 import { useRequest } from 'ahooks';
 import { useId, useState } from 'react';
+import { CodeBlockFrame, HighlightedCode } from '../CodeBlock';
 import { renderMermaidDiagram } from './mermaidRuntime';
 import styles from './style.module.less';
 

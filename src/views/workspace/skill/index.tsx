@@ -1,6 +1,7 @@
 import { DriveCreate } from '@/components/Drive/Modals';
 import { Empty, ResultState, Spin } from '@/components/Feedback';
 import { FormField, Input, TextArea } from '@/components/Input';
+import Markdown, { type MarkdownResourceResolver } from '@/components/Markdown';
 import AppAlertDialog from '@/components/Overlay/AppAlertDialog';
 import SkillEditor from '@/components/Skill/SkillEditor';
 import SkillFileTree from '@/components/Skill/SkillFileTree';
@@ -21,9 +22,10 @@ import {
   useResourceHostLayoutConfig,
   type ResourceHostLayoutConfig,
 } from '@/views/workspace/ResourceHostContext';
-import { Button, toast } from '@heroui/react';
-import { useRequest } from 'ahooks';
+import { Button, Tabs, toast } from '@heroui/react';
+import { useRequest, useUnmount } from 'ahooks';
 import { FolderPlus, Pencil, Plus, Save, Settings, Upload } from 'lucide-react';
+import type { editor as MonacoEditor } from 'monaco-editor';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom';
 import SkillSaveQueueDock from './_components/SkillSaveQueueDock';
@@ -77,6 +79,19 @@ interface SkillConfigPanelProps {
   onReset: () => void;
   onSave: () => void;
 }
+
+type MarkdownEditorView = 'preview' | 'markdown';
+
+const SKILL_IMAGE_EXTENSIONS = new Set([
+  'apng',
+  'avif',
+  'gif',
+  'jpeg',
+  'jpg',
+  'png',
+  'svg',
+  'webp',
+]);
 
 interface MoveTreeNodeResult {
   files: SkillFileNode[];
@@ -267,6 +282,99 @@ function canPreviewSkillFile(file: SkillFileNode): boolean {
   return typeof file.content === 'string' || isEditableSkillFileName(file.name);
 }
 
+function isMarkdownSkillFile(file: SkillFileNode): boolean {
+  return file.name.toLowerCase().endsWith('.md');
+}
+
+function getSkillFilePath(file: SkillFileNode): string {
+  return joinDirectoryPath(file.path, file.name);
+}
+
+function findSkillFileByPath(nodes: SkillFileNode[], path: string): SkillFileNode | null {
+  for (const node of nodes) {
+    if (node.kind === 'file' && getSkillFilePath(node) === path) return node;
+    const child = node.children ? findSkillFileByPath(node.children, path) : null;
+    if (child) return child;
+  }
+  return null;
+}
+
+function resolveRelativeSkillFile(
+  nodes: SkillFileNode[],
+  sourceFile: SkillFileNode,
+  rawUrl: string
+): SkillFileNode | null {
+  if (rawUrl.startsWith('#') || rawUrl.startsWith('//') || /^[a-z][a-z\d+.-]*:/i.test(rawUrl)) {
+    return null;
+  }
+
+  try {
+    const sourcePath = getSkillFilePath(sourceFile);
+    const url = new URL(rawUrl, `https://skill.local${sourcePath}`);
+    return findSkillFileByPath(nodes, decodeURIComponent(url.pathname));
+  } catch {
+    return null;
+  }
+}
+
+function getSkillFileExtension(file: SkillFileNode): string {
+  return file.name.split('.').pop()?.toLowerCase() ?? '';
+}
+
+function isSkillImageFile(file: SkillFileNode): boolean {
+  return SKILL_IMAGE_EXTENSIONS.has(getSkillFileExtension(file));
+}
+
+function inferImageMimeType(file: SkillFileNode): string {
+  const extension = getSkillFileExtension(file);
+  if (extension === 'jpg') return 'image/jpeg';
+  if (extension === 'svg') return 'image/svg+xml';
+  return `image/${extension}`;
+}
+
+function collectMarkdownResourceUrls(content: string): string[] {
+  const urls = new Set<string>();
+  const inlineLinkPattern = /!?\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))[^)]*\)/g;
+  const definitionPattern = /^\s*\[[^\]]+\]:\s*(?:<([^>]+)>|([^\s]+))/gm;
+
+  for (const pattern of [inlineLinkPattern, definitionPattern]) {
+    let match: RegExpExecArray | null = null;
+    while ((match = pattern.exec(content))) {
+      const url = match[1] ?? match[2];
+      if (url) urls.add(url);
+    }
+  }
+
+  return [...urls];
+}
+
+function readMarkdownPreviewOffset(container: HTMLDivElement): number | null {
+  const markers = Array.from(
+    container.querySelectorAll<HTMLElement>('[data-markdown-start-offset]')
+  );
+  const containerTop = container.getBoundingClientRect().top;
+  const visibleMarker = markers.find(
+    (marker) => marker.getBoundingClientRect().bottom > containerTop
+  );
+  const target = visibleMarker ?? markers.at(-1);
+  const value = target?.dataset.markdownStartOffset;
+  return value && Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+function scrollMarkdownPreviewToOffset(container: HTMLDivElement, sourceOffset: number): void {
+  const markers = Array.from(
+    container.querySelectorAll<HTMLElement>('[data-markdown-start-offset]')
+  );
+  const target = markers.reduce<HTMLElement | null>((closest, marker) => {
+    const offset = Number(marker.dataset.markdownStartOffset);
+    if (!Number.isFinite(offset) || offset > sourceOffset) return closest;
+    return marker;
+  }, null);
+  if (!target) return;
+
+  container.scrollTop += target.getBoundingClientRect().top - container.getBoundingClientRect().top;
+}
+
 function removeTreeNode(nodes: SkillFileNode[], idSet: Set<string>): SkillFileNode[] {
   return nodes
     .filter((node) => !idSet.has(node.id))
@@ -294,7 +402,8 @@ function updateSavedTreeFile(
   nodes: SkillFileNode[],
   id: string,
   content: string | Blob,
-  nextId?: string
+  nextId?: string,
+  objectKey?: string
 ): SkillFileNode[] {
   return nodes.map((node) => {
     if (node.id === id) {
@@ -302,11 +411,16 @@ function updateSavedTreeFile(
         ...node,
         id: nextId ?? node.id,
         content: typeof content === 'string' ? content : node.content,
-        contentBlob: undefined,
+        // 当前会话继续使用已上传的本地 Blob，避免 OSS 上传回调尚未完成时预览闪断。
+        contentBlob: node.contentBlob,
+        objectKey: objectKey ?? node.objectKey,
       };
     }
     if (node.children) {
-      return { ...node, children: updateSavedTreeFile(node.children, id, content, nextId) };
+      return {
+        ...node,
+        children: updateSavedTreeFile(node.children, id, content, nextId, objectKey),
+      };
     }
     return node;
   });
@@ -613,14 +727,13 @@ function SkillConfigPanel({
       </header>
       <div className={styles.editorBody}>
         <section className={styles.configPage} aria-label="Skill 配置">
-          <div className={styles.configIntro}>
-            <h2>Skill Info</h2>
-            <p>
-              请填写 name 和 description。它们用于帮助模型识别这个 Skill 的用途；缺失时不能发布。
-            </p>
-          </div>
-
           <div className={styles.configForm}>
+            <div className={styles.configFormHint}>
+              <strong>Skill Info</strong>
+              <span>
+                请填写 name 和 description。它们用于帮助模型识别这个 Skill 的用途；缺失时不能发布。
+              </span>
+            </div>
             <FormField
               aria-label="Skill name"
               value={name}
@@ -688,6 +801,9 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
   const skillService = useSkillService();
   const interactService = useInteractService();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const markdownEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const markdownPreviewRef = useRef<HTMLDivElement>(null);
+  const markdownAssetUrlRef = useRef(new Map<string, string>());
   const draftCacheWriteVersionRef = useRef(0);
   const restoredEditorDraftRef = useRef<{
     fileId: string;
@@ -731,6 +847,12 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
   const [pendingCreate, setPendingCreate] = useState<SkillPendingCreate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SkillFileNode | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(!resourceId);
+  const [markdownViews, setMarkdownViews] = useState<Record<string, MarkdownEditorView>>({});
+  const [markdownSourceOffsets, setMarkdownSourceOffsets] = useState<Record<string, number>>({});
+  const [markdownPreviewRestoreRequests, setMarkdownPreviewRestoreRequests] = useState<
+    Record<string, number>
+  >({});
+  const [markdownAssetUrls, setMarkdownAssetUrls] = useState<Record<string, string | null>>({});
   const [isTreeDragOver, setIsTreeDragOver] = useState(false);
   const [draftCacheReady, setDraftCacheReady] = useState(false);
 
@@ -833,6 +955,116 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
     () => (selectedTreeNodeId ? findFile(activeFiles, selectedTreeNodeId) : null),
     [activeFiles, selectedTreeNodeId]
   );
+  const selectedMarkdownView = selectedFile
+    ? (markdownViews[selectedFile.id] ?? 'markdown')
+    : 'markdown';
+
+  const markdownImageTargets = useMemo(() => {
+    if (!selectedFile || !isMarkdownSkillFile(selectedFile)) return [];
+
+    return collectMarkdownResourceUrls(editorContent)
+      .map((url) => resolveRelativeSkillFile(activeFiles, selectedFile, url))
+      .filter((file): file is SkillFileNode => Boolean(file && isSkillImageFile(file)));
+  }, [activeFiles, editorContent, selectedFile]);
+
+  useUnmount(() => {
+    markdownAssetUrlRef.current.forEach((url) => URL.revokeObjectURL(url));
+    markdownAssetUrlRef.current.clear();
+  });
+
+  useEffectForce(() => {
+    const missingFiles = markdownImageTargets.filter(
+      (file) => !Object.hasOwn(markdownAssetUrls, file.id)
+    );
+    if (missingFiles.length === 0) return;
+
+    let disposed = false;
+    void Promise.all(
+      missingFiles.map(async (file) => {
+        try {
+          const source =
+            file.contentBlob ??
+            (skill?.resourceId && file.objectKey
+              ? await skillService.loadAssetBlob(
+                  skill.resourceId,
+                  file.objectKey,
+                  viewingVersion ?? undefined
+                )
+              : null);
+          if (!source) return { id: file.id, url: null };
+          // 后端历史数据会以 .txt 对象保存图片，不能沿用 OSS 响应声明的 text/plain MIME。
+          const blob = new Blob([source], { type: inferImageMimeType(file) });
+          return { id: file.id, url: URL.createObjectURL(blob) };
+        } catch {
+          return { id: file.id, url: null };
+        }
+      })
+    ).then((results) => {
+      if (disposed) {
+        results.forEach((result) => {
+          if (result.url) URL.revokeObjectURL(result.url);
+        });
+        return;
+      }
+      setMarkdownAssetUrls((current) => {
+        const next = { ...current };
+        results.forEach((result) => {
+          if (result.url) markdownAssetUrlRef.current.set(result.id, result.url);
+          next[result.id] = result.url;
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [markdownAssetUrls, markdownImageTargets, skill?.resourceId, skillService, viewingVersion]);
+
+  const handleMarkdownViewChange = (nextKey: string) => {
+    if (!selectedFile || (nextKey !== 'preview' && nextKey !== 'markdown')) return;
+    if (nextKey === 'preview') {
+      const editor = markdownEditorRef.current;
+      const model = editor?.getModel();
+      const visibleRange = editor?.getVisibleRanges()[0];
+      const position = visibleRange
+        ? { lineNumber: visibleRange.startLineNumber, column: visibleRange.startColumn }
+        : editor?.getPosition();
+      if (model && position) {
+        const sourceOffset = model.getOffsetAt(position);
+        setMarkdownSourceOffsets((current) => ({ ...current, [selectedFile.id]: sourceOffset }));
+      }
+      setMarkdownPreviewRestoreRequests((current) => ({
+        ...current,
+        [selectedFile.id]: (current[selectedFile.id] ?? 0) + 1,
+      }));
+    } else {
+      const preview = markdownPreviewRef.current;
+      const sourceOffset = preview ? readMarkdownPreviewOffset(preview) : null;
+      if (sourceOffset != null) {
+        setMarkdownSourceOffsets((current) => ({ ...current, [selectedFile.id]: sourceOffset }));
+      }
+    }
+    setMarkdownViews((current) => ({ ...current, [selectedFile.id]: nextKey }));
+  };
+
+  useEffectForce(() => {
+    if (!selectedFile || selectedMarkdownView !== 'preview') return;
+    const sourceOffset = markdownSourceOffsets[selectedFile.id];
+    if (sourceOffset == null) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const preview = markdownPreviewRef.current;
+      if (preview) scrollMarkdownPreviewToOffset(preview, sourceOffset);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    editorContent,
+    markdownAssetUrls,
+    markdownPreviewRestoreRequests,
+    selectedFile,
+    selectedMarkdownView,
+  ]);
 
   /**
    * 文件树或选中文件变化时同步 Monaco 内容；后端只返回 objectKey，缺少 content 时按需从 OSS 加载。
@@ -1148,6 +1380,49 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
     applyTreeSelection(nodeId);
   };
 
+  const handleMarkdownEditorMount = useCallback(
+    (editor: MonacoEditor.IStandaloneCodeEditor) => {
+      markdownEditorRef.current = editor;
+      if (!selectedFile || !isMarkdownSkillFile(selectedFile)) return;
+
+      const sourceOffset = markdownSourceOffsets[selectedFile.id];
+      const model = editor.getModel();
+      if (sourceOffset == null || !model) return;
+
+      const position = model.getPositionAt(Math.min(sourceOffset, model.getValueLength()));
+      editor.setPosition(position);
+      editor.revealPositionInCenter(position);
+    },
+    [markdownSourceOffsets, selectedFile]
+  );
+
+  const markdownResourceResolver: MarkdownResourceResolver | undefined =
+    selectedFile && isMarkdownSkillFile(selectedFile)
+      ? (() => {
+          const resolveTarget = (url: string) =>
+            resolveRelativeSkillFile(activeFiles, selectedFile, url);
+
+          return {
+            resolveUrl: (url, kind) => {
+              if (url.startsWith('#') || url.startsWith('//') || /^[a-z][a-z\d+.-]*:/i.test(url)) {
+                return undefined;
+              }
+              const target = resolveTarget(url);
+              if (!target) return null;
+              if (isMarkdownSkillFile(target))
+                return kind === 'link' ? `#skill-file-${target.id}` : null;
+              return isSkillImageFile(target) ? (markdownAssetUrls[target.id] ?? null) : null;
+            },
+            onLinkClick: (url) => {
+              const target = resolveTarget(url);
+              if (!target || !isMarkdownSkillFile(target)) return false;
+              handleTreeSelect(target.id);
+              return true;
+            },
+          };
+        })()
+      : undefined;
+
   const handleStartCreate = (kind: 'file' | 'folder') => {
     const { parentFolderId } = resolveCreateParent();
     setPendingCreate({ kind, parentFolderId });
@@ -1254,7 +1529,13 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
           successResults.reduce((tree, result) => {
             const target = targetById.get(result.clientId);
             if (!target) return tree;
-            return updateSavedTreeFile(tree, target.file.id, target.content, result.assetId);
+            return updateSavedTreeFile(
+              tree,
+              target.file.id,
+              target.content,
+              result.assetId,
+              result.objectKey
+            );
           }, prev)
         );
 
@@ -2182,9 +2463,53 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
                     <>
                       <header className={styles.editorHeader}>
                         <span className={styles.editorFileName}>{selectedFile.name}</span>
+                        {isMarkdownSkillFile(selectedFile) ? (
+                          <Tabs
+                            className={styles.editorTabs}
+                            selectedKey={selectedMarkdownView}
+                            onSelectionChange={(key) => handleMarkdownViewChange(String(key))}
+                          >
+                            <Tabs.ListContainer>
+                              <Tabs.List
+                                className={styles.editorTabsList}
+                                aria-label="Markdown 展示模式"
+                              >
+                                <Tabs.Tab id="preview" className={styles.editorTab}>
+                                  预览
+                                  <Tabs.Indicator />
+                                </Tabs.Tab>
+                                <Tabs.Tab id="markdown" className={styles.editorTab}>
+                                  Markdown
+                                  <Tabs.Indicator />
+                                </Tabs.Tab>
+                              </Tabs.List>
+                            </Tabs.ListContainer>
+                          </Tabs>
+                        ) : null}
                       </header>
                       <div className={styles.editorBody}>
-                        {canPreviewSkillFile(selectedFile) ? (
+                        {isMarkdownSkillFile(selectedFile) && selectedMarkdownView === 'preview' ? (
+                          <div
+                            ref={markdownPreviewRef}
+                            className={styles.markdownPreview}
+                            onScroll={(event) => {
+                              const sourceOffset = readMarkdownPreviewOffset(event.currentTarget);
+                              if (sourceOffset == null) return;
+                              setMarkdownSourceOffsets((current) =>
+                                current[selectedFile.id] === sourceOffset
+                                  ? current
+                                  : { ...current, [selectedFile.id]: sourceOffset }
+                              );
+                            }}
+                          >
+                            <div className={styles.markdownPreviewContent}>
+                              <Markdown
+                                content={editorContent}
+                                resourceResolver={markdownResourceResolver}
+                              />
+                            </div>
+                          </div>
+                        ) : canPreviewSkillFile(selectedFile) ? (
                           <SkillEditor
                             content={editorContent}
                             fileName={selectedFile.name}
@@ -2199,6 +2524,7 @@ function SkillView({ resourceId = '' }: SkillViewProps = {}) {
                             }
                             onSave={handleSave}
                             onChange={setEditorContent}
+                            onEditorMount={handleMarkdownEditorMount}
                           />
                         ) : (
                           <Empty

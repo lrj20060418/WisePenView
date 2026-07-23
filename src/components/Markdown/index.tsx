@@ -1,15 +1,24 @@
 import { useUpdateEffect } from 'ahooks';
 import { useState } from 'react';
-import MarkdownRenderer from './Renderer';
+import MarkdownRenderer, { type MarkdownResourceResolver } from './Renderer';
 import { createMarkdownRuntime, updateMarkdownRuntime } from './runtime';
 import styles from './style.module.less';
 
+export type { MarkdownResourceResolver } from './Renderer';
+
 interface MarkdownContentProps {
   content: string;
-  streaming: boolean;
+  streaming?: boolean;
+  linkMode?: 'external' | 'safe';
+  resourceResolver?: MarkdownResourceResolver;
 }
 
-function MarkdownContent({ content, streaming }: MarkdownContentProps) {
+function Markdown({
+  content,
+  streaming = false,
+  linkMode = 'safe',
+  resourceResolver,
+}: MarkdownContentProps) {
   const [runtime] = useState(() => createMarkdownRuntime(content, streaming));
   const [snapshot, setSnapshot] = useState(runtime.snapshot);
 
@@ -25,9 +34,11 @@ function MarkdownContent({ content, streaming }: MarkdownContentProps) {
         renderContext={snapshot.renderContext}
         showFootnotes={!streaming}
         streaming={streaming}
+        linkMode={linkMode}
+        resourceResolver={resourceResolver}
       />
     </div>
   );
 }
 
-export default MarkdownContent;
+export default Markdown;
