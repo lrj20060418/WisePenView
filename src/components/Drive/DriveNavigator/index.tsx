@@ -8,7 +8,11 @@ import { parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { buildDriveTreeData, replaceDriveTreeNodeChildren } from '../common/buildDriveTreeData';
+import {
+  buildDriveTreeData,
+  isDriveNodeSelectable,
+  replaceDriveTreeNodeChildren,
+} from '../common/buildDriveTreeData';
 import {
   getDriveScopeGroupId,
   resolveDriveScope,
@@ -268,11 +272,12 @@ function DriveNavigator({
           const node = nodeMapRef.current.get(key);
           return (
             node != null &&
-            node.type !== 'loading' &&
-            !disabledNodeIdSet.has(node.id) &&
-            isNodeDisabled?.(node) !== true &&
-            selectableTypeSet.has(node.type) &&
-            (isNodeSelectable?.(node) ?? true)
+            isDriveNodeSelectable(node, {
+              selectableTypes: selectableTypeSet,
+              disabledNodeIds: disabledNodeIdSet,
+              isNodeSelectable,
+              isNodeDisabled,
+            })
           );
         });
     },
@@ -293,11 +298,12 @@ function DriveNavigator({
         .filter(
           (node): node is DriveNode =>
             node != null &&
-            node.type !== 'loading' &&
-            !disabledNodeIdSet.has(node.id) &&
-            isNodeDisabled?.(node) !== true &&
-            selectableTypeSet.has(node.type) &&
-            (isNodeSelectable?.(node) ?? true)
+            isDriveNodeSelectable(node, {
+              selectableTypes: selectableTypeSet,
+              disabledNodeIds: disabledNodeIdSet,
+              isNodeSelectable,
+              isNodeDisabled,
+            })
         );
       onNodeChange?.(selectedNodes);
       onChange?.(
@@ -448,7 +454,6 @@ function DriveNavigator({
       <Tree
         treeData={treeData}
         className={styles.tree}
-        blockNode
         selectable
         multiple={multiple}
         selectedKeys={selectedKeys}
