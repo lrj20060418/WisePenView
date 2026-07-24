@@ -132,67 +132,73 @@ function MyGroup() {
         size="sm"
       />
 
-      <Spin spinning={loading}>
-        {groups.length === 0 ? (
-          <div className={page.emptyState}>
-            <Empty description="暂无小组" />
-          </div>
-        ) : (
-          <div className={page.groupGrid}>
-            {groups.map((group) => (
-              <div key={group.groupId} className={page.groupGridItem}>
-                <GroupCard group={group} onClick={handleGroupClick} />
-              </div>
-            ))}
-          </div>
-        )}
+      {loading ? (
+        <div className={page.loadingState}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        <>
+          {groups.length === 0 ? (
+            <div className={page.emptyState}>
+              <Empty description="暂无小组" />
+            </div>
+          ) : (
+            <div className={page.groupGrid}>
+              {groups.map((group) => (
+                <div key={group.groupId} className={page.groupGridItem}>
+                  <GroupCard group={group} onClick={handleGroupClick} />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {total > 0 && (
-          <div className={page.paginationWrap}>
-            <Pagination size="sm">
-              <Pagination.Summary>
-                {start} - {end} / 共 {total} 条
-              </Pagination.Summary>
-              <Pagination.Content>
-                <Pagination.Item>
-                  <Pagination.Previous
-                    isDisabled={pageNum <= 1}
-                    onPress={() => onPageChange(Math.max(1, pageNum - 1), size)}
-                  >
-                    <Pagination.PreviousIcon />
-                    上一页
-                  </Pagination.Previous>
-                </Pagination.Item>
-                {pages.map((targetPage, index) =>
-                  targetPage === 'ellipsis' ? (
-                    <Pagination.Item key={`ellipsis-${index}`}>
-                      <Pagination.Ellipsis />
-                    </Pagination.Item>
-                  ) : (
-                    <Pagination.Item key={targetPage}>
-                      <Pagination.Link
-                        isActive={targetPage === pageNum}
-                        onPress={() => onPageChange(targetPage, size)}
-                      >
-                        {targetPage}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  )
-                )}
-                <Pagination.Item>
-                  <Pagination.Next
-                    isDisabled={pageNum >= totalPages}
-                    onPress={() => onPageChange(Math.min(totalPages, pageNum + 1), size)}
-                  >
-                    下一页
-                    <Pagination.NextIcon />
-                  </Pagination.Next>
-                </Pagination.Item>
-              </Pagination.Content>
-            </Pagination>
-          </div>
-        )}
-      </Spin>
+          {total > 0 && (
+            <div className={page.paginationWrap}>
+              <Pagination size="sm">
+                <Pagination.Summary>
+                  {start} - {end} / 共 {total} 条
+                </Pagination.Summary>
+                <Pagination.Content>
+                  <Pagination.Item>
+                    <Pagination.Previous
+                      isDisabled={pageNum <= 1}
+                      onPress={() => onPageChange(Math.max(1, pageNum - 1), size)}
+                    >
+                      <Pagination.PreviousIcon />
+                      上一页
+                    </Pagination.Previous>
+                  </Pagination.Item>
+                  {pages.map((targetPage, index) =>
+                    targetPage === 'ellipsis' ? (
+                      <Pagination.Item key={`ellipsis-${index}`}>
+                        <Pagination.Ellipsis />
+                      </Pagination.Item>
+                    ) : (
+                      <Pagination.Item key={targetPage}>
+                        <Pagination.Link
+                          isActive={targetPage === pageNum}
+                          onPress={() => onPageChange(targetPage, size)}
+                        >
+                          {targetPage}
+                        </Pagination.Link>
+                      </Pagination.Item>
+                    )
+                  )}
+                  <Pagination.Item>
+                    <Pagination.Next
+                      isDisabled={pageNum >= totalPages}
+                      onPress={() => onPageChange(Math.min(totalPages, pageNum + 1), size)}
+                    >
+                      下一页
+                      <Pagination.NextIcon />
+                    </Pagination.Next>
+                  </Pagination.Item>
+                </Pagination.Content>
+              </Pagination>
+            </div>
+          )}
+        </>
+      )}
 
       <JoinGroupModal
         isOpen={joinGroupModalOpen}

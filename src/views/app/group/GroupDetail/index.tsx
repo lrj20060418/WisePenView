@@ -1,4 +1,3 @@
-import { LogOut, Pencil, Trash2 } from 'lucide-react';
 /**
  * 小组详情的展示和操作入口由组类型与当前用户角色配置驱动。
  */
@@ -13,16 +12,16 @@ import { WALLET_TARGET_TYPE } from '@/domains/Wallet';
 import { parseDriveInitialNodeId } from '@/utils/navigation/driveRoute';
 import ComputeWallet from '@/views/app/_common/Wallet/ComputeWallet';
 import type { ComputeWalletRef } from '@/views/app/_common/Wallet/ComputeWallet/index.type';
-import { Button, toast } from '@heroui/react';
+import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { getGroupDisplayConfig } from '../_components/GroupDisplayConfig';
-import { DissolveGroupModal, EditGroupInfoModal, ExitGroupModal } from '../_components/GroupModals';
 import MemberList from '../_components/MemberList';
 import OwnerGroupTokenTransfer from '../_components/OwnerGroupTokenTransfer';
 import layout from '../style.module.less';
+import GroupDescriptionSettings from './_components/GroupDescriptionSettings';
 import page from './style.module.less';
 
 type GroupDetailLoaded = {
@@ -45,12 +44,12 @@ function GroupDetail() {
 
   const { loading, data, refresh } = useRequest(
     async (): Promise<GroupDetailLoaded> => {
-      const [groupData, role, cfg] = await Promise.all([
+      const [groupData, role, resConfig] = await Promise.all([
         groupService.fetchGroupInfo(id!),
         groupService.fetchMyRoleInGroup(id!),
         groupService.fetchGroupResConfig(id!),
       ]);
-      return { group: groupData, currentUserRole: role, resConfig: cfg };
+      return { group: groupData, currentUserRole: role, resConfig };
     },
     {
       refreshDeps: [id],
@@ -61,7 +60,7 @@ function GroupDetail() {
     }
   );
 
-  // 解包 data, 默认 currentUserRole 为 MEMBER, resConfig 为 undefined
+  // 解包 data, 默认 currentUserRole 为 MEMBER
   const { group, currentUserRole = 'MEMBER', resConfig } = data ?? {};
 
   const groupDisplayConfig = useMemo(() => {
@@ -71,22 +70,6 @@ function GroupDetail() {
     return getGroupDisplayConfig(group.groupType, currentUserRole);
   }, [group, currentUserRole]);
 
-  /** 仅关闭弹窗；解散/退出后会 navigate 离开本页，不应再拉详情（否则多一次失败请求） */
-  const handleModalCloseOnly = () => {
-    setEditGroupModalOpen(false);
-    setDissolveGroupModalOpen(false);
-    setExitGroupModalOpen(false);
-  };
-
-  /** 编辑成功后留在详情页，需重新拉取小组与角色 */
-  const handleEditSuccess = () => {
-    handleModalCloseOnly();
-    void refresh();
-  };
-
-  const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
-  const [dissolveGroupModalOpen, setDissolveGroupModalOpen] = useState(false);
-  const [exitGroupModalOpen, setExitGroupModalOpen] = useState(false);
   const walletRef = useRef<ComputeWalletRef | null>(null);
 
   /** Tabs 受控，避免 items 更新时重置当前选中的 Tab */
@@ -107,7 +90,7 @@ function GroupDetail() {
         key: 'files',
         label: '文件',
         children: (
-          <div className={layout.tabPane}>
+          <div className={`${layout.tabPane} ${page.fileTabPane}`}>
             <TableDrive
               scope={{ type: 'group', groupId: gid }}
               initialNodeId={initialNodeId}
@@ -183,14 +166,19 @@ function GroupDetail() {
       key: 'description',
       label: '描述',
       children: (
-        <div className={layout.tabPane}>
-          <p className={layout.sectionContent}>{group.groupDesc || '暂无描述'}</p>
-        </div>
+        <GroupDescriptionSettings
+          key={gid}
+          group={group}
+          groupId={gid}
+          groupResConfig={resConfig}
+          currentUserRole={currentUserRole}
+          onRefresh={() => void refresh()}
+        />
       ),
     });
 
     return items;
-  }, [group, id, groupDisplayConfig, initialNodeId, resConfig]);
+  }, [currentUserRole, group, groupDisplayConfig, id, initialNodeId, refresh, resConfig]);
 
   const detailTabKeys = useMemo(() => tabItems.map((item) => item.key), [tabItems]);
 
@@ -219,12 +207,17 @@ function GroupDetail() {
     return <div className={layout.pageContainer}>小组不存在</div>;
   }
 
-  const { groupName, ownerInfo, groupDesc: description, groupCoverUrl: cover, createTime } = group;
-  const groupId = group.groupId || id || '';
+  const { groupName, ownerInfo, createTime } = group;
   const ownerName = ownerInfo?.nickname?.trim() || '-';
 
   return (
-    <div className={layout.pageContainer}>
+    <div
+      className={
+        activeDetailTabKey === 'files' || activeDetailTabKey === 'description'
+          ? `${layout.pageContainer} ${page.fixedPage}`
+          : layout.pageContainer
+      }
+    >
       <div className={layout.pageHeaderWithActions}>
         <div>
           <h1 className={layout.pageTitle}>{groupName}</h1>
@@ -247,52 +240,7 @@ function GroupDetail() {
         onSelectionChange={handleDetailTabChange}
         items={tabItems.map(({ key, label, disabled }) => ({ key, label, disabled }))}
       />
-      {activeTabContent}
-
-      <div className={layout.actionsBar}>
-        {currentUserRole === 'OWNER' ? (
-          <div className={layout.actionsRow}>
-            <Button onPress={() => setEditGroupModalOpen(true)}>
-              <Pencil size={16} aria-hidden="true" />
-              编辑小组信息
-            </Button>
-            <Button variant="danger" onPress={() => setDissolveGroupModalOpen(true)}>
-              <Trash2 size={16} aria-hidden="true" />
-              解散小组
-            </Button>
-          </div>
-        ) : (
-          <Button variant="danger" onPress={() => setExitGroupModalOpen(true)}>
-            <LogOut size={16} aria-hidden="true" />
-            退出小组
-          </Button>
-        )}
-      </div>
-
-      <EditGroupInfoModal
-        open={editGroupModalOpen}
-        onCancel={() => setEditGroupModalOpen(false)}
-        groupName={groupName}
-        description={description}
-        cover={cover}
-        groupId={groupId}
-        groupType={group.groupType}
-        onSuccess={handleEditSuccess}
-      />
-      <DissolveGroupModal
-        isOpen={dissolveGroupModalOpen}
-        onOpenChange={setDissolveGroupModalOpen}
-        groupName={groupName}
-        groupId={groupId}
-        onSuccess={handleModalCloseOnly}
-      />
-      <ExitGroupModal
-        isOpen={exitGroupModalOpen}
-        onOpenChange={(open) => setExitGroupModalOpen(open)}
-        groupName={groupName}
-        groupId={groupId}
-        onSuccess={handleModalCloseOnly}
-      />
+      <div className={page.tabContent}>{activeTabContent}</div>
     </div>
   );
 }
