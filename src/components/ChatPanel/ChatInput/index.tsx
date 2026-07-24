@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import AppIconButton from '@/components/Button/AppIconButton';
-=======
 import { FULL_WIDTH_MODEL_ICON_ONLY_MAX_WIDTH } from '@/constants/layoutScale';
 import { useEffectForce } from '@/hooks/useEffectForce';
->>>>>>> 0507fde7 (feat(layout): 统一布局尺度与多端窄屏适配)
 import { TextArea } from '@heroui/react';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
@@ -105,13 +101,14 @@ function ChatInputContent({
         {contextPreview ? (
           <div className={styles.contextAttachment}>
             <span className={styles.contextAttachmentPreview}>{contextPreview}</span>
-            <AppIconButton
-              icon={<X size={14} aria-hidden="true" />}
-              label="移除上下文"
-              size="sm"
+            <button
+              type="button"
               className={styles.contextAttachmentClear}
-              onPress={onClearContext}
-            />
+              aria-label="移除上下文"
+              onClick={onClearContext}
+            >
+              <X size={14} />
+            </button>
           </div>
         ) : null}
 
