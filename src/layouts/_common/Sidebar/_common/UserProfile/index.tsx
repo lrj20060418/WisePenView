@@ -109,7 +109,12 @@ function UserProfile({ collapsed, menuMode = 'app' }: UserProfileProps) {
               <Info size={16} />
               <span>关于</span>
             </Dropdown.Item>
-            <Dropdown.Item id="logout" textValue="退出登录" className={styles.profileMenuItem}>
+            <Dropdown.Item
+              id="logout"
+              textValue="退出登录"
+              variant="danger"
+              className={styles.profileMenuItem}
+            >
               <LogOut size={16} />
               <span>退出登录</span>
             </Dropdown.Item>
@@ -146,7 +151,12 @@ function UserProfile({ collapsed, menuMode = 'app' }: UserProfileProps) {
               <Info size={16} />
               <span>关于</span>
             </Dropdown.Item>
-            <Dropdown.Item id="logout" textValue="退出登录" className={styles.profileMenuItem}>
+            <Dropdown.Item
+              id="logout"
+              textValue="退出登录"
+              variant="danger"
+              className={styles.profileMenuItem}
+            >
               <LogOut size={16} />
               <span>退出登录</span>
             </Dropdown.Item>

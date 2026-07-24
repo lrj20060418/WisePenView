@@ -1,5 +1,6 @@
 import AppIconButton from '@/components/Button/AppIconButton';
 import EntryIcon from '@/components/Icons/EntryIcon';
+import { AppPopover } from '@/components/Overlay';
 import ResourcePermissionModal from '@/components/Resource/ResourcePermissionModal';
 import { useUserService } from '@/domains';
 import { normalizeId } from '@/utils/normalize/normalizeId';
@@ -125,7 +126,7 @@ function ResourceHeaderMore({
         overlayTrigger={<Dropdown.Trigger />}
       />
       <Dropdown.Popover placement="bottom end" className={styles.popover}>
-        <div className={styles.popoverHeader}>更多操作</div>
+        <AppPopover.Header>更多操作</AppPopover.Header>
         <Dropdown.Menu aria-label="资源更多操作" onAction={handleAction}>
           {operations.onOpenOriginal ? (
             <Dropdown.Section>
@@ -223,7 +224,7 @@ function ResourceHeaderMore({
                   className={`${styles.popover} ${styles.advancedPopover}`}
                 >
                   <div className={styles.advancedPanel}>
-                    <div className={styles.popoverHeader}>高级设置</div>
+                    <AppPopover.Header>高级设置</AppPopover.Header>
                     {menu.advanced}
                   </div>
                 </Dropdown.Popover>

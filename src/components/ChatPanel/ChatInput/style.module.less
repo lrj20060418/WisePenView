@@ -162,20 +162,9 @@
   }
 }
 
-.toolbarPopover {
-  padding: 0;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  background: var(--overlay);
-  box-shadow: var(--card-shadow);
-}
-
-.popoverPanel,
-.modelMenu {
+.popoverPanel {
   min-width: 220px;
   max-width: 340px;
-  padding: var(--space-xs);
-  background: var(--surface);
 }
 
 .popoverPanelScrollable {
@@ -210,18 +199,11 @@
 .deferredPopoverPanel {
   min-width: 220px;
   min-height: 72px;
-  padding: var(--space-xs);
-  background: var(--surface);
 }
 
 .deferredSkillMenuPanel {
   width: 260px;
   min-height: 180px;
-}
-
-.deferredModelMenu {
-  width: 320px;
-  min-height: 112px;
 }
 
 .popoverTitle {
@@ -238,7 +220,7 @@
   background: transparent;
 
   :global(.list-box-item) {
-    border-radius: var(--radius-xl);
+    border-radius: var(--app-radius-popover-item, var(--radius-xl));
   }
 }
 
@@ -273,7 +255,7 @@
   min-height: 34px;
   padding: 6px var(--space-sm);
   border-top: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
+  border-radius: var(--app-radius-popover-item, var(--radius-xl));
   color: var(--muted);
   font-size: var(--font-size-sm);
   cursor: pointer;

@@ -41,23 +41,6 @@
 /* 与 ChatInput toolbarPopover 对齐；宽度保持 320px */
 .popover {
   width: 320px;
-  padding: 0;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  background: var(--overlay);
-  box-shadow: var(--card-shadow);
-}
-
-.menu {
-  padding: var(--space-xs);
-  background: var(--surface);
-}
-
-.title {
-  padding: var(--space-2xs) var(--space-xs);
-  color: var(--muted);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
 }
 
 .list {
@@ -88,7 +71,7 @@
   }
 
   :global(.list-box-item) {
-    border-radius: var(--radius-xl);
+    border-radius: var(--app-radius-popover-item, var(--radius-xl));
   }
 }
 

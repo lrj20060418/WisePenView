@@ -6,7 +6,7 @@ import {
   buildResourcePermissionActionKeySet,
   filterResourcePermissionActionsByOptions,
 } from '@/components/Drive/common/resourcePermissionPolicy';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import UserSearchCombobox from '@/components/UserSearchCombobox';
 import { useGroupService, useResourceService, useTagService, useUserService } from '@/domains';
 import type { GroupBaseInfo } from '@/domains/Group';
@@ -304,37 +304,39 @@ function SubjectPermissionPopover({
   }
 
   return (
-    <Popover deferContent={false}>
-      <Popover.Trigger>{trigger}</Popover.Trigger>
-      <Popover.Content className={styles.permissionPopover} placement="bottom end">
-        <Popover.Dialog>
-          <ListBox
-            aria-label={`${subject.name} 的权限选项`}
-            selectionMode="multiple"
-            selectedKeys={selectedActionKeys}
-            className={styles.actionList}
-          >
-            {actionOptions.map((option) => (
-              <ListBox.Item
-                id={option.key}
-                key={option.key}
-                textValue={option.label}
-                onPress={() => onActionToggle(subject, option.action)}
-              >
-                <span className={styles.actionLabel}>
-                  <ResourcePermissionActionIcon
-                    action={option.action}
-                    className={styles.actionIcon}
-                  />
-                  <span className={styles.actionText}>{option.label}</span>
-                </span>
-                <ListBox.ItemIndicator />
-              </ListBox.Item>
-            ))}
-          </ListBox>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+    <AppPopover deferContent={false}>
+      <AppPopover.Trigger>{trigger}</AppPopover.Trigger>
+      <AppPopover.Content
+        className={styles.permissionPopover}
+        placement="bottom end"
+        bodyPadding="none"
+      >
+        <ListBox
+          aria-label={`${subject.name} 的权限选项`}
+          selectionMode="multiple"
+          selectedKeys={selectedActionKeys}
+          className={styles.actionList}
+        >
+          {actionOptions.map((option) => (
+            <ListBox.Item
+              id={option.key}
+              key={option.key}
+              textValue={option.label}
+              onPress={() => onActionToggle(subject, option.action)}
+            >
+              <span className={styles.actionLabel}>
+                <ResourcePermissionActionIcon
+                  action={option.action}
+                  className={styles.actionIcon}
+                />
+                <span className={styles.actionText}>{option.label}</span>
+              </span>
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 

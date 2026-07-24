@@ -1,5 +1,5 @@
 import AppIconButton from '@/components/Button/AppIconButton';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { ListBox, ListBoxItem } from '@heroui/react';
 import { Cloud, Plus, Upload } from 'lucide-react';
 import type { Key } from 'react';
@@ -25,39 +25,36 @@ function UploadMenu() {
   };
 
   return (
-    <Popover isOpen={open} onOpenChange={setAttachmentOpen}>
+    <AppPopover isOpen={open} onOpenChange={setAttachmentOpen}>
       <AppIconButton
         icon={<Plus size={18} aria-hidden="true" />}
         label="上传附件"
-        overlayTrigger={<Popover.Trigger />}
+        overlayTrigger={<AppPopover.Trigger />}
       />
-      <Popover.Content className={styles.toolbarPopover} placement="top">
-        <Popover.Dialog>
-          <div className={styles.popoverPanel}>
-            <div className={styles.popoverTitle}>附件</div>
-            <ListBox
-              aria-label="附件操作"
-              selectionMode="none"
-              className={styles.listBox}
-              onAction={handleAction}
-            >
-              <ListBoxItem id="local-file" textValue="从本地选取">
-                <span className={styles.listItemContent}>
-                  <Upload size={16} />
-                  <span>从本地选取</span>
-                </span>
-              </ListBoxItem>
-              <ListBoxItem id="cloud-file" textValue="从云盘选取">
-                <span className={styles.listItemContent}>
-                  <Cloud size={16} />
-                  <span>从云盘选取</span>
-                </span>
-              </ListBoxItem>
-            </ListBox>
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      <AppPopover.Content placement="top" title="附件">
+        <div className={styles.popoverPanel}>
+          <ListBox
+            aria-label="附件操作"
+            selectionMode="none"
+            className={styles.listBox}
+            onAction={handleAction}
+          >
+            <ListBoxItem id="local-file" textValue="从本地选取">
+              <span className={styles.listItemContent}>
+                <Upload size={16} />
+                <span>从本地选取</span>
+              </span>
+            </ListBoxItem>
+            <ListBoxItem id="cloud-file" textValue="从云盘选取">
+              <span className={styles.listItemContent}>
+                <Cloud size={16} />
+                <span>从云盘选取</span>
+              </span>
+            </ListBoxItem>
+          </ListBox>
+        </div>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 

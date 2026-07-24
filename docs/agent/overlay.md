@@ -16,13 +16,25 @@ Modal
 ├─ AppFormDialog
 ├─ AppDisplayDialog
 └─ AppModal
+
+Popover
+└─ AppPopover
 ```
 
 - `Modal` 是底层 Overlay 原子组件。
 - `AppAlertDialog`、`AppFormDialog`、`AppDisplayDialog`、`AppModal` 都直接组合 `Modal`。
 - 四个 App 级组件之间不应互相继承，也不应让 `AppAlertDialog` / `AppFormDialog` / `AppDisplayDialog` 基于 `AppModal` 实现。
+- `Popover` 是延迟挂载原子层，`AppPopover` 统一业务 Popover 的 Content、Dialog、header、无 header body 和 danger 视觉。
 
 原因是 `AppModal` 现在只表示“复杂业务浮层的可定制起点”。如果其他语义组件基于它实现，`AppModal` 很容易重新变成承载 confirm、form、display、danger、banner 等语义的超级组件。
+
+## AppPopover
+
+业务代码使用 `AppPopover`，不直接使用底层 `Popover` 或 `@heroui/react` 的 `Popover`。标准标题通过 `AppPopover.Content title` 传入；无标题内容直接传 children。调用方只保留宽度、最大高度和滚动等业务布局，边框、圆角、阴影和内容间距由 `AppPopover` 统一。
+
+`AppPopover` 的 `variant="danger"` 用于整个浮层承载危险提示的场景；菜单中的单个危险操作仍使用 HeroUI 的 `Dropdown.Item variant="danger"`。
+
+LaTeX 编辑浮层因依赖编辑器选区和手工测量位置，不迁移 HeroUI 的定位状态，但复用 `AppPopover.Header` 以及相同的表面 token。
 
 ## 组件边界
 

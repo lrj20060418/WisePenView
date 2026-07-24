@@ -1,5 +1,5 @@
 import AppIconButton from '@/components/Button/AppIconButton';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { useChatService } from '@/domains';
 import { buildSkillMenuSections } from '@/domains/Chat';
 import { parseErrorMessage } from '@/utils/error';
@@ -70,7 +70,7 @@ function SkillMenu() {
   }
 
   return (
-    <Popover isOpen={skillMenuOpen} onOpenChange={setSkillMenuOpen}>
+    <AppPopover isOpen={skillMenuOpen} onOpenChange={setSkillMenuOpen}>
       <span className={styles.toolButtonWrap}>
         {selectedOptionCount > 0 ? (
           <span className={styles.skillMenuBadge}>{selectedOptionCount}</span>
@@ -78,128 +78,122 @@ function SkillMenu() {
         <AppIconButton
           icon={<Settings size={17} aria-hidden="true" />}
           label="配置 Agent"
-          overlayTrigger={<Popover.Trigger />}
+          overlayTrigger={<AppPopover.Trigger />}
         />
       </span>
-      <Popover.Content className={styles.toolbarPopover} placement="top">
-        <Popover.Dialog>
-          <Popover.DeferredContent
-            fallback={
-              <div className={`${styles.deferredPopoverPanel} ${styles.deferredSkillMenuPanel}`} />
-            }
-          >
-            {() => (
-              <div className={`${styles.popoverPanel} ${styles.popoverPanelScrollable}`}>
-                <div className={styles.popoverTitle}>Skill</div>
+      <AppPopover.Content placement="top" title="Skill">
+        <AppPopover.DeferredContent
+          fallback={
+            <div className={`${styles.deferredPopoverPanel} ${styles.deferredSkillMenuPanel}`} />
+          }
+        >
+          {() => (
+            <div className={`${styles.popoverPanel} ${styles.popoverPanelScrollable}`}>
+              {primarySection && primarySection.items.length > 0 ? (
+                <ListBox
+                  aria-label="选择 Skill"
+                  selectionMode="multiple"
+                  selectedKeys={selectedSkillIds}
+                  className={styles.listBox}
+                >
+                  {primarySection.items.map((item) => (
+                    <ListBoxItem
+                      key={item.key}
+                      id={item.key}
+                      textValue={item.label}
+                      onPress={() => handleToggleSkill(item.key)}
+                    >
+                      <span className={styles.listItemContent}>
+                        <Sparkles size={16} />
+                        <span>{item.label}</span>
+                        {selectedSkillIds.includes(item.key) ? (
+                          <Check size={14} className={styles.checkIcon} />
+                        ) : null}
+                      </span>
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              ) : null}
 
-                {primarySection && primarySection.items.length > 0 ? (
+              {externalItems.length > 0 ? (
+                <>
+                  <div className={styles.popoverTitle}>其他 Skill</div>
                   <ListBox
-                    aria-label="选择 Skill"
+                    aria-label="已选择的其他 Skill"
                     selectionMode="multiple"
-                    selectedKeys={selectedSkillIds}
+                    selectedKeys={externalItems.map((item) => item.key)}
                     className={styles.listBox}
                   >
-                    {primarySection.items.map((item) => (
+                    {externalItems.map((item) => (
                       <ListBoxItem
                         key={item.key}
                         id={item.key}
                         textValue={item.label}
-                        onPress={() => handleToggleSkill(item.key)}
+                        onPress={() => removeSkill(item.key)}
                       >
                         <span className={styles.listItemContent}>
                           <Sparkles size={16} />
+                          <span>
+                            {item.label}
+                            {item.sourceText ? (
+                              <span className={styles.skillMenuSourceText}>{item.sourceText}</span>
+                            ) : null}
+                          </span>
+                          <Check size={14} className={styles.checkIcon} />
+                        </span>
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </>
+              ) : null}
+
+              <ListBox
+                aria-label="选择其他 Skill"
+                selectionMode="none"
+                className={styles.listBox}
+                onAction={handleSelectOther}
+              >
+                <ListBoxItem id="select-other-skill" textValue="选择其他 Skill...">
+                  <span className={styles.listItemContent}>
+                    <Sparkles size={16} />
+                    <span>选择其他 Skill...</span>
+                  </span>
+                </ListBoxItem>
+              </ListBox>
+
+              {toolSection && toolSection.items.length > 0 ? (
+                <>
+                  <div className={styles.popoverTitle}>工具</div>
+                  <ListBox
+                    aria-label="选择工具"
+                    selectionMode="multiple"
+                    selectedKeys={selectedToolIds}
+                    className={styles.listBox}
+                  >
+                    {toolSection.items.map((item) => (
+                      <ListBoxItem
+                        key={item.key}
+                        id={item.key}
+                        textValue={item.label}
+                        onPress={() => handleToggleTool(item.key)}
+                      >
+                        <span className={styles.listItemContent}>
+                          <Wrench size={16} />
                           <span>{item.label}</span>
-                          {selectedSkillIds.includes(item.key) ? (
+                          {selectedToolIds.includes(item.key) ? (
                             <Check size={14} className={styles.checkIcon} />
                           ) : null}
                         </span>
                       </ListBoxItem>
                     ))}
                   </ListBox>
-                ) : null}
-
-                {externalItems.length > 0 ? (
-                  <>
-                    <div className={styles.popoverTitle}>其他 Skill</div>
-                    <ListBox
-                      aria-label="已选择的其他 Skill"
-                      selectionMode="multiple"
-                      selectedKeys={externalItems.map((item) => item.key)}
-                      className={styles.listBox}
-                    >
-                      {externalItems.map((item) => (
-                        <ListBoxItem
-                          key={item.key}
-                          id={item.key}
-                          textValue={item.label}
-                          onPress={() => removeSkill(item.key)}
-                        >
-                          <span className={styles.listItemContent}>
-                            <Sparkles size={16} />
-                            <span>
-                              {item.label}
-                              {item.sourceText ? (
-                                <span className={styles.skillMenuSourceText}>
-                                  {item.sourceText}
-                                </span>
-                              ) : null}
-                            </span>
-                            <Check size={14} className={styles.checkIcon} />
-                          </span>
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </>
-                ) : null}
-
-                <ListBox
-                  aria-label="选择其他 Skill"
-                  selectionMode="none"
-                  className={styles.listBox}
-                  onAction={handleSelectOther}
-                >
-                  <ListBoxItem id="select-other-skill" textValue="选择其他 Skill...">
-                    <span className={styles.listItemContent}>
-                      <Sparkles size={16} />
-                      <span>选择其他 Skill...</span>
-                    </span>
-                  </ListBoxItem>
-                </ListBox>
-
-                {toolSection && toolSection.items.length > 0 ? (
-                  <>
-                    <div className={styles.popoverTitle}>工具</div>
-                    <ListBox
-                      aria-label="选择工具"
-                      selectionMode="multiple"
-                      selectedKeys={selectedToolIds}
-                      className={styles.listBox}
-                    >
-                      {toolSection.items.map((item) => (
-                        <ListBoxItem
-                          key={item.key}
-                          id={item.key}
-                          textValue={item.label}
-                          onPress={() => handleToggleTool(item.key)}
-                        >
-                          <span className={styles.listItemContent}>
-                            <Wrench size={16} />
-                            <span>{item.label}</span>
-                            {selectedToolIds.includes(item.key) ? (
-                              <Check size={14} className={styles.checkIcon} />
-                            ) : null}
-                          </span>
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </>
-                ) : null}
-              </div>
-            )}
-          </Popover.DeferredContent>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+                </>
+              ) : null}
+            </div>
+          )}
+        </AppPopover.DeferredContent>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 
