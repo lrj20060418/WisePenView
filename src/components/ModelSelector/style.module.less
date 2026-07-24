@@ -1,8 +1,9 @@
 .trigger {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  width: max-content;
   max-width: 100%;
   min-width: 0;
   height: 32px;
@@ -12,6 +13,7 @@
   border-radius: var(--radius-xl);
   color: var(--text-tertiary);
   background: transparent;
+  overflow: hidden;
   cursor: pointer;
   transition:
     background 0.2s,
@@ -37,7 +39,7 @@
   }
 
   > span {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -50,7 +52,9 @@
   flex-shrink: 0;
   width: 32px;
   min-width: 32px;
+  max-width: 32px;
   padding: 0;
+  justify-content: center;
   border-radius: var(--radius-full, 999px);
 }
 

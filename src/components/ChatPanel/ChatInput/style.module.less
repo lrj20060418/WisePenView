@@ -1,6 +1,6 @@
 .container {
   flex-shrink: 0;
-  padding: var(--space-sm) 0 var(--space-2xs);
+  padding: var(--chat-input-container-padding-block, var(--space-sm)) 0 var(--space-2xs);
   background: transparent;
 }
 
@@ -9,11 +9,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--chat-input-card-padding-block, var(--space-sm)) var(--space-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--card-shadow);
+  container-type: inline-size;
+  container-name: chat-input;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
@@ -114,8 +116,9 @@
 
 .textarea {
   flex: 0 0 auto;
+  width: 100%;
   min-height: calc(1.6em + 16px);
-  max-height: calc(16em + 16px);
+  max-height: var(--chat-input-textarea-max-height, calc(16em + 16px));
   overflow-y: hidden;
   resize: none !important;
   border: none !important;
@@ -126,16 +129,27 @@
   line-height: 1.6;
   color: var(--foreground);
 
+  /* HeroUI TextArea：样式可能落在包裹层，实际 textarea 需同步约束 */
+  :global(textarea) {
+    min-height: inherit !important;
+    max-height: inherit !important;
+    height: inherit;
+    overflow-y: inherit;
+    resize: none !important;
+    field-sizing: fixed;
+  }
+
   &::placeholder {
     color: var(--field-placeholder);
   }
 }
 
 .actionToolbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-sm);
+  column-gap: var(--space-sm);
+  width: 100%;
   min-height: 36px;
   min-width: 0;
 }
@@ -143,16 +157,34 @@
 .toolbarLeft,
 .toolsRight {
   display: flex;
+  flex-flow: row nowrap;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
 }
 
+.toolbarLeft {
+  grid-column: 1;
+  justify-self: start;
+
+  > :global(*) {
+    flex: 0 0 auto;
+  }
+}
+
 .toolsRight {
-  margin-left: auto;
+  grid-column: 3;
+  justify-self: end;
+  /* 模型选择与录音/发送之间需稳定间距，避免文案溢出叠上去 */
+  gap: var(--space-xs);
+
+  > :global(*) {
+    flex: 0 0 auto;
+  }
 }
 
 .toolbarCircleBtn {
+  flex: 0 0 auto;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -367,18 +399,36 @@
 }
 
 .modelSelectorShell {
-  flex-shrink: 1;
-  min-width: 0;
-  max-width: 180px;
-  /* fullWidth?????????????? */
-  margin-inline-end: var(--space-sm);
+  flex: 0 1 auto;
+  width: max-content;
+  min-width: 32px;
+  max-width: var(--layout-model-selector-max-width, 240px);
+  overflow: hidden;
+  margin-inline-end: 0;
 }
 
 .modelSelectorShellIcon {
+  flex: 0 0 auto;
+  width: auto;
   max-width: none;
-  flex-shrink: 0;
-  /* panel ???????????????????????? */
+  min-width: 32px;
+  overflow: visible;
   margin-inline-end: 0;
+}
+
+@container chat-input (max-width: 420px) {
+  .actionToolbar {
+    column-gap: var(--space-2xs);
+  }
+
+  .toolbarLeft {
+    gap: 2px;
+  }
+
+  /* 右侧控件保持可读间距，防止模型文案与麦克风重叠 */
+  .toolsRight {
+    gap: var(--space-xs);
+  }
 }
 
 .dropOverlay {
@@ -456,19 +506,5 @@
 @media (max-width: 640px) {
   .container {
     padding-inline: var(--space-sm);
-  }
-
-  .actionToolbar {
-    align-items: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .toolsRight {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .modelSelectorShell {
-    max-width: calc(100% - 40px);
   }
 }

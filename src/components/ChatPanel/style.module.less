@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-width: var(--chat-panel-min-width);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   position: relative;
   /* 与 Note / Workspace 主区同纸面；fullWidth 亦同 */
   --chat-shell-bg: var(--surface);
@@ -23,7 +25,7 @@
   --chat-user-message-max-width: 72%;
   --chat-avatar-size: 24px;
   --chat-model-meta-font-size: var(--font-size-base);
-  --chat-footer-scroll-offset: 132px;
+  --chat-footer-scroll-offset: var(--layout-chat-footer-scroll-offset, 132px);
   /* 历史导航：侧栏紧凑 */
   --history-nav-preview-font-size: var(--font-size-xs);
   --history-nav-item-padding-block: var(--space-2xs);
@@ -42,6 +44,9 @@
   --history-nav-bar-gap: var(--space-sm);
 
   &.fullWidth {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
     --chat-shell-bg: var(--surface);
     --chat-message-font-size: var(--font-size-heading-5);
     --chat-message-line-height: 1.625;
@@ -100,6 +105,17 @@
 
   &.collapsedHeader {
     padding: var(--space-sm);
+  }
+}
+
+:global(html[data-layout-height='short']) {
+  .header {
+    padding-block: var(--space-xs);
+  }
+
+  .headerLeft,
+  .headerRight {
+    min-height: 32px;
   }
 }
 
