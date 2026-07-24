@@ -1,3 +1,4 @@
+import AppIconButton from '@/components/Button/AppIconButton';
 import { Checkbox } from '@/components/Input';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import clsx from 'clsx';
@@ -382,18 +383,17 @@ function Tree({
             <div className={styles.indent} aria-hidden />
 
             {expandable ? (
-              <button
-                type="button"
+              <AppIconButton
+                icon={<span className={styles.switcherIcon}>{renderSwitcherIcon(loading)}</span>}
+                label={expanded ? '收起节点' : '展开节点'}
+                size="sm"
                 className={clsx(styles.switcher, 'wisepen-tree__switcher')}
                 data-expanded={expanded}
-                aria-label={expanded ? '收起节点' : '展开节点'}
                 onClick={(event) => {
                   event.stopPropagation();
                   toggleExpand(node, !expanded);
                 }}
-              >
-                <span className={styles.switcherIcon}>{renderSwitcherIcon(loading)}</span>
-              </button>
+              />
             ) : (
               <span
                 className={clsx(styles.switcherPlaceholder, 'wisepen-tree__switcher-placeholder')}
