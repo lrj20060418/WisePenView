@@ -1,5 +1,5 @@
 import { blockNoteSchema } from '@/components/Note/CustomBlockNote/registry/noteEditorComposition';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { blockHasType, editorHasBlockWithType } from '@blocknote/core';
 import { useBlockNoteEditor, useEditorState } from '@blocknote/react';
 import { Button, Input } from '@heroui/react';
@@ -72,27 +72,25 @@ export function FileCaptionToolbarButton(buttonGroupProps: ButtonGroupChildProps
   };
 
   return (
-    <Popover isOpen={open} onOpenChange={handleOpenChange} deferContent={false}>
-      <Popover.Trigger>
+    <AppPopover isOpen={open} onOpenChange={handleOpenChange} deferContent={false}>
+      <AppPopover.Trigger>
         <ToolbarButton {...buttonGroupProps} label="编辑图片标题" icon={<PencilLine size={20} />} />
-      </Popover.Trigger>
-      <Popover.Content className={styles.formPopover} placement="bottom">
-        <Popover.Dialog>
-          <div className={styles.formPanel} onMouseDown={(event) => event.stopPropagation()}>
-            <Input
-              autoFocus
-              aria-label="图片标题"
-              placeholder="输入图片标题"
-              value={caption}
-              onChange={(event) => setCaption(event.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <Button size="sm" variant="primary" onPress={saveCaption}>
-              确定
-            </Button>
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      </AppPopover.Trigger>
+      <AppPopover.Content className={styles.formPopover} placement="bottom">
+        <div className={styles.formPanel} onMouseDown={(event) => event.stopPropagation()}>
+          <Input
+            autoFocus
+            aria-label="图片标题"
+            placeholder="输入图片标题"
+            value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <Button size="sm" variant="primary" onPress={saveCaption}>
+            确定
+          </Button>
+        </div>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }

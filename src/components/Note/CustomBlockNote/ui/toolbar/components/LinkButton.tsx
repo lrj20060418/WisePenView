@@ -1,5 +1,5 @@
 import { blockNoteSchema } from '@/components/Note/CustomBlockNote/registry/noteEditorComposition';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { isTableCellSelection } from '@blocknote/core';
 import {
   DEFAULT_LINK_PROTOCOL,
@@ -126,27 +126,25 @@ export function CreateLinkToolbarButton(buttonGroupProps: ButtonGroupChildProps)
   };
 
   return (
-    <Popover isOpen={open} onOpenChange={handleOpenChange} deferContent={false}>
-      <Popover.Trigger>
+    <AppPopover isOpen={open} onOpenChange={handleOpenChange} deferContent={false}>
+      <AppPopover.Trigger>
         <ToolbarButton {...buttonGroupProps} label="添加链接" icon={<Link size={20} />} />
-      </Popover.Trigger>
-      <Popover.Content className={styles.formPopover} placement="bottom">
-        <Popover.Dialog>
-          <div className={styles.formPanel} onMouseDown={(event) => event.stopPropagation()}>
-            <Input
-              autoFocus
-              aria-label="链接地址"
-              placeholder="输入链接地址"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <Button size="sm" variant="primary" onPress={saveLink}>
-              确定
-            </Button>
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      </AppPopover.Trigger>
+      <AppPopover.Content className={styles.formPopover} placement="bottom">
+        <div className={styles.formPanel} onMouseDown={(event) => event.stopPropagation()}>
+          <Input
+            autoFocus
+            aria-label="链接地址"
+            placeholder="输入链接地址"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <Button size="sm" variant="primary" onPress={saveLink}>
+            确定
+          </Button>
+        </div>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }

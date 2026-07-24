@@ -1,4 +1,5 @@
 import { Input, TextArea } from '@/components/Input';
+import { AppPopover } from '@/components/Overlay';
 import AppModal from '@/components/Overlay/AppModal';
 import UploadZone from '@/components/UploadZone';
 import { FEEDBACK_TYPE, useImageService, useUserService, type FeedbackType } from '@/domains';
@@ -7,7 +8,7 @@ import {
   assertImageProxyUploadLimit,
   IMAGE_UPLOAD_MAX_SIZE_LABEL,
 } from '@/utils/image/uploadLimit';
-import { Button, Label, ListBox, Popover, TextField, toast, type Selection } from '@heroui/react';
+import { Button, Label, ListBox, TextField, toast, type Selection } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { ChevronDown } from 'lucide-react';
 import { useState, type Key } from 'react';
@@ -28,9 +29,7 @@ const DEFAULT_FORM_VALUES: FeedbackFormValues = {
   image: null,
 };
 
-const FEEDBACK_TYPE_VALUES = new Set<string>(
-  FEEDBACK_TYPE.options.map((option) => option.value)
-);
+const FEEDBACK_TYPE_VALUES = new Set<string>(FEEDBACK_TYPE.options.map((option) => option.value));
 
 function isFeedbackType(value: string): value is FeedbackType {
   return FEEDBACK_TYPE_VALUES.has(value);
@@ -186,8 +185,8 @@ function UserFeedbackModal({ isOpen, onOpenChange }: UserFeedbackModalProps) {
             *
           </span>
         </span>
-        <Popover>
-          <Popover.Trigger>
+        <AppPopover>
+          <AppPopover.Trigger>
             <Button
               variant="outline"
               className={styles.typeTrigger}
@@ -201,26 +200,24 @@ function UserFeedbackModal({ isOpen, onOpenChange }: UserFeedbackModalProps) {
               </span>
               <ChevronDown size={16} aria-hidden className={styles.typeChevron} />
             </Button>
-          </Popover.Trigger>
-          <Popover.Content className={styles.typePopover} placement="bottom start">
-            <Popover.Dialog>
-              <ListBox
-                aria-label="问题类型选项"
-                selectionMode="multiple"
-                selectedKeys={new Set(formValues.types)}
-                onSelectionChange={handleTypeSelectionChange}
-                className={styles.typeList}
-              >
-                {FEEDBACK_TYPE.options.map((option) => (
-                  <ListBox.Item key={option.value} id={option.value} textValue={option.label}>
-                    {option.label}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Popover.Dialog>
-          </Popover.Content>
-        </Popover>
+          </AppPopover.Trigger>
+          <AppPopover.Content className={styles.typePopover} placement="bottom start">
+            <ListBox
+              aria-label="问题类型选项"
+              selectionMode="multiple"
+              selectedKeys={new Set(formValues.types)}
+              onSelectionChange={handleTypeSelectionChange}
+              className={styles.typeList}
+            >
+              {FEEDBACK_TYPE.options.map((option) => (
+                <ListBox.Item key={option.value} id={option.value} textValue={option.label}>
+                  {option.label}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </AppPopover.Content>
+        </AppPopover>
       </div>
 
       <TextField

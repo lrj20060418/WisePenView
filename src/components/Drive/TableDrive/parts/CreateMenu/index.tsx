@@ -1,5 +1,5 @@
 import EntryIcon from '@/components/Icons/EntryIcon';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { Button } from '@heroui/react';
 import { CloudUpload, FileInput, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -46,38 +46,36 @@ function CreateMenu({ disabled = false, items, onSelect }: CreateMenuProps) {
   };
 
   return (
-    <Popover isOpen={open} onOpenChange={setOpen}>
-      <Popover.Trigger>
+    <AppPopover isOpen={open} onOpenChange={setOpen}>
+      <AppPopover.Trigger>
         <Button variant="secondary" size="sm" isDisabled={disabled}>
           <Plus size={16} aria-hidden="true" />
           新建
         </Button>
-      </Popover.Trigger>
-      <Popover.Content className={styles.menuPopover} placement="bottom start">
-        <Popover.Dialog>
-          <div role="menu" aria-label="新建菜单">
-            <ul className={styles.menuList}>
-              {items.map((item) => (
-                <li key={item.id} role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className={styles.menuItem}
-                    disabled={item.disabled}
-                    onClick={() => handleSelect(item.id)}
-                  >
-                    <span className={styles.menuIcon}>
-                      <CreateMenuIcon id={item.id} />
-                    </span>
-                    {item.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      </AppPopover.Trigger>
+      <AppPopover.Content className={styles.menuPopover} placement="bottom start">
+        <div role="menu" aria-label="新建菜单">
+          <ul className={styles.menuList}>
+            {items.map((item) => (
+              <li key={item.id} role="none">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.menuItem}
+                  disabled={item.disabled}
+                  onClick={() => handleSelect(item.id)}
+                >
+                  <span className={styles.menuIcon}>
+                    <CreateMenuIcon id={item.id} />
+                  </span>
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 

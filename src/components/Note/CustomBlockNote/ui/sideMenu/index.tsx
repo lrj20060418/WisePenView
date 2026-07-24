@@ -576,7 +576,12 @@ function CustomSideMenu({ plugins }: { plugins: readonly NoteContentPlugin[] }) 
                     <Dropdown.Item id="copy" textValue="复制" className={styles.menuItem}>
                       <MenuItemContent icon={Copy} label="复制" />
                     </Dropdown.Item>
-                    <Dropdown.Item id="delete" textValue="删除" className={styles.menuItem}>
+                    <Dropdown.Item
+                      id="delete"
+                      textValue="删除"
+                      variant="danger"
+                      className={styles.menuItem}
+                    >
                       <MenuItemContent icon={Trash2} label="删除" />
                     </Dropdown.Item>
                   </Dropdown.Section>

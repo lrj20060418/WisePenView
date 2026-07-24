@@ -5,11 +5,10 @@ import {
   getColorItem,
   type ColorKey,
 } from '@/components/Note/CustomBlockNote/ui/editorMenus/colorPaletteData';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { useBlockNoteEditor, useEditorState } from '@blocknote/react';
 import { Baseline } from 'lucide-react';
 import { useState } from 'react';
-import styles from '../style.module.less';
 import {
   blockHasInlineContent,
   colorStyleExists,
@@ -75,38 +74,36 @@ export function ColorMenu(_buttonGroupProps: ButtonGroupChildProps) {
   const selectedTextColor = getColorItem(state.textColor);
 
   return (
-    <Popover isOpen={open} onOpenChange={setOpen} deferContent={false}>
+    <AppPopover isOpen={open} onOpenChange={setOpen} deferContent={false}>
       <AppIconButton
         icon={<Baseline size={20} className={selectedTextColor.textClassName} aria-hidden="true" />}
         label="颜色"
         size="sm"
         isActive={open}
-        overlayTrigger={<Popover.Trigger />}
+        overlayTrigger={<AppPopover.Trigger />}
         onMouseDown={stopToolbarMouseDown}
       />
-      <Popover.Content className={styles.colorPopover} placement="bottom">
-        <Popover.Dialog>
-          <ColorPaletteContent
-            text={
-              state.hasTextColor
-                ? {
-                    color: state.textColor,
-                    onChange: (color) => applyColor('textColor', color),
-                  }
-                : undefined
-            }
-            background={
-              state.hasBackgroundColor
-                ? {
-                    color: state.backgroundColor,
-                    onChange: (color) => applyColor('backgroundColor', color),
-                  }
-                : undefined
-            }
-            onReset={resetColors}
-          />
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      <AppPopover.Content placement="bottom" bodyPadding="none">
+        <ColorPaletteContent
+          text={
+            state.hasTextColor
+              ? {
+                  color: state.textColor,
+                  onChange: (color) => applyColor('textColor', color),
+                }
+              : undefined
+          }
+          background={
+            state.hasBackgroundColor
+              ? {
+                  color: state.backgroundColor,
+                  onChange: (color) => applyColor('backgroundColor', color),
+                }
+              : undefined
+          }
+          onReset={resetColors}
+        />
+      </AppPopover.Content>
+    </AppPopover>
   );
 }

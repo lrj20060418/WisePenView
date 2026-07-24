@@ -1,5 +1,5 @@
 import AppIconButton from '@/components/Button/AppIconButton';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { useGroupService } from '@/domains';
 import { buildDriveNodeScope } from '@/domains/Drive';
 import type { Group } from '@/domains/Group';
@@ -52,64 +52,59 @@ function SidebarDriveScopeSwitcher() {
   };
 
   return (
-    <Popover isOpen={open} onOpenChange={setOpen}>
+    <AppPopover isOpen={open} onOpenChange={setOpen}>
       <AppIconButton
         icon={<ChevronsUpDown size={14} aria-hidden="true" />}
         label="切换云盘范围"
         size="sm"
         className={styles.nodeActionBtn}
         tooltip={{ content: '切换云盘' }}
-        overlayTrigger={<Popover.Trigger />}
+        overlayTrigger={<AppPopover.Trigger />}
       />
-      <Popover.Content className={styles.scopePopover} placement="right">
-        <Popover.Dialog>
-          <div
-            className={styles.scopeMenuPanel}
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <div className={styles.scopeMenuTitle}>切换云盘</div>
-            <div role="menu" aria-label="切换云盘范围" className={styles.scopeList}>
+      <AppPopover.Content placement="right" title="切换云盘">
+        <div
+          className={styles.scopeMenuPanel}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <div role="menu" aria-label="切换云盘范围" className={styles.scopeList}>
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={selectedKey === PERSONAL_SCOPE_KEY}
+              className={styles.scopeMenuItem}
+              onClick={() => handleSelectScope(undefined)}
+            >
+              <HardDrive size={15} aria-hidden="true" />
+              <span className={styles.scopeMenuItemText}>个人云盘</span>
+              {selectedKey === PERSONAL_SCOPE_KEY ? (
+                <Check size={14} className={styles.scopeCheckIcon} aria-hidden="true" />
+              ) : null}
+            </button>
+            {groups.map((group) => (
               <button
+                key={group.groupId}
                 type="button"
                 role="menuitemradio"
-                aria-checked={selectedKey === PERSONAL_SCOPE_KEY}
+                aria-checked={selectedKey === group.groupId}
                 className={styles.scopeMenuItem}
-                onClick={() => handleSelectScope(undefined)}
+                onClick={() => handleSelectScope(group.groupId)}
               >
-                <HardDrive size={15} aria-hidden="true" />
-                <span className={styles.scopeMenuItemText}>个人云盘</span>
-                {selectedKey === PERSONAL_SCOPE_KEY ? (
+                <UsersRound size={15} aria-hidden="true" />
+                <span className={styles.scopeMenuItemText}>{group.groupName || '未命名小组'}</span>
+                {selectedKey === group.groupId ? (
                   <Check size={14} className={styles.scopeCheckIcon} aria-hidden="true" />
                 ) : null}
               </button>
-              {groups.map((group) => (
-                <button
-                  key={group.groupId}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={selectedKey === group.groupId}
-                  className={styles.scopeMenuItem}
-                  onClick={() => handleSelectScope(group.groupId)}
-                >
-                  <UsersRound size={15} aria-hidden="true" />
-                  <span className={styles.scopeMenuItemText}>
-                    {group.groupName || '未命名小组'}
-                  </span>
-                  {selectedKey === group.groupId ? (
-                    <Check size={14} className={styles.scopeCheckIcon} aria-hidden="true" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-            {loading ? <div className={styles.scopeHint}>正在加载小组...</div> : null}
-            {!loading && groups.length === 0 ? (
-              <div className={styles.scopeHint}>暂无可切换小组</div>
-            ) : null}
+            ))}
           </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+          {loading ? <div className={styles.scopeHint}>正在加载小组...</div> : null}
+          {!loading && groups.length === 0 ? (
+            <div className={styles.scopeHint}>暂无可切换小组</div>
+          ) : null}
+        </div>
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 

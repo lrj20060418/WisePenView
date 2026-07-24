@@ -1,6 +1,7 @@
 import type { FormEvent, KeyboardEvent, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
+import { AppPopover } from '@/components/Overlay';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import popoverStyles from '../InlineMath/style.module.less';
 import { sanitizeLatexInput } from '../latexInput';
@@ -118,21 +119,23 @@ export function LatexEditPopover(props: LatexEditPopoverProps) {
       role="dialog"
       aria-label={title}
     >
-      <div className={popoverStyles.inlineEditPopoverHeader}>{title}</div>
-      <textarea
-        ref={inputRef}
-        className={textareaClassName}
-        value={value}
-        onBeforeInput={handleTextareaBeforeInput}
-        onChange={(event) => onValueChange(sanitizeLatexInput(event.target.value))}
-        onKeyDown={(e) => handleTextareaKeyDown(e, onCancel, onCommit, commitEnterUnlessShift)}
-        onBlur={onBlur}
-        rows={rows}
-        spellCheck={false}
-        autoComplete="off"
-        aria-label="LaTeX 源码"
-      />
-      <div className={popoverStyles.inlineEditHint}>{hint}</div>
+      <AppPopover.Header>{title}</AppPopover.Header>
+      <div className={popoverStyles.inlineEditPopoverBody}>
+        <textarea
+          ref={inputRef}
+          className={textareaClassName}
+          value={value}
+          onBeforeInput={handleTextareaBeforeInput}
+          onChange={(event) => onValueChange(sanitizeLatexInput(event.target.value))}
+          onKeyDown={(e) => handleTextareaKeyDown(e, onCancel, onCommit, commitEnterUnlessShift)}
+          onBlur={onBlur}
+          rows={rows}
+          spellCheck={false}
+          autoComplete="off"
+          aria-label="LaTeX 源码"
+        />
+        <div className={popoverStyles.inlineEditHint}>{hint}</div>
+      </div>
     </div>,
     document.body
   );

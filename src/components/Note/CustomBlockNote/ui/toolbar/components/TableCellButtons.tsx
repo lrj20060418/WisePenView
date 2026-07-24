@@ -7,7 +7,7 @@ import {
   getSafeTableCellSelection,
   getTableHandles,
 } from '@/components/Note/CustomBlockNote/ui/tableHandles/safe';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import {
   blockHasType,
   mapTableCell,
@@ -19,7 +19,6 @@ import { useBlockNoteEditor, useEditorState } from '@blocknote/react';
 import { ButtonGroup, ToggleButtonGroup } from '@heroui/react';
 import { Paintbrush, PanelLeft, PanelTop, TableCellsMerge, TableCellsSplit } from 'lucide-react';
 import { Fragment, useState } from 'react';
-import styles from '../style.module.less';
 import { getSelectedBlocks, stopToolbarMouseDown, toBlockUpdate } from '../utils';
 import { ToolbarToggleButton } from './ToolbarButton';
 
@@ -265,27 +264,25 @@ export function TableCellButtons() {
         </ToggleButtonGroup>
       ) : null}
       <ButtonGroup size="sm" variant="ghost" aria-label="表格颜色">
-        <Popover isOpen={colorOpen} onOpenChange={setColorOpen} deferContent={false}>
+        <AppPopover isOpen={colorOpen} onOpenChange={setColorOpen} deferContent={false}>
           <AppIconButton
             icon={<Paintbrush size={20} aria-hidden="true" />}
             label="单元格背景色"
             size="sm"
             isActive={colorOpen}
-            overlayTrigger={<Popover.Trigger />}
+            overlayTrigger={<AppPopover.Trigger />}
             onMouseDown={stopToolbarMouseDown}
           />
-          <Popover.Content className={styles.colorPopover} placement="bottom">
-            <Popover.Dialog>
-              <ColorPaletteContent
-                background={{
-                  color: state.backgroundColor,
-                  onChange: applyBackgroundColor,
-                }}
-                onReset={() => applyBackgroundColor('default')}
-              />
-            </Popover.Dialog>
-          </Popover.Content>
-        </Popover>
+          <AppPopover.Content placement="bottom" bodyPadding="none">
+            <ColorPaletteContent
+              background={{
+                color: state.backgroundColor,
+                onChange: applyBackgroundColor,
+              }}
+              onReset={() => applyBackgroundColor('default')}
+            />
+          </AppPopover.Content>
+        </AppPopover>
       </ButtonGroup>
     </>
   );

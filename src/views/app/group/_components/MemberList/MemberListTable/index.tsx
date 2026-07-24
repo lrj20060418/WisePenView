@@ -102,7 +102,7 @@ function buildPageSizeControl(
         <Select.Value />
         <Select.Indicator />
       </Select.Trigger>
-      <Select.Popover className={ManageTable.selectPopover}>
+      <Select.Popover>
         <ListBox>
           {config.pageSizeOptions.map((value) => (
             <ListBox.Item key={String(value)} id={String(value)} textValue={`${value} 条/页`}>
@@ -156,7 +156,7 @@ function renderRoleEditor(
         <Select.Value />
         <Select.Indicator />
       </Select.Trigger>
-      <Select.Popover className={ManageTable.selectPopover}>
+      <Select.Popover>
         <ListBox>
           {canPromoteToAdmin ? (
             <ListBox.Item key="ADMIN" id="ADMIN" textValue="管理员">

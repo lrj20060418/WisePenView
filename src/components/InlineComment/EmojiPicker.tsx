@@ -1,5 +1,5 @@
 import AppIconButton from '@/components/Button/AppIconButton';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import data from '@emoji-mart/data';
 import zh from '@emoji-mart/data/i18n/zh.json';
 import { useMemoizedFn } from 'ahooks';
@@ -51,21 +51,19 @@ function EmojiPicker({ label, disabled, onSelect }: EmojiPickerProps) {
   });
 
   return (
-    <Popover isOpen={open} onOpenChange={setOpen} deferContent={false}>
+    <AppPopover isOpen={open} onOpenChange={setOpen} deferContent={false}>
       <AppIconButton
         icon={<SmilePlus size={15} aria-hidden />}
         label={label}
         size="sm"
         isDisabled={disabled}
         className={styles.iconButton}
-        overlayTrigger={<Popover.Trigger />}
+        overlayTrigger={<AppPopover.Trigger />}
       />
-      <Popover.Content className={styles.emojiPopover} placement="bottom end">
-        <Popover.Dialog>
-          <div ref={mountPicker} className={styles.emojiMartHost} aria-label="选择表情" />
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+      <AppPopover.Content placement="bottom end" bodyPadding="none">
+        <div ref={mountPicker} className={styles.emojiMartHost} aria-label="选择表情" />
+      </AppPopover.Content>
+    </AppPopover>
   );
 }
 

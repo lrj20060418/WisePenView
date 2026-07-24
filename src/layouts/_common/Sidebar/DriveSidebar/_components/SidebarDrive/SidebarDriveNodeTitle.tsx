@@ -1,4 +1,4 @@
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import { CloudUpload, FileInput, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 
@@ -89,103 +89,101 @@ function SidebarDriveNodeTitle({
           onKeyDown={stopTreeAction}
         >
           {canCreateFolder ? (
-            <Popover isOpen={createMenuOpen} onOpenChange={setCreateMenuOpen}>
+            <AppPopover isOpen={createMenuOpen} onOpenChange={setCreateMenuOpen}>
               <AppIconButton
                 icon={<Plus size={14} aria-hidden="true" />}
                 label={`在${label}中新建`}
                 size="sm"
                 className={styles.nodeActionBtn}
                 tooltip={{ content: '新建' }}
-                overlayTrigger={<Popover.Trigger />}
+                overlayTrigger={<AppPopover.Trigger />}
               />
-              <Popover.Content className={styles.createPopover} placement="right">
-                <Popover.Dialog>
-                  <div
-                    className={styles.createMenuPanel}
-                    onClick={stopTreeAction}
-                    onKeyDown={stopTreeAction}
+              <AppPopover.Content placement="right">
+                <div
+                  className={styles.createMenuPanel}
+                  onClick={stopTreeAction}
+                  onKeyDown={stopTreeAction}
+                >
+                  <button
+                    type="button"
+                    className={styles.createMenuItem}
+                    onClick={() => handleCreate('folder')}
                   >
-                    <button
-                      type="button"
-                      className={styles.createMenuItem}
-                      onClick={() => handleCreate('folder')}
-                    >
-                      <FolderPlus size={15} color="var(--primary)" aria-hidden="true" />
-                      <span>新建文件夹</span>
-                    </button>
-                    {canCreateResource ? (
-                      <>
+                    <FolderPlus size={15} color="var(--primary)" aria-hidden="true" />
+                    <span>新建文件夹</span>
+                  </button>
+                  {canCreateResource ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.createMenuItem}
+                        onClick={() => handleCreate('note')}
+                      >
+                        <EntryIcon
+                          entryType="resource"
+                          resourceIconType="note"
+                          size={15}
+                          color="var(--primary)"
+                        />
+                        <span>新建笔记</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.createMenuItem}
+                        onClick={() => handleCreate('importNote')}
+                      >
+                        <FileInput size={15} color="var(--primary)" aria-hidden="true" />
+                        <span>导入笔记</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.createMenuItem}
+                        onClick={() => handleCreate('drawio')}
+                      >
+                        <EntryIcon
+                          entryType="resource"
+                          resourceIconType="drawio"
+                          size={15}
+                          color="var(--primary)"
+                        />
+                        <span>新建图表</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.createMenuItem}
+                        onClick={() => handleCreate('skill')}
+                      >
+                        <EntryIcon
+                          entryType="resource"
+                          resourceIconType="skill"
+                          size={15}
+                          color="var(--primary)"
+                        />
+                        <span>新建 Skill</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.createMenuItem}
+                        onClick={() => handleCreate('agent')}
+                      >
+                        <EntryIcon entryType="resource" resourceIconType="agent" size={15} />
+                        <span>新建 Agent</span>
+                      </button>
+                      {canUploadDocument ? (
                         <button
                           type="button"
                           className={styles.createMenuItem}
-                          onClick={() => handleCreate('note')}
+                          onClick={() => handleCreate('upload')}
                         >
-                          <EntryIcon
-                            entryType="resource"
-                            resourceIconType="note"
-                            size={15}
-                            color="var(--primary)"
-                          />
-                          <span>新建笔记</span>
+                          <CloudUpload size={15} color="var(--primary)" aria-hidden="true" />
+                          <span>上传文件</span>
                         </button>
-                        <button
-                          type="button"
-                          className={styles.createMenuItem}
-                          onClick={() => handleCreate('importNote')}
-                        >
-                          <FileInput size={15} color="var(--primary)" aria-hidden="true" />
-                          <span>导入笔记</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.createMenuItem}
-                          onClick={() => handleCreate('drawio')}
-                        >
-                          <EntryIcon
-                            entryType="resource"
-                            resourceIconType="drawio"
-                            size={15}
-                            color="var(--primary)"
-                          />
-                          <span>新建图表</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.createMenuItem}
-                          onClick={() => handleCreate('skill')}
-                        >
-                          <EntryIcon
-                            entryType="resource"
-                            resourceIconType="skill"
-                            size={15}
-                            color="var(--primary)"
-                          />
-                          <span>新建 Skill</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.createMenuItem}
-                          onClick={() => handleCreate('agent')}
-                        >
-                          <EntryIcon entryType="resource" resourceIconType="agent" size={15} />
-                          <span>新建 Agent</span>
-                        </button>
-                        {canUploadDocument ? (
-                          <button
-                            type="button"
-                            className={styles.createMenuItem}
-                            onClick={() => handleCreate('upload')}
-                          >
-                            <CloudUpload size={15} color="var(--primary)" aria-hidden="true" />
-                            <span>上传文件</span>
-                          </button>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
-                </Popover.Dialog>
-              </Popover.Content>
-            </Popover>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              </AppPopover.Content>
+            </AppPopover>
           ) : null}
           {canRename ? (
             <AppIconButton

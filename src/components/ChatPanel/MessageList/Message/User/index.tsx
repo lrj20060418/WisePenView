@@ -1,6 +1,6 @@
 import CopyButton from '@/components/Button/CopyButton';
 import EntryIcon from '@/components/Icons/EntryIcon';
-import { Popover } from '@/components/Overlay';
+import { AppPopover } from '@/components/Overlay';
 import {
   Attachment,
   AttachmentContent,
@@ -61,8 +61,8 @@ function UserMessageAttachments({
       ))}
 
       {overflowCount > 0 ? (
-        <Popover isOpen={moreOpen} onOpenChange={setMoreOpen} deferContent={false}>
-          <Popover.Trigger title={`查看全部 ${attachments.length} 个附件`}>
+        <AppPopover isOpen={moreOpen} onOpenChange={setMoreOpen} deferContent={false}>
+          <AppPopover.Trigger title={`查看全部 ${attachments.length} 个附件`}>
             <button
               type="button"
               className={styles.moreTrigger}
@@ -71,32 +71,33 @@ function UserMessageAttachments({
             >
               +{overflowCount}
             </button>
-          </Popover.Trigger>
-          <Popover.Content className={styles.morePopover} placement="bottom end">
-            <Popover.Dialog>
-              <div className={styles.morePanel}>
-                <div className={styles.moreTitle}>全部附件（{attachments.length}）</div>
-                <ul className={styles.moreList} aria-label="全部附件">
-                  {attachments.map((attachment) => (
-                    <li key={attachment.attachmentId} className={styles.moreItem}>
-                      <span className={styles.moreItemIcon} aria-hidden>
-                        <EntryIcon entryType="resource" size={16} />
+          </AppPopover.Trigger>
+          <AppPopover.Content
+            className={styles.morePopover}
+            placement="bottom end"
+            title={`全部附件（${attachments.length}）`}
+          >
+            <div className={styles.morePanel}>
+              <ul className={styles.moreList} aria-label="全部附件">
+                {attachments.map((attachment) => (
+                  <li key={attachment.attachmentId} className={styles.moreItem}>
+                    <span className={styles.moreItemIcon} aria-hidden>
+                      <EntryIcon entryType="resource" size={16} />
+                    </span>
+                    <span className={styles.moreItemText}>
+                      <span className={styles.moreItemName} title={attachment.filename}>
+                        {attachment.filename}
                       </span>
-                      <span className={styles.moreItemText}>
-                        <span className={styles.moreItemName} title={attachment.filename}>
-                          {attachment.filename}
-                        </span>
-                        <span className={styles.moreItemMeta}>
-                          {getAttachmentDescription(attachment)}
-                        </span>
+                      <span className={styles.moreItemMeta}>
+                        {getAttachmentDescription(attachment)}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Popover.Dialog>
-          </Popover.Content>
-        </Popover>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </AppPopover.Content>
+        </AppPopover>
       ) : null}
     </AttachmentGroup>
   );
