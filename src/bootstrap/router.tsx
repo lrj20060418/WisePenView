@@ -141,8 +141,28 @@ const router = createBrowserRouter([
               },
               // 文档与云盘页
               {
-                path: 'drive',
+                path: 'drive/personal',
                 element: <Drive />,
+              },
+              {
+                path: 'drive/personal/folder/:folderId',
+                element: <Drive />,
+              },
+              {
+                path: 'drive/group/:groupId',
+                element: <Drive />,
+              },
+              {
+                path: 'drive/group/:groupId/folder/:folderId',
+                element: <Drive />,
+              },
+              {
+                path: 'drive/upload-queue',
+                element: <Drive viewMode="uploadQueue" />,
+              },
+              {
+                path: 'drive/favorites',
+                element: <Drive viewMode="favorites" />,
               },
               {
                 path: 'my-group',

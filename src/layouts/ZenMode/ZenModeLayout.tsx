@@ -1,4 +1,4 @@
-import AppIconButton from '@/components/AppIconButton';
+import AppIconButton from '@/components/Button/AppIconButton';
 import ChatPanel from '@/components/ChatPanel';
 import { useCurrentChatSessionStore } from '@/components/ChatPanel/_store/useCurrentChatSessionStore';
 import { clearNewChatSessionStore } from '@/components/ChatPanel/_store/useNewChatSessionStore';
@@ -111,13 +111,9 @@ function ZenResourcePane({
     (next: OpenResourceTarget) => {
       const resourceId = next.resourceId.trim();
       if (!resourceId) return;
-      const resourceType = resolveResourceKind({
-        resourceType: next.resourceType,
-        resourceName: next.resourceName,
-      });
+      const resourceType = resolveResourceKind(next.resourceType);
       const viewer = resolveResourceViewer({
         resourceType: next.resourceType ?? resourceType,
-        resourceName: next.resourceName,
         viewer: next.viewer,
       });
       setPaneTarget(pane.paneId, {

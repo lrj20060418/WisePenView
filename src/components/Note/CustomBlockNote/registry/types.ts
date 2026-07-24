@@ -9,6 +9,8 @@ import type {
   StyleSchema,
 } from '@blocknote/core';
 import type { DefaultReactSuggestionItem } from '@blocknote/react';
+import type { Node as PMNode } from '@tiptap/pm/model';
+import type { Transaction } from '@tiptap/pm/state';
 import type { EditorProps } from '@tiptap/pm/view';
 import type { LucideIcon } from 'lucide-react';
 
@@ -17,6 +19,49 @@ import type { AiDiffDisplayMode } from '@/domains/Note';
 export type NoteInlineContentSpecs = Record<string, InlineContentSpec<InlineContentConfig>>;
 
 export type PluginEditor = BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema>;
+
+export interface NoteTransactionRange {
+  from: number;
+  to: number;
+}
+
+export interface NoteChangedBlock {
+  id: string;
+  node: PMNode;
+  pos: number;
+}
+
+export interface NoteTransactionAnalysis {
+  docChanged: boolean;
+  changedRanges: readonly NoteTransactionRange[];
+  changedBlocks: readonly NoteChangedBlock[];
+  removedBlockIds: readonly string[];
+  structureChanged: boolean;
+}
+
+export interface NoteTransactionUpdate {
+  transaction: Transaction;
+  appendedTransactions: Transaction[];
+}
+
+export interface NoteTransactionEditor {
+  _tiptapEditor: {
+    on: (event: 'update', listener: (update: NoteTransactionUpdate) => void) => void;
+    off: (event: 'update', listener: (update: NoteTransactionUpdate) => void) => void;
+  };
+}
+
+export interface NoteTransactionService {
+  analyze: (transactions: readonly Transaction[]) => NoteTransactionAnalysis;
+  subscribe: (
+    editor: NoteTransactionEditor,
+    listener: (analysis: NoteTransactionAnalysis) => void
+  ) => () => void;
+}
+
+export interface NoteEditorServices {
+  transactions: NoteTransactionService;
+}
 
 export type NoteCapabilityDeclaration =
   | { support: 'default' }
@@ -29,7 +74,42 @@ export interface NoteContentCapabilityDeclarations {
   markdownExport: NoteCapabilityDeclaration;
   aiDiff: NoteCapabilityDeclaration;
   plainText: NoteCapabilityDeclaration;
+  findReplace: NoteCapabilityDeclaration;
   print: NoteCapabilityDeclaration;
+}
+
+export type NoteFindReplaceHighlight =
+  { kind: 'inline'; from: number; to: number } | { kind: 'node'; from: number; to: number };
+
+/** 插件产出的纯替换描述，由搜索协调器统一写入同一个事务。 */
+export type NoteReplaceOperation =
+  | { kind: 'inlineText'; from: number; to: number }
+  | {
+      kind: 'nodeAttributeText';
+      pos: number;
+      attribute: string;
+      fromOffset: number;
+      toOffset: number;
+    };
+
+export interface NoteFindReplaceMatch {
+  pluginId: string;
+  /** 用于排序、定位和与当前选区比对的稳定文档位置。 */
+  from: number;
+  to: number;
+  highlight: NoteFindReplaceHighlight;
+  operation: NoteReplaceOperation;
+}
+
+export interface NoteFindReplaceContext {
+  node: PMNode;
+  pos: number;
+  query: string;
+  registry: NotePluginRegistry;
+}
+
+export interface NoteFindReplaceFacet {
+  collectMatches: (context: NoteFindReplaceContext) => readonly NoteFindReplaceMatch[];
 }
 
 interface NoteBlockPlainTextFacet {
@@ -213,6 +293,7 @@ export interface NoteBlockPlugin extends NoteContentPluginBase {
   insertion?: NoteBlockInsertion;
   inputRules?: NoteBlockInputRules;
   plainText?: NoteBlockPlainTextFacet;
+  findReplace?: NoteFindReplaceFacet;
   outline?: NoteBlockOutlineFacet;
   markdownImport?: NoteMarkdownBlockImport;
   markdownExport?: NoteMarkdownExportProjection;
@@ -224,6 +305,7 @@ export interface NoteInlinePlugin extends NoteContentPluginBase {
   kind: 'inline';
   spec: InlineContentSpec<InlineContentConfig>;
   plainText?: NoteInlinePlainTextFacet;
+  findReplace?: NoteFindReplaceFacet;
   markdownImport?: NoteMarkdownInlineImport;
   markdownExport?: NoteMarkdownExportProjection;
   aiDiff: NoteInlineAiDiff;
@@ -245,10 +327,12 @@ export interface NoteEditorExtension extends NotePluginNodeBase {
 
 interface NotePluginContext {
   registry: NotePluginRegistry;
+  services: NoteEditorServices;
 }
 
 export interface NotePluginRegistry {
   root: NotePluginBundle;
+  services: NoteEditorServices;
   contentPlugins: readonly NoteContentPlugin[];
   blockPlugins: ReadonlyMap<string, NoteBlockPlugin>;
   inlinePlugins: ReadonlyMap<string, NoteInlinePlugin>;

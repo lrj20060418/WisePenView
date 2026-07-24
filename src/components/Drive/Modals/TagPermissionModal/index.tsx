@@ -1,3 +1,4 @@
+import AppAvatar from '@/components/Avatar';
 import DriveNavigator from '@/components/Drive/DriveNavigator';
 import ResourcePermissionActionIcon from '@/components/Drive/common/resourcePermissionActionIcon';
 import {
@@ -6,7 +7,7 @@ import {
   TAG_PERMISSION_RESOURCE_STRATEGIES,
 } from '@/components/Drive/common/tagPermissionPreset';
 import { Empty, Spin } from '@/components/Feedback';
-import { Input } from '@/components/Input';
+import { Checkbox, Input } from '@/components/Input';
 import AppModal from '@/components/Overlay/AppModal';
 import { useGroupService, useTagService } from '@/domains';
 import { mapTagToFolderNode } from '@/domains/Drive/mapper/DriveServices.map';
@@ -25,16 +26,7 @@ import {
 } from '@/domains/Tag';
 import { useEffectForce } from '@/hooks/useEffectForce';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
-import {
-  Avatar,
-  Button,
-  Checkbox,
-  ListBox,
-  Tabs,
-  TextField,
-  toast,
-  type Selection,
-} from '@heroui/react';
+import { Button, ListBox, Tabs, TextField, toast, type Selection } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import { Check, X } from 'lucide-react';
 import { useState, type Key } from 'react';
@@ -522,19 +514,12 @@ const TagPolicyModalBase = ({
                     onClick={() => handleActionToggle(row.action, !selected)}
                   >
                     <Checkbox
+                      className={styles.permissionCheckbox}
                       aria-label={row.label}
                       isSelected={selected}
-                      onChange={(checked) => handleActionToggle(row.action, checked)}
-                      variant="secondary"
-                      className={styles.permissionCheckbox}
+                      onChange={(isSelected) => handleActionToggle(row.action, isSelected)}
                       onClick={(event) => event.stopPropagation()}
-                    >
-                      <Checkbox.Content className={styles.permissionCheckboxContent}>
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                      </Checkbox.Content>
-                    </Checkbox>
+                    />
                   </td>
                   {TAG_PERMISSION_RESOURCE_STRATEGIES.map((strategy) => {
                     const supported = row.supportedStrategyKeys.includes(strategy.key);
@@ -625,10 +610,10 @@ const TagPolicyModalBase = ({
         {visibleMemberOptions.map((member) => (
           <ListBox.Item key={member.userId} id={member.userId} textValue={member.name}>
             <span className={styles.memberItem}>
-              <Avatar aria-label={member.name} className={styles.memberAvatar}>
-                {member.avatar ? <Avatar.Image alt={member.name} src={member.avatar} /> : null}
-                <Avatar.Fallback>{getDisplayInitial(member.name)}</Avatar.Fallback>
-              </Avatar>
+              <AppAvatar aria-label={member.name} className={styles.memberAvatar}>
+                {member.avatar ? <AppAvatar.Image alt={member.name} src={member.avatar} /> : null}
+                <AppAvatar.Fallback>{getDisplayInitial(member.name)}</AppAvatar.Fallback>
+              </AppAvatar>
               <span className={styles.memberMeta}>
                 <span className={styles.memberName}>{member.name}</span>
                 <span className={styles.memberDescription}>{member.description}</span>

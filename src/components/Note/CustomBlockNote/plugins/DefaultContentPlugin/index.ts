@@ -9,7 +9,7 @@ import { Image as ImageIcon } from 'lucide-react';
 
 import { createClientError, FRONTEND_CLIENT_ERROR } from '@/utils/error';
 import { projectInlinePlainText } from '../../engines/plainText';
-import type { NoteRichTextAiDiffConfig } from '../../noteConfig';
+import { collectInlineTextMatches } from '../../engines/search/findReplace';
 import type {
   NoteBlockPlugin,
   NoteCapabilityDeclaration,
@@ -18,7 +18,12 @@ import type {
   NotePluginBundle,
   NotePrintContribution,
 } from '../../registry/types';
-import { createRichTextBlockAiDiff, linkInlineAiDiff, textInlineAiDiff } from './aiDiff';
+import {
+  createRichTextBlockAiDiff,
+  linkInlineAiDiff,
+  textInlineAiDiff,
+  type NoteRichTextAiDiffConfig,
+} from './aiDiff';
 
 const DEFAULT_CAPABILITY: NoteCapabilityDeclaration = { support: 'default' };
 const UNSUPPORTED_AI_DIFF: NoteCapabilityDeclaration = {
@@ -31,6 +36,7 @@ function richTextCapabilities(): NoteContentCapabilityDeclarations {
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff: { support: 'inherited' },
     plainText: { support: 'inherited' },
+    findReplace: { support: 'custom' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -41,6 +47,7 @@ function atomicCapabilities(): NoteContentCapabilityDeclarations {
     markdownExport: DEFAULT_CAPABILITY,
     aiDiff: UNSUPPORTED_AI_DIFF,
     plainText: { support: 'inherited' },
+    findReplace: { support: 'unsupported', reason: '媒体和分割线不包含可替换文本' },
     print: DEFAULT_CAPABILITY,
   };
 }
@@ -82,6 +89,14 @@ function createDefaultBlockPlugin(
     ...(options.print ? { print: options.print } : {}),
     ...(options.sideMenu ? { sideMenu: options.sideMenu } : {}),
     ...(options.outline ? { outline: options.outline } : {}),
+    ...(capabilities.findReplace.support === 'custom'
+      ? {
+          findReplace: {
+            collectMatches: ({ node, pos, query }) =>
+              collectInlineTextMatches(node, pos, query, `default.block.${type}`),
+          },
+        }
+      : {}),
     plainText: {
       project: (block, registry) => projectInlinePlainText(block.content, registry),
     },
@@ -100,6 +115,7 @@ function createDefaultInlinePlugin(type: 'text' | 'link') {
       markdownExport: DEFAULT_CAPABILITY,
       aiDiff: { support: 'inherited' },
       plainText: { support: 'inherited' },
+      findReplace: { support: 'unsupported', reason: '文本由所属 block 统一处理' },
       print: DEFAULT_CAPABILITY,
     },
     selection: {

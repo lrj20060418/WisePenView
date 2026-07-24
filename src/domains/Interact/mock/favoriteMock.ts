@@ -34,7 +34,7 @@ const mockFavoriteResources: ResourceItem[] = [
     resourceName: '示例文档.pdf',
     ownerId: '1',
     ownerInfo: {},
-    resourceType: 'file',
+    resourceType: 'pdf',
     resourceIconType: 'pdf',
   },
   {
@@ -42,7 +42,7 @@ const mockFavoriteResources: ResourceItem[] = [
     resourceName: '项目说明.md',
     ownerId: '1',
     ownerInfo: {},
-    resourceType: 'file',
+    resourceType: 'md',
     resourceIconType: 'md',
   },
 ];
@@ -145,7 +145,7 @@ export const updateMockFavoriteCollection = async (
 ): Promise<void> => {
   await delay(100);
   const collection = collections.find((item) => item.collectionId === params.collectionId);
-  if (!collection) return;
+  if (!collection || collection.isDefault) return;
   collection.collectionName = params.collectionName;
   collection.description = params.description ?? null;
 };

@@ -1,5 +1,5 @@
 import { usePdfPreviewProgressStore } from '@/components/PdfViewer/_store/usePdfPreviewProgressStore';
-import type { DriveNodeScope } from '@/domains/Drive';
+import { buildDriveNodeScope, type DriveNodeScope } from '@/domains/Drive';
 import { useWorkspaceNavigationStore } from '@/layouts/Workspace/_store/useWorkspaceNavigationStore';
 import {
   RESOURCE_VIEWER,
@@ -16,7 +16,7 @@ export interface OpenInWorkspaceTarget {
   resourceType?: string;
   resourceName?: string;
   viewer?: ResourceViewer | string;
-  driveLocation:
+  driveLocation?:
     | { scope: DriveNodeScope }
     | {
         scope: DriveNodeScope;
@@ -55,27 +55,24 @@ export const useOpenInWorkspace = (): OpenInWorkspaceFn => {
       if (!resourceId) return;
 
       const navigationStore = useWorkspaceNavigationStore.getState();
-      const scope = target.driveLocation.scope;
-      if ('parentNodeId' in target.driveLocation) {
+      const driveLocation = target.driveLocation;
+      const scope = driveLocation?.scope ?? buildDriveNodeScope();
+      if (driveLocation && 'parentNodeId' in driveLocation) {
         navigationStore.navigateToResource({
           scope,
           resource: {
             resourceId,
-            parentNodeId: target.driveLocation.parentNodeId,
-            ...(target.driveLocation.nodeId ? { nodeId: target.driveLocation.nodeId } : {}),
+            parentNodeId: driveLocation.parentNodeId,
+            ...(driveLocation.nodeId ? { nodeId: driveLocation.nodeId } : {}),
           },
         });
       } else {
         navigationStore.navigateToScope(scope);
       }
 
-      const resourceType = resolveResourceKind({
-        resourceType: target.resourceType,
-        resourceName: target.resourceName,
-      });
+      const resourceType = resolveResourceKind(target.resourceType);
       const viewer = resolveResourceViewer({
         resourceType: target.resourceType ?? resourceType,
-        resourceName: target.resourceName,
         viewer: target.viewer,
       });
       const basePath = buildWorkspaceResourcePath({ resourceType, resourceId, viewer });

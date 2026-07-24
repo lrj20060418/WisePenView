@@ -34,6 +34,7 @@ export const SkillServicesMock: ISkillService = {
   updateSkillInfo: async () => undefined,
   publishVersion: async () => undefined,
   loadAssetContent: async () => '# Mock Skill\n',
+  loadAssetBlob: async () => new Blob(),
   deleteAssets: async () => undefined,
   uploadAsset: async () => undefined,
   uploadAssets: async (_resourceId, _draftVersion, assets, options) => {
@@ -45,6 +46,7 @@ export const SkillServicesMock: ISkillService = {
       name: asset.name,
       path: asset.path,
       assetId: `mock-asset-${index}-${asset.name}`,
+      objectKey: `mock-skill/${asset.path}/${asset.name}`,
     }));
   },
   saveAsset: async () => undefined,

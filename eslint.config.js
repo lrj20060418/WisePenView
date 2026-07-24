@@ -200,6 +200,13 @@ export default defineConfig([
     },
   },
   {
+    // Electron 主进程与预加载脚本运行在 Node 环境，不能沿用浏览器全局变量配置。
+    files: ['electron/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     // Overlay 封装内部允许直连 HeroUI 浮层原语。
     files: ['src/components/Overlay/**/*.{ts,tsx}'],
     rules: {
@@ -208,7 +215,7 @@ export default defineConfig([
   },
   {
     // 全局搜索是 command palette 形态，允许直接使用底层 Modal。
-    files: ['src/views/app/drive/_components/GlobalSearchBox/SearchModal/**/*.{ts,tsx}'],
+    files: ['src/components/Drive/GlobalSearch/SearchModal/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': buildRestrictedImportsRule({ allowOverlayPrimitive: true }),
     },

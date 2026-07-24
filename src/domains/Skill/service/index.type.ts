@@ -19,6 +19,7 @@ export interface UploadSkillAssetResult {
   name: string;
   path: string;
   assetId?: string;
+  objectKey?: string;
   error?: unknown;
 }
 
@@ -37,6 +38,7 @@ export interface ISkillService {
   updateSkillInfo(resourceId: string, name?: string, description?: string): Promise<void>;
   publishVersion(resourceId: string): Promise<void>;
   loadAssetContent(resourceId: string, objectKey: string, targetVersion?: number): Promise<string>;
+  loadAssetBlob(resourceId: string, objectKey: string, targetVersion?: number): Promise<Blob>;
   deleteAssets(resourceId: string, draftVersion: number, assetIds: string[]): Promise<void>;
   uploadAsset(
     resourceId: string,

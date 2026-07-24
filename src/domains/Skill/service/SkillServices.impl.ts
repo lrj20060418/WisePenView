@@ -53,6 +53,18 @@ async function stringifyOssContent(content: unknown): Promise<string> {
   return content == null ? '' : String(content);
 }
 
+async function toOssBlob(content: unknown): Promise<Blob> {
+  if (content instanceof Blob) return content;
+  if (content instanceof ArrayBuffer) return new Blob([content]);
+  if (ArrayBuffer.isView(content)) {
+    const copy = new Uint8Array(content.byteLength);
+    copy.set(new Uint8Array(content.buffer, content.byteOffset, content.byteLength));
+    return new Blob([copy]);
+  }
+  if (isTextReadable(content)) return new Blob([await content.text()]);
+  return new Blob([content == null ? '' : String(content)]);
+}
+
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
@@ -91,6 +103,13 @@ export const createSkillServices = (deps: SkillServicesDeps): ISkillService => {
     return assetClientManager.runWithClient({ resourceId, targetVersion }, async (client) => {
       const result = await client.get(objectKey);
       return stringifyOssContent(result.content);
+    });
+  };
+
+  const readAssetBlob = async (resourceId: string, objectKey: string, targetVersion?: number) => {
+    return assetClientManager.runWithClient({ resourceId, targetVersion }, async (client) => {
+      const result = await client.get(objectKey);
+      return toOssBlob(result.content);
     });
   };
 
@@ -182,6 +201,13 @@ export const createSkillServices = (deps: SkillServicesDeps): ISkillService => {
     return readAssetContent(resourceId, objectKey, targetVersion);
   };
 
+  const loadAssetBlob = async (resourceId: string, objectKey: string, targetVersion?: number) => {
+    if (!objectKey) {
+      throw createClientError(FRONTEND_CLIENT_ERROR.SKILL_FILE_OBJECT_KEY_MISSING);
+    }
+    return readAssetBlob(resourceId, objectKey, targetVersion);
+  };
+
   const deleteAssets = async (resourceId: string, draftVersion: number, assetIds: string[]) => {
     if (assetIds.length === 0) return;
     await SkillApi.deleteSkillAssets({ resourceId, draftVersion, assetIds });
@@ -259,6 +285,7 @@ export const createSkillServices = (deps: SkillServicesDeps): ISkillService => {
               name: request.name,
               path: request.path,
               assetId: ticket.assetId,
+              objectKey: ticket.objectKey,
             };
           } catch (error) {
             if (ticket?.assetId) {
@@ -314,6 +341,7 @@ export const createSkillServices = (deps: SkillServicesDeps): ISkillService => {
     updateSkillInfo,
     publishVersion,
     loadAssetContent,
+    loadAssetBlob,
     deleteAssets,
     uploadAsset,
     uploadAssets,

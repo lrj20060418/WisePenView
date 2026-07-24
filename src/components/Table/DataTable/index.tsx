@@ -25,7 +25,6 @@ import { useTranslation } from 'react-i18next';
 import DataTableLoadingSkeleton from './parts/LoadingSkeleton';
 
 const LOAD_MORE_THRESHOLD_PX = 48;
-
 function getRowTextValue<T extends object>(row: T, rowKey: keyof T & string): string {
   const value = row[rowKey];
   return value == null ? '' : String(value);

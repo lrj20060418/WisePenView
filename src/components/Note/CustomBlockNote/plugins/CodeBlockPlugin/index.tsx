@@ -1,10 +1,10 @@
 import { codeBlockOptions } from '@blocknote/code-block';
 import { createCodeBlockSpec } from '@blocknote/core';
-import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import { getCodeBlockHighlighter, normalizeCodeLanguage } from '@/utils/codeHighlight';
 
+import { collectInlineTextMatches } from '../../engines/search/findReplace';
 import type { NoteBlockPlugin } from '../../registry/types';
 import { CodeBlockAiContentView, CodeBlockAiDiffComparisonView } from './AiDiffView';
 import { CodeBlockToolbar } from './CodeBlockToolbar';
@@ -76,7 +76,10 @@ export const codeBlockPlugin = {
         toolbarWrapper.dataset.wiseCodeBlockToolbar = '';
         toolbarWrapper.replaceChildren(toolbarHost);
 
-        flushSync(() => {
+        let destroyed = false;
+        // BlockNote 可能在外层 React 生命周期中创建 NodeView，延后挂载以避免跨 Root 更新冲突。
+        queueMicrotask(() => {
+          if (destroyed) return;
           reactRoot.render(
             <CodeBlockToolbar
               codeElement={codeElement}
@@ -108,8 +111,10 @@ export const codeBlockPlugin = {
             return baseRender.ignoreMutation?.(mutation) ?? false;
           },
           destroy: () => {
-            reactRoot.unmount();
+            destroyed = true;
             baseRender.destroy?.();
+            // NodeView 可能在外层 React 提交期间销毁，延后卸载可避免嵌套同步卸载冲突。
+            queueMicrotask(() => reactRoot.unmount());
           },
         };
       },
@@ -120,6 +125,7 @@ export const codeBlockPlugin = {
     markdownExport: { support: 'default' },
     aiDiff: { support: 'custom' },
     plainText: { support: 'default' },
+    findReplace: { support: 'custom' },
     print: { support: 'custom' },
   },
   markdownImport: {
@@ -127,6 +133,10 @@ export const codeBlockPlugin = {
   },
   selection: {
     inspect: (_block, context) => ({ selected: context.selected, text: context.selectedText }),
+  },
+  findReplace: {
+    collectMatches: ({ node, pos, query }) =>
+      collectInlineTextMatches(node, pos, query, 'codeBlock'),
   },
   aiDiff: {
     renderAiContent: CodeBlockAiContentView,

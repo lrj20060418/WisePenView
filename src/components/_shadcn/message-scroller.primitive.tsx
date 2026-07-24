@@ -19,10 +19,11 @@ type RenderProp<TState extends RenderState> =
 type MessageScrollerDefaultScrollPosition = 'start' | 'end' | 'last-anchor';
 type MessageScrollerButtonDirection = 'start' | 'end';
 type MessageScrollerScrollAlign = 'start' | 'center' | 'end' | 'nearest';
+type MessageScrollerScrollMargin = number | ((viewport: HTMLElement) => number);
 type MessageScrollerScrollOptions = {
   align?: MessageScrollerScrollAlign;
   behavior?: ScrollBehavior;
-  scrollMargin?: number;
+  scrollMargin?: MessageScrollerScrollMargin;
 };
 type MessageScrollerScrollable = {
   start: boolean;
@@ -37,6 +38,7 @@ type MessageScrollerProviderProps = {
   children?: React.ReactNode;
   autoScroll?: boolean;
   defaultScrollPosition?: MessageScrollerDefaultScrollPosition;
+  scrollAnchorOffsetRatio?: number;
   scrollEdgeThreshold?: number;
   scrollPreviousItemPeek?: number;
   scrollMargin?: number;
@@ -127,6 +129,7 @@ type MessageScrollerRefs = {
   preserveScrollOnPrependRef: React.MutableRefObject<boolean>;
   rootRef: React.MutableRefObject<HTMLDivElement | null>;
   scrollEdgeThresholdRef: React.MutableRefObject<number>;
+  scrollAnchorOffsetRatioRef: React.MutableRefObject<number>;
   scrollMarginRef: React.MutableRefObject<number>;
   scrollPreviousItemPeekRef: React.MutableRefObject<number>;
   spacerGapRef: React.MutableRefObject<number>;
@@ -376,6 +379,7 @@ function getScrollableState({
 
 function getVisibilityState({
   content,
+  scrollAnchorOffsetRatio,
   scrollMargin,
   scrollPreviousItemPeek,
   spacer,
@@ -383,6 +387,7 @@ function getVisibilityState({
   visibleMessageIds,
 }: {
   content: HTMLElement | null;
+  scrollAnchorOffsetRatio: number;
   scrollMargin: number;
   scrollPreviousItemPeek: number;
   spacer: HTMLElement | null;
@@ -394,7 +399,11 @@ function getVisibilityState({
   }
 
   const viewportRect = viewport.getBoundingClientRect();
-  const anchorTopEdge = viewportRect.top + scrollMargin + scrollPreviousItemPeek;
+  const anchorTopEdge =
+    viewportRect.top +
+    (scrollAnchorOffsetRatio > 0
+      ? viewport.clientHeight * scrollAnchorOffsetRatio
+      : scrollMargin + scrollPreviousItemPeek);
   const needsManualIntersection = typeof IntersectionObserver === 'undefined';
   const nextVisibleMessageIds: string[] = [];
   let currentAnchorId: string | null = null;
@@ -434,8 +443,9 @@ function getVisibilityState({
 }
 
 function getMessageItems(content: HTMLElement, spacer: HTMLElement | null) {
-  return Array.from(content.children).filter(
-    (item): item is HTMLElement => item instanceof HTMLElement && item !== spacer
+  // 消息项可能嵌套在 Content 子容器内（如 messagesBody），不能只用 children
+  return Array.from(content.querySelectorAll<HTMLElement>('[data-message-id]')).filter(
+    (item) => item !== spacer && Boolean(item.dataset.messageId)
   );
 }
 
@@ -826,12 +836,14 @@ function useScrollCommands({
         return false;
       }
 
+      const resolvedScrollMargin =
+        typeof scrollMargin === 'function' ? scrollMargin(viewport) : scrollMargin;
       const scrollTop = getElementScrollTop({
         align,
         element,
         scrollMargin: keepPreviousPeek
-          ? scrollMargin + scrollPreviousItemPeekRef.current
-          : scrollMargin,
+          ? resolvedScrollMargin + scrollPreviousItemPeekRef.current
+          : resolvedScrollMargin,
         spacer: spacerRef.current,
         viewport,
       });
@@ -1012,11 +1024,13 @@ function areVisibilityStatesEqual(
 
 function useMessageScrollerRefs({
   autoScroll,
+  scrollAnchorOffsetRatio,
   scrollEdgeThreshold,
   scrollMargin,
   scrollPreviousItemPeek,
 }: {
   autoScroll: boolean;
+  scrollAnchorOffsetRatio: number;
   scrollEdgeThreshold: number;
   scrollMargin: number;
   scrollPreviousItemPeek: number;
@@ -1038,6 +1052,7 @@ function useMessageScrollerRefs({
   const preserveScrollOnPrependRef = React.useRef(true);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const scrollEdgeThresholdRef = React.useRef(scrollEdgeThreshold);
+  const scrollAnchorOffsetRatioRef = React.useRef(scrollAnchorOffsetRatio);
   const scrollMarginRef = React.useRef(scrollMargin);
   const scrollPreviousItemPeekRef = React.useRef(scrollPreviousItemPeek);
   const spacerGapRef = React.useRef(0);
@@ -1062,6 +1077,7 @@ function useMessageScrollerRefs({
 
   autoScrollRef.current = autoScroll;
   scrollEdgeThresholdRef.current = scrollEdgeThreshold;
+  scrollAnchorOffsetRatioRef.current = scrollAnchorOffsetRatio;
   scrollMarginRef.current = scrollMargin;
   scrollPreviousItemPeekRef.current = scrollPreviousItemPeek;
 
@@ -1083,6 +1099,7 @@ function useMessageScrollerRefs({
     preserveScrollOnPrependRef,
     rootRef,
     scrollEdgeThresholdRef,
+    scrollAnchorOffsetRatioRef,
     scrollMarginRef,
     scrollPreviousItemPeekRef,
     spacerGapRef,
@@ -1119,6 +1136,7 @@ function useMessageScrollerController({
   autoScroll = false,
   autoScrollResetKey,
   defaultScrollPosition = 'end',
+  scrollAnchorOffsetRatio = 0,
   scrollEdgeThreshold = DEFAULT_SCROLL_EDGE_THRESHOLD,
   scrollPreviousItemPeek = DEFAULT_SCROLL_PREVIOUS_ITEM_PEEK,
   scrollMargin = DEFAULT_SCROLL_MARGIN,
@@ -1126,6 +1144,7 @@ function useMessageScrollerController({
   Omit<MessageScrollerProviderProps, 'autoScroll' | 'children'>) {
   const refs = useMessageScrollerRefs({
     autoScroll,
+    scrollAnchorOffsetRatio,
     scrollEdgeThreshold,
     scrollMargin,
     scrollPreviousItemPeek,
@@ -1148,6 +1167,7 @@ function useMessageScrollerController({
     preserveScrollOnPrependRef,
     rootRef,
     scrollEdgeThresholdRef,
+    scrollAnchorOffsetRatioRef,
     scrollMarginRef,
     scrollPreviousItemPeekRef,
     spacerGapRef,
@@ -1259,6 +1279,7 @@ function useMessageScrollerController({
         visibilityStore.setSnapshot(
           getVisibilityState({
             content: contentRef.current,
+            scrollAnchorOffsetRatio: scrollAnchorOffsetRatioRef.current,
             scrollMargin: scrollMarginRef.current,
             scrollPreviousItemPeek: scrollPreviousItemPeekRef.current,
             spacer: spacerRef.current,
@@ -1270,6 +1291,7 @@ function useMessageScrollerController({
     });
   }, [
     contentRef,
+    scrollAnchorOffsetRatioRef,
     scrollMarginRef,
     scrollPreviousItemPeekRef,
     spacerRef,
@@ -1840,12 +1862,14 @@ function MessageScrollerProvider({
   autoScrollResetKey,
   children,
   defaultScrollPosition = 'end',
+  scrollAnchorOffsetRatio = 0,
   scrollEdgeThreshold = DEFAULT_SCROLL_EDGE_THRESHOLD,
   scrollPreviousItemPeek = DEFAULT_SCROLL_PREVIOUS_ITEM_PEEK,
   scrollMargin = DEFAULT_SCROLL_MARGIN,
 }: MessageScrollerProviderProps) {
   const { context, registerMessage } = useMessageScrollerController({
     autoScroll,
+    scrollAnchorOffsetRatio,
     autoScrollResetKey,
     defaultScrollPosition,
     scrollEdgeThreshold,

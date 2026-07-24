@@ -54,6 +54,7 @@ function SidebarDriveNodeTitle({
   const canCreateFolder = node.type === 'root' || node.type === 'folder';
   const canCreateResource =
     node.type === 'folder' || (node.type === 'root' && node.canMountResources);
+  const canUploadDocument = node.type === 'root' && node.scope.type === 'personal';
   const isSystemFolder = node.type === 'folder' && Boolean(node.systemType);
   const canRename = !isSystemFolder && (node.type === 'folder' || node.type === 'resource');
   const canDelete =
@@ -73,7 +74,6 @@ function SidebarDriveNodeTitle({
             entryType={node.type}
             folderIconType={folderIconType}
             resourceType={resourceType}
-            resourceName={label}
             resourceIconType={resourceIconType}
             size={16}
           />
@@ -176,14 +176,16 @@ function SidebarDriveNodeTitle({
                           <EntryIcon entryType="resource" resourceIconType="agent" size={15} />
                           <span>新建 Agent</span>
                         </button>
-                        <button
-                          type="button"
-                          className={styles.createMenuItem}
-                          onClick={() => handleCreate('upload')}
-                        >
-                          <CloudUpload size={15} color="var(--primary)" aria-hidden="true" />
-                          <span>上传文件</span>
-                        </button>
+                        {canUploadDocument ? (
+                          <button
+                            type="button"
+                            className={styles.createMenuItem}
+                            onClick={() => handleCreate('upload')}
+                          >
+                            <CloudUpload size={15} color="var(--primary)" aria-hidden="true" />
+                            <span>上传文件</span>
+                          </button>
+                        ) : null}
                       </>
                     ) : null}
                   </div>

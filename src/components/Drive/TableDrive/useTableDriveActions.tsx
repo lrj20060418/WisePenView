@@ -31,7 +31,6 @@ export interface UseTableDriveActionsParams {
   scope: DriveNodeScope;
   actions?: TableDriveActionConfig;
   refresh: () => void;
-  onUploadSuccess?: () => void;
   targetTagId?: string;
   isTrashView?: boolean;
 }
@@ -46,8 +45,6 @@ export interface UseTableDriveActionsReturn {
   openTagAccessPermission: (tagId: string) => void;
   openTagMountPermission: (tagId: string) => void;
   openResourcePermission: (target: ResourcePermissionModalTarget) => void;
-  tagPermissionRefreshToken: number;
-  resourcePermissionRefreshToken: number;
   ModalHost: ReactElement;
 }
 
@@ -57,7 +54,6 @@ const DEFAULT_TOOLBAR_CONFIG: Required<NonNullable<TableDriveActionConfig['toolb
   canCreateDrawio: true,
   canCreateSkill: true,
   canCreateAgent: true,
-  canUploadDocument: true,
   canUploadToGroup: false,
   canManageTagPermission: false,
 };
@@ -68,7 +64,6 @@ export function useTableDriveActions({
   scope,
   actions,
   refresh,
-  onUploadSuccess,
   targetTagId,
   isTrashView = false,
 }: UseTableDriveActionsParams): UseTableDriveActionsReturn {
@@ -81,14 +76,11 @@ export function useTableDriveActions({
   const toolbarConfig = { ...DEFAULT_TOOLBAR_CONFIG, ...actions?.toolbar };
 
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
-  const [uploadMountTagId, setUploadMountTagId] = useState<string>();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [tagAccessPermissionTagId, setTagAccessPermissionTagId] = useState<string>();
   const [tagMountPermissionTagId, setTagMountPermissionTagId] = useState<string>();
-  const [tagPermissionRefreshToken, setTagPermissionRefreshToken] = useState(0);
   const [resourcePermissionTarget, setResourcePermissionTarget] =
     useState<ResourcePermissionModalTarget | null>(null);
-  const [resourcePermissionRefreshToken, setResourcePermissionRefreshToken] = useState(0);
   const [driveCreateType, setDriveCreateType] = useState<DriveCreateType | null>(null);
 
   const existingFolderNames = useMemo(
@@ -128,11 +120,6 @@ export function useTableDriveActions({
     },
     [documentService, driveService, groupId, mountTagId, resourceService]
   );
-
-  const handleUploadSuccess = useCallback(() => {
-    refresh();
-    onUploadSuccess?.();
-  }, [onUploadSuccess, refresh]);
 
   const {
     fileInputRef: markdownFileInputRef,
@@ -209,15 +196,8 @@ export function useTableDriveActions({
         />
         <UploadDocumentModal
           isOpen={uploadDocumentOpen}
-          targetTagId={uploadMountTagId ?? targetTagId}
-          groupId={groupId}
-          onOpenChange={(open) => {
-            setUploadDocumentOpen(open);
-            if (!open) {
-              setUploadMountTagId(undefined);
-            }
-          }}
-          onSuccess={handleUploadSuccess}
+          onOpenChange={setUploadDocumentOpen}
+          onSuccess={refresh}
         />
         {groupId && uploadOpen ? (
           <UploadFileToGroupModal
@@ -237,7 +217,7 @@ export function useTableDriveActions({
                 setTagAccessPermissionTagId(undefined);
               }
             }}
-            onSuccess={() => setTagPermissionRefreshToken((prev) => prev + 1)}
+            onSuccess={refresh}
           />
         ) : null}
         {groupId && tagMountPermissionTagId ? (
@@ -250,7 +230,7 @@ export function useTableDriveActions({
                 setTagMountPermissionTagId(undefined);
               }
             }}
-            onSuccess={() => setTagPermissionRefreshToken((prev) => prev + 1)}
+            onSuccess={refresh}
           />
         ) : null}
         {groupId && resourcePermissionTarget ? (
@@ -263,7 +243,7 @@ export function useTableDriveActions({
                 setResourcePermissionTarget(null);
               }
             }}
-            onSuccess={() => setResourcePermissionRefreshToken((prev) => prev + 1)}
+            onSuccess={refresh}
           />
         ) : null}
         {driveCreateType ? (
@@ -288,26 +268,19 @@ export function useTableDriveActions({
       groupId,
       handleDriveCreateSuccess,
       handleMarkdownFileChange,
-      handleUploadSuccess,
       markdownFileInputRef,
       refresh,
       resourcePermissionTarget,
-      targetTagId,
       tagAccessPermissionTagId,
       tagMountPermissionTagId,
       uploadDocumentOpen,
-      uploadMountTagId,
       uploadOpen,
     ]
   );
 
   const openUploadDocument = useCallback(() => {
-    const nextMountTagId = resolveCurrentFolderTagId(currentNodeId, []) ?? targetTagId;
-    if (nextMountTagId) {
-      setUploadMountTagId(nextMountTagId);
-    }
     setUploadDocumentOpen(true);
-  }, [currentNodeId, targetTagId]);
+  }, []);
 
   const openUploadToGroup = useCallback(() => {
     setUploadOpen(true);
@@ -362,9 +335,8 @@ export function useTableDriveActions({
     [handleCreateNote, openMarkdownFilePicker, openUploadDocument]
   );
 
-  const showUploadDocument = Boolean(
-    toolbarConfig.canUploadDocument && targetTagId && !isTrashView
-  );
+  const showUploadDocument =
+    scope.type === 'personal' && currentNodeId === scope.rootId && !isTrashView;
 
   const canCreateInCurrentFolder = Boolean(mountTagId);
 
@@ -428,8 +400,6 @@ export function useTableDriveActions({
     openTagAccessPermission,
     openTagMountPermission,
     openResourcePermission,
-    tagPermissionRefreshToken,
-    resourcePermissionRefreshToken,
     ModalHost,
   };
 }

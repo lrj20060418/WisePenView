@@ -106,26 +106,25 @@ function ResourceHeaderMore({
     }
     if (key === 'search') {
       menu?.onSearch?.();
+      return;
     }
+
+    menu?.actions?.find((action) => action.id === key)?.onAction();
   };
 
   return (
     <Dropdown>
       <Tooltip>
-        <Tooltip.Trigger>
-          <Dropdown.Trigger>
-            <Button
-              variant="ghost"
-              size="sm"
-              isIconOnly
-              isPending={menu?.isPending || operations.isLocating}
-              isDisabled={isDisabled}
-              aria-label="更多"
-            >
-              <Ellipsis size={18} aria-hidden="true" />
-            </Button>
-          </Dropdown.Trigger>
-        </Tooltip.Trigger>
+        <Button
+          variant="ghost"
+          size="sm"
+          isIconOnly
+          isPending={menu?.isPending || operations.isLocating}
+          isDisabled={isDisabled}
+          aria-label="更多"
+        >
+          <Ellipsis size={18} aria-hidden="true" />
+        </Button>
         <Tooltip.Content>更多</Tooltip.Content>
       </Tooltip>
       <Dropdown.Popover placement="bottom end" className={styles.popover}>
@@ -172,6 +171,24 @@ function ResourceHeaderMore({
             </Dropdown.Section>
           ) : null}
           {menu?.showInlineCommentHistory ? (
+            <Dropdown.Section>
+              <Dropdown.Item
+                id="comment-history"
+                textValue="历史批注"
+                isDisabled={!menu.onInlineCommentHistory}
+              >
+                <ResourceHeaderMenuItemContent icon={MessageSquare} label="历史批注" />
+              </Dropdown.Item>
+            </Dropdown.Section>
+          ) : null}
+          {menu?.onSearch ? (
+            <Dropdown.Section>
+              <Dropdown.Item id="search" textValue="全文搜索">
+                <ResourceHeaderMenuItemContent icon={Search} label="全文搜索" />
+              </Dropdown.Item>
+            </Dropdown.Section>
+          ) : null}
+          {menu?.actions?.length ? (
             <Dropdown.Section>
               <Dropdown.Item
                 id="comment-history"
@@ -323,7 +340,6 @@ function ResourceHeader({
                   <EntryIcon
                     entryType="resource"
                     resourceType={resourceType}
-                    resourceName={resourceName}
                     resourceIconType={resourceIconType}
                   />
                 </span>
@@ -336,7 +352,6 @@ function ResourceHeader({
                 <EntryIcon
                   entryType="resource"
                   resourceType={resourceType}
-                  resourceName={resourceName}
                   resourceIconType={resourceIconType}
                 />
               </span>

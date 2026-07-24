@@ -43,6 +43,7 @@ import {
   createNoteChatStateProvider,
   createNoteSelectionChatContext,
 } from '../../NoteChatProtocol';
+import { useNoteFindMode } from '../../_hooks/useNoteFindMode';
 import { useAiDiffDisplayStore } from '../../_store/useAiDiffDisplayStore';
 import styles from '../../style.module.less';
 import FindBar from '../FindBar';
@@ -159,6 +160,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const bodyEditorRef = useRef<NoteBodyEditorHandle>(null);
   const titleEditorRef = useRef<NoteTitleHandle>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
+  const findModeScopeRef = useRef<HTMLDivElement>(null);
   const titleAnchorRef = useRef<HTMLDivElement>(null);
   const scrollBarHideTimerRef = useRef<number | null>(null);
   const [isMainScrolling, setIsMainScrolling] = useState(false);
@@ -224,6 +226,11 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
   const saveStatusText = formatNoteSaveStatus(headerSaveStatus);
   const collaborationUser = useMemo(() => buildNoteCollaborationUser(currentUser), [currentUser]);
   const canRenderBodyEditor = !shouldWaitCurrentUser;
+  const findMode = useNoteFindMode({
+    editorRef: bodyEditorRef,
+    scopeRef: findModeScopeRef,
+    canReplace: isConnected && noteInfoDisplay.canCollaborativeEdit,
+  });
   useRequest(() => interactService.recordResourceRead(resourceId), {
     refreshDeps: [resourceId],
   });
@@ -488,9 +495,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
                 onAction: () => setIsInlineCommentHistoryOpen(true),
               },
             ],
-            searchPopover: (
-              <FindBar key="search-popover" editorRef={bodyEditorRef} showClose={false} />
-            ),
+            onSearch: findMode.openFind,
             onPrint: handlePrintPdf,
             download: {
               label: '下载为 Markdown',
@@ -521,6 +526,7 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
       resourceId,
       resourceName,
       headerSaveStatus,
+      findMode.openFind,
       saveStatusText,
       setAiDiffDisplayMode,
       showAiDiffDisplayModeSwitch,
@@ -531,7 +537,25 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
 
   return (
     <>
-      <div className={styles.mainScroll}>
+      <div className={styles.mainScroll} ref={findModeScopeRef}>
+        {findMode.findMode ? (
+          <div className={styles.findBarDock}>
+            <FindBar
+              query={findMode.findMode.query}
+              replacement={findMode.findMode.replacement}
+              result={findMode.findMode.result}
+              replaced={findMode.findMode.replaced}
+              canReplace={findMode.canReplace}
+              onQueryChange={findMode.changeFindQuery}
+              onReplacementChange={findMode.changeReplacement}
+              onPrevious={findMode.findPrevious}
+              onNext={findMode.findNext}
+              onReplaceCurrent={findMode.replaceCurrent}
+              onReplaceAll={findMode.replaceAll}
+              onClose={findMode.closeFind}
+            />
+          </div>
+        ) : null}
         <div
           className={`${styles.contentRow} ${
             isOutlineOpen ? styles.contentRowOutlineOpen : styles.contentRowOutlineCollapsed
@@ -599,6 +623,8 @@ function NoteWorkspace({ resourceId, noteInfoDisplay, onRefreshNoteInfo }: NoteW
                       onActiveHeadingChange={setActiveHeadingId}
                       onAiDiffPresenceChange={setHasAiDiffContent}
                       onAskAi={handleAskAi}
+                      onOpenFind={findMode.openFind}
+                      isFindModeActive={findMode.isFindModeActive}
                       portalContainers={{
                         aiBulkActions: aiBulkActionsPortalContainer,
                       }}

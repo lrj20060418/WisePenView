@@ -59,13 +59,21 @@ function fileExtToLanguage(name: string): string {
   }
 }
 
-function SkillEditor({ content, fileName, readOnly, onSave, onChange }: SkillEditorProps) {
+function SkillEditor({
+  content,
+  fileName,
+  readOnly,
+  onSave,
+  onChange,
+  onEditorMount,
+}: SkillEditorProps) {
   const onSaveRef = useLatest(onSave);
 
   const handleMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSaveRef.current?.();
     });
+    onEditorMount?.(editor);
   };
 
   return (
