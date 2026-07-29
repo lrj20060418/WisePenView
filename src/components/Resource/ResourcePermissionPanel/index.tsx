@@ -1,31 +1,27 @@
 import AppAvatar from '@/components/Avatar';
 import AppIconButton from '@/components/Button/AppIconButton';
 import ResourcePermissionActionIcon from '@/components/Drive/common/resourcePermissionActionIcon';
-import {
-  areResourcePermissionActionsEqualByOptions,
-  buildResourcePermissionActionKeySet,
-  filterResourcePermissionActionsByOptions,
-} from '@/components/Drive/common/resourcePermissionPolicy';
+import { buildResourcePermissionActionKeySet } from '@/components/Drive/common/resourcePermissionPolicy';
 import { AppPopover } from '@/components/Overlay';
 import UserSearchCombobox from '@/components/UserSearchCombobox';
-import { useGroupService, useResourceService, useTagService, useUserService } from '@/domains';
-import type { GroupBaseInfo } from '@/domains/Group';
 import {
-  type ResourceAction,
   type ResourcePermissionActionOption,
-  type ResourcePermissionOverview,
   type ResourcePermissionSource,
   type ResourcePermissionSubject,
-  updateResourceActionSelection,
 } from '@/domains/Resource';
-import type { UserSearchUser } from '@/domains/User';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Chip, ListBox, Skeleton, toast } from '@heroui/react';
-import { useRequest } from 'ahooks';
+import { Button, Chip, ListBox, Skeleton } from '@heroui/react';
+import type { TFunction } from 'i18next';
 import { ChevronDown, Trash2, UserPlus } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ResourcePermissionPanelProps } from './index.type';
+import {
+  getAvatarSrc,
+  getSubjectActionsForDisplay,
+  getSubjectRenderKey,
+} from './resourcePermissionPanelModel';
 import styles from './style.module.less';
+import { useResourcePermissionPanelController } from './useResourcePermissionPanelController';
 
 interface SubjectPermissionPopoverProps {
   subject: ResourcePermissionSubject;
@@ -36,36 +32,15 @@ interface SubjectPermissionPopoverProps {
   ) => void;
 }
 
-type SpecifiedUserCandidate = Pick<
-  UserSearchUser,
-  'userId' | 'username' | 'nickname' | 'realName' | 'avatar'
->;
-
-const sourceLabelMap: Record<ResourcePermissionSource, string> = {
-  owner: '所有者',
-  tag: '来自标签',
-  resourceOverride: '资源覆盖',
-  specifiedUser: '指定用户',
+const sourceLabelKeyMap: Record<ResourcePermissionSource, string> = {
+  owner: 'permission.source.owner',
+  tag: 'permission.source.tag',
+  resourceOverride: 'permission.source.resourceOverride',
+  specifiedUser: 'permission.source.specifiedUser',
 };
-const TAG_INHERITED_DESCRIPTION = '继承自资源所在标签的权限';
-const RESOURCE_OVERRIDE_DESCRIPTION = '已覆盖标签策略，仅对此资源生效';
-const EMPTY_ACTION_OPTIONS: ResourcePermissionActionOption[] = [];
 const PANEL_SKELETON_ROWS = ['owner', 'tag', 'override', 'specifiedUser'] as const;
 
-const getSupportedActionsFromOptions = (
-  actionOptions: ResourcePermissionActionOption[]
-): ResourceAction[] =>
-  actionOptions.filter((option) => option.supported).map((option) => option.action);
-
 const getDisplayInitial = (name: string): string => name.trim().charAt(0).toUpperCase() || '?';
-
-const getAvatarSrc = (avatar?: string): string | undefined => {
-  const trimmedAvatar = avatar?.trim();
-  return trimmedAvatar || undefined;
-};
-
-const getUserCandidateDisplayName = (user: SpecifiedUserCandidate): string =>
-  user.realName?.trim() || user.nickname?.trim() || user.username.trim() || `用户 ${user.userId}`;
 
 const getActionLabel = (
   action: ResourcePermissionActionOption['action'],
@@ -74,210 +49,28 @@ const getActionLabel = (
 
 const formatActionSummary = (
   subject: ResourcePermissionSubject,
-  options: ResourcePermissionActionOption[]
+  options: ResourcePermissionActionOption[],
+  t: TFunction<'resource'>
 ): string => {
-  if (subject.source === 'owner') return '全部权限';
-  if (subject.source === 'tag') return '继承自标签';
+  if (subject.source === 'owner') return t('permission.summary.all');
+  if (subject.source === 'tag') return t('permission.summary.inherited');
   const actions = subject.effectiveActions;
   if (actions.length === 0) {
-    return '无权限';
+    return t('permission.summary.none');
   }
   const first = actions[0];
-  return `${getActionLabel(first, options)} 等 ${actions.length} 个权限`;
-};
-
-const getSubjectActionsForDisplay = (subject: ResourcePermissionSubject) => {
-  if (subject.source === 'tag') {
-    return subject.inheritedActions ?? subject.effectiveActions;
-  }
-  return subject.readonly ? subject.effectiveActions : subject.editableActions;
-};
-
-const canCompareWithInheritedActions = (subject: ResourcePermissionSubject): boolean =>
-  Array.isArray(subject.inheritedActions);
-
-const getSubjectRenderKey = (subject: ResourcePermissionSubject): string => {
-  if (subject.groupId) return `group:${subject.groupId}`;
-  if (subject.userId) return `user:${subject.userId}:${subject.source}`;
-  return subject.id;
-};
-
-const updateSubjectActions = (
-  subjects: ResourcePermissionSubject[],
-  subjectId: string,
-  actions: ResourcePermissionActionOption['action'][],
-  options: ResourcePermissionActionOption[]
-): ResourcePermissionSubject[] =>
-  subjects.map((subject) => {
-    if (subject.id !== subjectId || subject.readonly) return subject;
-    const nextActions = filterResourcePermissionActionsByOptions(actions, options);
-    if (
-      subject.source === 'resourceOverride' &&
-      canCompareWithInheritedActions(subject) &&
-      areResourcePermissionActionsEqualByOptions(nextActions, subject.inheritedActions, options)
-    ) {
-      const inheritedActions = filterResourcePermissionActionsByOptions(
-        subject.inheritedActions,
-        options
-      );
-      return {
-        ...subject,
-        id: subject.groupId ? `group:${subject.groupId}:tag` : subject.id,
-        source: 'tag',
-        description: TAG_INHERITED_DESCRIPTION,
-        editableActions: inheritedActions,
-        effectiveActions: inheritedActions,
-        inheritedActions,
-      };
-    }
-    if (subject.source === 'tag') {
-      return {
-        ...subject,
-        id: subject.groupId ? `group:${subject.groupId}:override` : `${subject.id}:override`,
-        source: 'resourceOverride',
-        description: RESOURCE_OVERRIDE_DESCRIPTION,
-        editableActions: nextActions,
-        effectiveActions: nextActions,
-      };
-    }
-    return {
-      ...subject,
-      editableActions: nextActions,
-      effectiveActions: nextActions,
-    };
+  return t('permission.summary.multiple', {
+    first: getActionLabel(first, options),
+    count: actions.length,
   });
-
-const createSpecifiedUserSubject = (user: SpecifiedUserCandidate): ResourcePermissionSubject => ({
-  id: `user:${user.userId}:specified`,
-  kind: 'user',
-  source: 'specifiedUser',
-  name: getUserCandidateDisplayName(user),
-  description: '由您邀请而获得的权限',
-  avatar: getAvatarSrc(user.avatar),
-  userId: user.userId,
-  effectiveActions: [],
-  editableActions: [],
-});
-
-const hydrateUserDisplayInfo = (
-  subjects: ResourcePermissionSubject[],
-  userInfoById: Map<string, SpecifiedUserCandidate>
-): ResourcePermissionSubject[] => {
-  let changed = false;
-  const nextSubjects = subjects.map((subject) => {
-    if (!subject.userId) return subject;
-    const userInfo = userInfoById.get(subject.userId);
-    if (!userInfo) return subject;
-
-    const nextName = getUserCandidateDisplayName(userInfo);
-    const nextAvatar = getAvatarSrc(userInfo.avatar) || getAvatarSrc(subject.avatar);
-    if (subject.name === nextName && subject.avatar === nextAvatar) {
-      return subject;
-    }
-
-    changed = true;
-    return {
-      ...subject,
-      name: nextName,
-      avatar: nextAvatar,
-    };
-  });
-
-  return changed ? nextSubjects : subjects;
 };
-
-const hydrateGroupDisplayInfo = (
-  subjects: ResourcePermissionSubject[],
-  groupInfoById: Map<string, GroupBaseInfo>
-): ResourcePermissionSubject[] => {
-  let changed = false;
-  const nextSubjects = subjects.map((subject) => {
-    if (!subject.groupId) return subject;
-    const groupInfo = groupInfoById.get(subject.groupId);
-    if (!groupInfo) return subject;
-
-    const groupName = groupInfo.groupName.trim();
-    const groupDesc = groupInfo.groupDesc.trim();
-    const groupCoverUrl = groupInfo.groupCoverUrl.trim();
-    const nextName = groupName ? `${groupName} 的成员` : subject.name;
-    const nextDescription =
-      subject.source === 'resourceOverride' && groupDesc ? groupDesc : subject.description;
-    const nextAvatar = groupCoverUrl || getAvatarSrc(subject.avatar);
-
-    if (
-      subject.name === nextName &&
-      subject.description === nextDescription &&
-      subject.avatar === nextAvatar
-    ) {
-      return subject;
-    }
-
-    changed = true;
-    return {
-      ...subject,
-      name: nextName,
-      description: nextDescription,
-      avatar: nextAvatar,
-    };
-  });
-
-  return changed ? nextSubjects : subjects;
-};
-
-const hydrateInheritedTagActions = (
-  subjects: ResourcePermissionSubject[],
-  options: ResourcePermissionActionOption[],
-  getInheritedActions: (subject: ResourcePermissionSubject) => ResourceAction[] | undefined
-): ResourcePermissionSubject[] =>
-  subjects.map((subject) => {
-    if (!subject.groupId || !subject.primaryTagId) return subject;
-    const inheritedActions = getInheritedActions(subject);
-    if (!inheritedActions) return subject;
-    const normalizedInheritedActions = filterResourcePermissionActionsByOptions(
-      inheritedActions,
-      options
-    );
-
-    if (subject.source === 'resourceOverride') {
-      const matchesTag = areResourcePermissionActionsEqualByOptions(
-        subject.editableActions,
-        normalizedInheritedActions,
-        options
-      );
-      if (matchesTag) {
-        return {
-          ...subject,
-          id: `group:${subject.groupId}:tag`,
-          source: 'tag',
-          description: TAG_INHERITED_DESCRIPTION,
-          editableActions: normalizedInheritedActions,
-          effectiveActions: normalizedInheritedActions,
-          inheritedActions: normalizedInheritedActions,
-        };
-      }
-    }
-
-    if (subject.source === 'tag') {
-      return {
-        ...subject,
-        description: TAG_INHERITED_DESCRIPTION,
-        editableActions: normalizedInheritedActions,
-        effectiveActions: normalizedInheritedActions,
-        inheritedActions: normalizedInheritedActions,
-      };
-    }
-
-    return {
-      ...subject,
-      inheritedActions: normalizedInheritedActions,
-    };
-  });
 
 function SubjectPermissionPopover({
   subject,
   actionOptions,
   onActionToggle,
 }: SubjectPermissionPopoverProps) {
+  const { t } = useTranslation('resource');
   const selectedActionKeys = buildResourcePermissionActionKeySet(
     getSubjectActionsForDisplay(subject),
     actionOptions
@@ -288,10 +81,10 @@ function SubjectPermissionPopover({
       size="sm"
       className={styles.permissionButton}
       isDisabled={subject.readonly || actionOptions.length === 0}
-      aria-label={`${subject.name} 的权限`}
+      aria-label={t('permission.subjectAria', { name: subject.name })}
     >
       <span className={styles.permissionTriggerText}>
-        {formatActionSummary(subject, actionOptions)}
+        {formatActionSummary(subject, actionOptions, t)}
       </span>
       {!subject.readonly && actionOptions.length > 0 ? (
         <ChevronDown size={14} aria-hidden className={styles.permissionChevron} />
@@ -312,7 +105,7 @@ function SubjectPermissionPopover({
         bodyPadding="none"
       >
         <ListBox
-          aria-label={`${subject.name} 的权限选项`}
+          aria-label={t('permission.optionsAria', { name: subject.name })}
           selectionMode="multiple"
           selectedKeys={selectedActionKeys}
           className={styles.actionList}
@@ -341,8 +134,9 @@ function SubjectPermissionPopover({
 }
 
 function PermissionPanelSkeleton() {
+  const { t } = useTranslation('resource');
   return (
-    <div className={styles.skeletonShell} aria-label="正在加载权限配置">
+    <div className={styles.skeletonShell} aria-label={t('permission.loadingAria')}>
       <div className={styles.skeletonList}>
         {PANEL_SKELETON_ROWS.map((row) => (
           <div key={row} className={styles.skeletonItem}>
@@ -368,298 +162,80 @@ function ResourcePermissionPanel({
   resourceType,
   onSuccess,
 }: ResourcePermissionPanelProps) {
-  const groupService = useGroupService();
-  const resourceService = useResourceService();
-  const tagService = useTagService();
-  const userService = useUserService();
-  const updateQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const latestSubjectsRef = useRef<ResourcePermissionSubject[]>([]);
-  const [subjectDrafts, setSubjectDrafts] = useState<ResourcePermissionSubject[] | null>(null);
-  const [newUserKeyword, setNewUserKeyword] = useState('');
-  const [pendingUpdateCount, setPendingUpdateCount] = useState(0);
+  const { t } = useTranslation('resource');
   const {
-    data: permissionOverview,
-    loading,
+    actionOptions,
+    addSpecifiedUserCandidate,
     error,
-    refresh: refreshPermissionOverview,
-  } = useRequest(
-    () => resourceService.getResourcePermissionOverview({ resourceId, resourceType }),
-    {
-      ready: Boolean(resourceId && resourceType),
-      refreshDeps: [resourceId, resourceType],
-      onSuccess: (overview: ResourcePermissionOverview) => {
-        latestSubjectsRef.current = overview.subjects;
-        setSubjectDrafts(overview.subjects);
-      },
-    }
-  );
-  const subjects = subjectDrafts ?? permissionOverview?.subjects ?? [];
-  const actionOptions = permissionOverview?.actionOptions ?? EMPTY_ACTION_OPTIONS;
-  const inheritedSubjects = subjects.filter((subject) => subject.source !== 'specifiedUser');
-  const specifiedUserSubjects = subjects.filter((subject) => subject.source === 'specifiedUser');
-  const existingSpecifiedUserIds = new Set(
-    specifiedUserSubjects
-      .map((subject) => subject.userId)
-      .filter((userId): userId is string => Boolean(userId))
-  );
-  const shouldShowInviteDivider = inheritedSubjects.length > 0 && specifiedUserSubjects.length > 0;
-
-  const isUpdating = pendingUpdateCount > 0;
-
-  useRequest(
-    async () => {
-      if (!permissionOverview) return;
-      const userSubjects = permissionOverview.subjects.filter(
-        (subject) => subject.userId && subject.kind !== 'group'
-      );
-      if (userSubjects.length === 0) return;
-
-      const userInfoById = new Map<string, SpecifiedUserCandidate>();
-      const ownerIds = new Set(
-        userSubjects
-          .filter((subject) => subject.source === 'owner')
-          .map((subject) => subject.userId)
-          .filter((userId): userId is string => Boolean(userId))
-      );
-
-      if (ownerIds.size > 0) {
-        const currentUser = await userService.getUserInfo().catch(() => undefined);
-        if (currentUser && ownerIds.has(currentUser.id)) {
-          userInfoById.set(currentUser.id, {
-            userId: currentUser.id,
-            username: currentUser.username,
-            nickname: currentUser.nickname,
-            realName: currentUser.realName,
-            avatar: currentUser.avatar,
-          });
-        }
-      }
-
-      await Promise.all(
-        userSubjects
-          .filter((subject) => subject.source !== 'owner' && subject.userId)
-          .map(async (subject) => {
-            const userId = subject.userId;
-            if (!userId || userInfoById.has(userId)) return;
-            const keywords = Array.from(
-              new Set([userId, subject.name].map((keyword) => keyword.trim()).filter(Boolean))
-            );
-            for (const keyword of keywords) {
-              const candidates = await userService
-                .queryUserSearchCandidates({ keyword, size: 6 })
-                .catch(() => []);
-              const matchedUser = candidates.find((user) => user.userId === userId);
-              if (matchedUser) {
-                userInfoById.set(userId, matchedUser);
-                return;
-              }
-            }
-          })
-      );
-
-      if (userInfoById.size === 0) return;
-
-      setSubjectDrafts((currentSubjects) => {
-        const baseSubjects = currentSubjects ?? permissionOverview.subjects;
-        const nextSubjects = hydrateUserDisplayInfo(baseSubjects, userInfoById);
-        latestSubjectsRef.current = nextSubjects;
-        return nextSubjects;
-      });
-    },
-    {
-      ready: Boolean(permissionOverview),
-      refreshDeps: [permissionOverview, userService],
-    }
-  );
-
-  useRequest(
-    async () => {
-      if (!permissionOverview) return;
-      const groupIds = Array.from(
-        new Set(
-          permissionOverview.subjects
-            .map((subject) => subject.groupId)
-            .filter((groupId): groupId is string => Boolean(groupId))
-        )
-      );
-      if (groupIds.length === 0) return;
-
-      const groupInfos = await Promise.all(
-        groupIds.map((groupId) => groupService.fetchGroupBaseInfo(groupId).catch(() => undefined))
-      );
-      const groupInfoById = new Map(
-        groupInfos
-          .filter((groupInfo): groupInfo is GroupBaseInfo => Boolean(groupInfo?.groupId))
-          .map((groupInfo) => [groupInfo.groupId, groupInfo])
-      );
-      if (groupInfoById.size === 0) return;
-
-      setSubjectDrafts((currentSubjects) => {
-        const baseSubjects = currentSubjects ?? permissionOverview.subjects;
-        const nextSubjects = hydrateGroupDisplayInfo(baseSubjects, groupInfoById);
-        latestSubjectsRef.current = nextSubjects;
-        return nextSubjects;
-      });
-    },
-    {
-      ready: Boolean(permissionOverview),
-      refreshDeps: [permissionOverview, groupService],
-    }
-  );
-
-  useRequest(
-    async () => {
-      if (!permissionOverview || actionOptions.length === 0) return;
-      const groupIds = Array.from(
-        new Set(
-          permissionOverview.subjects
-            .map((subject) => subject.groupId)
-            .filter((groupId): groupId is string => Boolean(groupId))
-        )
-      );
-      if (groupIds.length === 0) return;
-
-      await Promise.all(
-        groupIds.map((groupId) => tagService.getRawTagTree(groupId).catch(() => []))
-      );
-      setSubjectDrafts((currentSubjects) => {
-        const baseSubjects = currentSubjects ?? permissionOverview.subjects;
-        const nextSubjects = hydrateInheritedTagActions(baseSubjects, actionOptions, (subject) =>
-          subject.primaryTagId
-            ? tagService.getRawTagById(subject.primaryTagId, subject.groupId)?.grantedActions
-            : undefined
-        );
-        latestSubjectsRef.current = nextSubjects;
-        return nextSubjects;
-      });
-    },
-    {
-      ready: Boolean(permissionOverview && actionOptions.length > 0),
-      refreshDeps: [permissionOverview, actionOptions, tagService],
-    }
-  );
-
-  const persistPermissionSubjects = (nextSubjects: ResourcePermissionSubject[]) => {
-    setPendingUpdateCount((count) => count + 1);
-    updateQueueRef.current = updateQueueRef.current
-      .catch(() => undefined)
-      .then(async () => {
-        await resourceService.updateResourcePermissionSubjects({
-          resourceId,
-          subjects: nextSubjects,
-        });
-        onSuccess?.();
-      })
-      .catch((err) => {
-        toast.danger(parseErrorMessage(err));
-        refreshPermissionOverview();
-      })
-      .finally(() => {
-        setPendingUpdateCount((count) => Math.max(0, count - 1));
-      });
-  };
-
-  const commitSubjectDrafts = (nextSubjects: ResourcePermissionSubject[]) => {
-    latestSubjectsRef.current = nextSubjects;
-    setSubjectDrafts(nextSubjects);
-    persistPermissionSubjects(nextSubjects);
-  };
-
-  const handleActionToggle = (
-    changedSubject: ResourcePermissionSubject,
-    action: ResourcePermissionActionOption['action']
-  ) => {
-    const currentSubjects = latestSubjectsRef.current;
-    const currentSelectedSubject = currentSubjects.find(
-      (subject) => subject.id === changedSubject.id
-    );
-    if (!currentSelectedSubject || currentSelectedSubject.readonly) return;
-    const currentActions = getSubjectActionsForDisplay(currentSelectedSubject);
-    const nextActions = updateResourceActionSelection(
-      currentActions,
-      action,
-      !currentActions.includes(action),
-      getSupportedActionsFromOptions(actionOptions)
-    );
-    const nextSubjects = updateSubjectActions(
-      currentSubjects,
-      currentSelectedSubject.id,
-      nextActions,
-      actionOptions
-    );
-    commitSubjectDrafts(nextSubjects);
-  };
-
-  const addSpecifiedUserCandidate = (user: SpecifiedUserCandidate) => {
-    const currentSubjects = latestSubjectsRef.current;
-    const userId = user.userId.trim();
-    if (!userId) {
-      toast.warning('未找到有效用户');
-      return;
-    }
-    if (currentSubjects.some((subject) => subject.userId === userId)) {
-      toast.warning('该用户已在协作者列表中');
-      return;
-    }
-    const nextSubject = createSpecifiedUserSubject({ ...user, userId });
-    const nextSubjects = [...currentSubjects, nextSubject];
-    commitSubjectDrafts(nextSubjects);
-    setNewUserKeyword('');
-  };
-
-  const handleUserSearchEmpty = () => {
-    const keyword = newUserKeyword.trim();
-    toast.warning(keyword ? '未找到可见用户，请输入完整用户名或邮箱' : '请输入完整用户名或邮箱');
-  };
-
-  const handleUserSearchError = (err: unknown) => {
-    toast.danger(parseErrorMessage(err));
-  };
-
-  const handleRemoveSpecifiedUser = (subject: ResourcePermissionSubject) => {
-    if (subject.source !== 'specifiedUser') return;
-    const nextSubjects = latestSubjectsRef.current.filter(
-      (currentSubject) => currentSubject.id !== subject.id
-    );
-    commitSubjectDrafts(nextSubjects);
-  };
-
-  const queryUserCandidates = useCallback(
-    (keyword: string) => userService.queryUserSearchCandidates({ keyword, size: 6 }),
-    [userService]
-  );
+    existingSpecifiedUserIds,
+    handleActionToggle,
+    handleRemoveSpecifiedUser,
+    handleUserSearchEmpty,
+    handleUserSearchError,
+    inheritedSubjects,
+    isUpdating,
+    loading,
+    newUserKeyword,
+    permissionOverview,
+    queryUserCandidates,
+    setNewUserKeyword,
+    shouldShowInviteDivider,
+    specifiedUserSubjects,
+  } = useResourcePermissionPanelController({ resourceId, resourceType, onSuccess });
 
   const renderSubjectItem = (subject: ResourcePermissionSubject) => {
     const avatarSrc = getAvatarSrc(subject.avatar);
+    const baseSubjectName =
+      subject.kind === 'owner' && !subject.name
+        ? t('permission.source.owner')
+        : subject.kind === 'user' && (!subject.name || subject.name === subject.userId)
+          ? t('permission.userFallback', { userId: subject.userId })
+          : subject.kind === 'group' && (!subject.name || subject.name === subject.groupId)
+            ? t('permission.groupFallback', { groupId: subject.groupId })
+            : subject.name;
+    const subjectName =
+      subject.kind === 'group'
+        ? t('permission.groupMembers', { groupName: baseSubjectName })
+        : baseSubjectName;
+    const displaySubject =
+      subjectName === subject.name ? subject : { ...subject, name: subjectName };
+    const description =
+      subject.source === 'owner'
+        ? t('permission.source.owner')
+        : subject.source === 'tag'
+          ? t('permission.description.inheritedFromTag')
+          : subject.source === 'specifiedUser'
+            ? t('permission.description.invitedByYou')
+            : subject.source === 'resourceOverride' && !subject.description
+              ? t('permission.description.resourceOverride')
+              : subject.description;
 
     return (
       <div key={getSubjectRenderKey(subject)} role="listitem" className={styles.subjectItem}>
         <div className={styles.subjectContent}>
-          <AppAvatar aria-label={subject.name} className={styles.avatar}>
-            {avatarSrc ? <AppAvatar.Image alt={subject.name} src={avatarSrc} /> : null}
-            <AppAvatar.Fallback>{getDisplayInitial(subject.name)}</AppAvatar.Fallback>
+          <AppAvatar aria-label={subjectName} className={styles.avatar}>
+            {avatarSrc ? <AppAvatar.Image alt={subjectName} src={avatarSrc} /> : null}
+            <AppAvatar.Fallback>{getDisplayInitial(subjectName)}</AppAvatar.Fallback>
           </AppAvatar>
           <div className={styles.subjectMeta}>
             <div className={styles.subjectNameRow}>
-              <span className={styles.subjectName}>{subject.name}</span>
+              <span className={styles.subjectName}>{subjectName}</span>
               <Chip size="sm" variant="soft" className={styles.sourceChip}>
-                <Chip.Label>{sourceLabelMap[subject.source]}</Chip.Label>
+                <Chip.Label>{t(sourceLabelKeyMap[subject.source])}</Chip.Label>
               </Chip>
             </div>
-            {subject.description ? (
-              <span className={styles.subjectDescription}>{subject.description}</span>
-            ) : null}
+            {description ? <span className={styles.subjectDescription}>{description}</span> : null}
           </div>
           <div className={styles.subjectActions}>
             <SubjectPermissionPopover
-              subject={subject}
+              subject={displaySubject}
               actionOptions={actionOptions}
               onActionToggle={handleActionToggle}
             />
             {subject.source === 'specifiedUser' ? (
               <AppIconButton
                 icon={<Trash2 size={16} aria-hidden />}
-                label="移除协作者"
+                label={t('permission.removeCollaborator')}
                 size="sm"
                 variant="danger"
                 onPress={() => handleRemoveSpecifiedUser(subject)}
@@ -680,8 +256,12 @@ function ResourcePermissionPanel({
           <div className={styles.stateText}>{parseErrorMessage(error)}</div>
         ) : permissionOverview ? (
           <div className={styles.shell}>
-            <section className={styles.subjectPane} aria-label="协作者">
-              <div className={styles.subjectList} role="list" aria-label="协作者权限来源">
+            <section className={styles.subjectPane} aria-label={t('permission.collaborator')}>
+              <div
+                className={styles.subjectList}
+                role="list"
+                aria-label={t('permission.collaboratorSources')}
+              >
                 {inheritedSubjects.map(renderSubjectItem)}
                 {shouldShowInviteDivider ? (
                   <div className={styles.inviteDivider} aria-hidden />
@@ -697,16 +277,16 @@ function ResourcePermissionPanel({
                   onError={handleUserSearchError}
                   queryUsers={queryUserCandidates}
                   excludedUserIds={existingSpecifiedUserIds}
-                  placeholder="完整用户名或邮箱"
-                  ariaLabel="协作者用户名或邮箱"
+                  placeholder={t('permission.userPlaceholder')}
+                  ariaLabel={t('permission.userInputAria')}
                   submitIcon={<UserPlus size={16} aria-hidden />}
-                  submitLabel="添加"
+                  submitLabel={t('permission.addCollaborator')}
                 />
               </div>
             </section>
           </div>
         ) : (
-          <div className={styles.stateText}>暂无权限配置</div>
+          <div className={styles.stateText}>{t('permission.empty')}</div>
         )}
       </div>
     </div>

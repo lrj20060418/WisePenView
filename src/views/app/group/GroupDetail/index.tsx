@@ -9,13 +9,14 @@ import UserCapsule from '@/components/UserCapsule';
 import { useGroupService } from '@/domains';
 import type { Group, GroupResConfig } from '@/domains/Group';
 import { WALLET_TARGET_TYPE } from '@/domains/Wallet';
+import SidebarDriveScopeSwitcher from '@/layouts/_common/Sidebar/DriveSidebar/_components/SidebarDrive/SidebarDriveScopeSwitcher';
 import { parseDriveInitialNodeId } from '@/utils/navigation/driveRoute';
 import ComputeWallet from '@/views/app/_common/Wallet/ComputeWallet';
-import type { ComputeWalletRef } from '@/views/app/_common/Wallet/ComputeWallet/index.type';
 import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
 import type { ReactNode } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router-dom';
 import { getGroupDisplayConfig } from '../_components/GroupDisplayConfig';
 import MemberList from '../_components/MemberList';
@@ -37,10 +38,11 @@ type GroupDetailTabItem = SegmentedTabItem<GroupDetailTabKey> & {
 };
 
 function GroupDetail() {
+  const { t } = useTranslation('group');
   const groupService = useGroupService();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const initialNodeId = useMemo(() => parseDriveInitialNodeId(location.search), [location.search]);
+  const initialNodeId = parseDriveInitialNodeId(location.search);
 
   const { loading, data, refresh } = useRequest(
     async (): Promise<GroupDetailLoaded> => {
@@ -55,7 +57,7 @@ function GroupDetail() {
       refreshDeps: [id],
       ready: Boolean(id),
       onError: () => {
-        toast.danger('获取小组详情失败');
+        toast.danger(t('detail.loadFailed'));
       },
     }
   );
@@ -63,14 +65,14 @@ function GroupDetail() {
   // 解包 data, 默认 currentUserRole 为 MEMBER
   const { group, currentUserRole = 'MEMBER', resConfig } = data ?? {};
 
-  const groupDisplayConfig = useMemo(() => {
+  const groupDisplayConfig = (() => {
     if (!group) {
       return null;
     }
     return getGroupDisplayConfig(group.groupType, currentUserRole);
-  }, [group, currentUserRole]);
+  })();
 
-  const walletRef = useRef<ComputeWalletRef | null>(null);
+  const [walletRefreshVersion, setWalletRefreshVersion] = useState(0);
 
   /** Tabs 受控，避免 items 更新时重置当前选中的 Tab */
   const [detailTabKey, setDetailTabKey] = useState<GroupDetailTabKey>('files');
@@ -79,7 +81,7 @@ function GroupDetail() {
    * Tab 配置必须在任意 early return 之前计算，以符合 Hooks 规则。
    * group/groupDisplayConfig 为空时返回空数组（加载中或无效态不会渲染到 Tab）。
    */
-  const tabItems = useMemo<GroupDetailTabItem[]>(() => {
+  const tabItems = (() => {
     if (!group || !resConfig || !groupDisplayConfig) {
       return [];
     }
@@ -88,13 +90,13 @@ function GroupDetail() {
     const items: GroupDetailTabItem[] = [
       {
         key: 'files',
-        label: '文件',
+        label: t('detail.tabs.files'),
         children: (
           <div className={`${layout.tabPane} ${page.fileTabPane}`}>
             <TableDrive
               scope={{ type: 'group', groupId: gid }}
+              breadcrumbExtra={<SidebarDriveScopeSwitcher />}
               initialNodeId={initialNodeId}
-              showToolbarTrash={false}
               actions={{
                 toolbar: {
                   canCreateFolder: groupDisplayConfig.canCreateTag,
@@ -112,7 +114,7 @@ function GroupDetail() {
       },
       {
         key: 'members',
-        label: '成员列表',
+        label: t('detail.tabs.members'),
         children: (
           <div className={layout.tabPane}>
             <MemberList
@@ -133,7 +135,7 @@ function GroupDetail() {
     if (groupDisplayConfig.showWalletTabs) {
       items.push({
         key: 'wallet',
-        label: 'token 明细',
+        label: t('detail.tabs.wallet'),
         children: (
           <div className={layout.tabPane}>
             <ComputeWallet
@@ -141,20 +143,20 @@ function GroupDetail() {
               targetId={gid}
               canRecharge={false}
               showOperatorColumn
-              ref={walletRef}
+              refreshVersion={walletRefreshVersion}
             />
           </div>
         ),
       });
       items.push({
         key: 'token-transfer',
-        label: 'token 划拨',
+        label: t('detail.tabs.transfer'),
         children: (
           <div className={layout.tabPane}>
             <OwnerGroupTokenTransfer
               groupId={gid}
               onTransferSuccess={() => {
-                void walletRef.current?.refresh();
+                setWalletRefreshVersion((version) => version + 1);
               }}
             />
           </div>
@@ -164,7 +166,7 @@ function GroupDetail() {
 
     items.push({
       key: 'description',
-      label: '描述',
+      label: t('detail.tabs.description'),
       children: (
         <GroupDescriptionSettings
           key={gid}
@@ -178,9 +180,9 @@ function GroupDetail() {
     });
 
     return items;
-  }, [currentUserRole, group, groupDisplayConfig, id, initialNodeId, refresh, resConfig]);
+  })() satisfies GroupDetailTabItem[];
 
-  const detailTabKeys = useMemo(() => tabItems.map((item) => item.key), [tabItems]);
+  const detailTabKeys = tabItems.map((item) => item.key);
 
   const handleDetailTabChange = (nextKey: GroupDetailTabKey) => {
     if (detailTabKeys.includes(nextKey)) {
@@ -204,7 +206,7 @@ function GroupDetail() {
   }
 
   if (!group) {
-    return <div className={layout.pageContainer}>小组不存在</div>;
+    return <div className={layout.pageContainer}>{t('detail.notFound')}</div>;
   }
 
   const { groupName, ownerInfo, createTime } = group;
@@ -224,17 +226,17 @@ function GroupDetail() {
           <div className={layout.headerMeta}>
             {ownerInfo && (
               <div className={layout.headerMetaItem}>
-                <span>创建者：</span>
+                <span>{t('detail.creator')}</span>
                 <UserCapsule name={ownerName} avatar={ownerInfo.avatar} />
               </div>
             )}
-            <span>创建日期：{createTime ?? '暂无'}</span>
+            <span>{t('detail.createdAt', { date: createTime ?? t('detail.noDate') })}</span>
           </div>
         </div>
       </div>
 
       <SegmentedTabs<GroupDetailTabKey>
-        ariaLabel="小组详情"
+        ariaLabel={t('detail.aria')}
         className={layout.detailTabs}
         selectedKey={activeDetailTabKey}
         onSelectionChange={handleDetailTabChange}

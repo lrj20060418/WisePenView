@@ -2,7 +2,8 @@ import { useNoteService } from '@/domains';
 import { createClientError, FRONTEND_CLIENT_ERROR, parseErrorMessage } from '@/utils/error';
 import { toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { useCallback, useRef, type ChangeEvent, type RefObject } from 'react';
+import { useRef, type ChangeEvent, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePendingNoteImportStore } from './_store/usePendingNoteImportStore';
 
 export const MARKDOWN_NOTE_FILE_ACCEPT = '.md,.markdown,text/markdown,text/x-markdown';
@@ -13,7 +14,7 @@ interface ImportedMarkdownNote {
 }
 
 interface UseMarkdownNoteImportOptions {
-  mountCreatedResource: (resourceId: string) => Promise<void>;
+  getPathTagId?: () => string | undefined;
   onSuccess: (note: ImportedMarkdownNote) => void;
   onError?: () => void;
 }
@@ -30,16 +31,17 @@ function isMarkdownFile(fileName: string): boolean {
   return normalizedName.endsWith('.md') || normalizedName.endsWith('.markdown');
 }
 
-function resolveNoteTitle(fileName: string): string {
+function resolveNoteTitle(fileName: string, untitledTitle: string): string {
   const title = fileName.replace(/\.(?:md|markdown)$/i, '').trim();
-  return title || '未命名笔记';
+  return title || untitledTitle;
 }
 
 export function useMarkdownNoteImport({
-  mountCreatedResource,
+  getPathTagId,
   onSuccess,
   onError,
 }: UseMarkdownNoteImportOptions): UseMarkdownNoteImportResult {
+  const { t } = useTranslation('note');
   const noteService = useNoteService();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,14 +51,16 @@ export function useMarkdownNoteImport({
         throw createClientError(FRONTEND_CLIENT_ERROR.DOCUMENT_UNSUPPORTED_TYPE);
       }
 
-      const title = resolveNoteTitle(file.name);
+      const title = resolveNoteTitle(file.name, t('title.untitled'));
       const markdown = (await file.text()).replace(/^\uFEFF/, '');
-      const { resourceId } = await noteService.createNote({ title });
+      const { resourceId } = await noteService.createNote({
+        title,
+        pathTagId: getPathTagId?.(),
+      });
       if (!resourceId) {
         throw createClientError(FRONTEND_CLIENT_ERROR.NOTE_CREATE_RESOURCE_ID_MISSING);
       }
 
-      await mountCreatedResource(resourceId);
       usePendingNoteImportStore.getState().setPendingImport(resourceId, {
         markdown,
         sourceFileName: file.name,
@@ -77,24 +81,21 @@ export function useMarkdownNoteImport({
     }
   );
 
-  const openFilePicker = useCallback(() => {
+  const openFilePicker = () => {
     if (importing) return;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
       fileInputRef.current.click();
     }
-  }, [importing]);
+  };
 
-  const handleFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.currentTarget.files?.[0];
-      event.currentTarget.value = '';
-      if (file) {
-        importMarkdownNote(file);
-      }
-    },
-    [importMarkdownNote]
-  );
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (file) {
+      importMarkdownNote(file);
+    }
+  };
 
   return {
     fileInputRef,

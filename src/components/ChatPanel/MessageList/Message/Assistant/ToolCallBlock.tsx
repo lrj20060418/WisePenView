@@ -1,5 +1,4 @@
 import { useMessageScroller } from '@/components/_shadcn';
-import { useEffectForce } from '@/hooks/useEffectForce';
 import { Button, Chip } from '@heroui/react';
 import { getToolName, type DynamicToolUIPart, type ToolUIPart } from 'ai';
 import {
@@ -11,7 +10,8 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ToolCallBlock.module.less';
 
 type RenderableToolPart = ToolUIPart | DynamicToolUIPart;
@@ -22,14 +22,14 @@ type ToolDetailKind = 'input' | 'output' | 'error';
 type ToolStatusTone = 'default' | 'accent' | 'success' | 'warning' | 'danger';
 
 interface ToolStatusBadge {
-  label: string;
+  labelKey: string;
   tone: ToolStatusTone;
   Icon: LucideIcon;
 }
 
 interface ToolDetailSection {
   kind: ToolDetailKind;
-  label: string;
+  labelKey: string;
   text: string;
 }
 
@@ -58,19 +58,23 @@ const FINISHED_STATES: ReadonlySet<ToolPartState> = new Set([
 function getToolStatusBadge(part: RenderableToolPart): ToolStatusBadge {
   switch (part.state) {
     case 'input-streaming':
-      return { label: '待处理', tone: 'default', Icon: Circle };
+      return { labelKey: 'message.tool.status.pending', tone: 'default', Icon: Circle };
     case 'input-available':
-      return { label: '运行中', tone: 'default', Icon: Clock };
+      return { labelKey: 'message.tool.status.running', tone: 'default', Icon: Clock };
     case 'approval-requested':
-      return { label: '等待批准', tone: 'warning', Icon: Clock };
+      return {
+        labelKey: 'message.tool.status.awaitingApproval',
+        tone: 'warning',
+        Icon: Clock,
+      };
     case 'approval-responded':
-      return { label: '已回复', tone: 'accent', Icon: CheckCircle2 };
+      return { labelKey: 'message.tool.status.responded', tone: 'accent', Icon: CheckCircle2 };
     case 'output-available':
-      return { label: '已完成', tone: 'success', Icon: CheckCircle2 };
+      return { labelKey: 'message.tool.status.completed', tone: 'success', Icon: CheckCircle2 };
     case 'output-error':
-      return { label: '错误', tone: 'danger', Icon: CircleX };
+      return { labelKey: 'message.tool.status.error', tone: 'danger', Icon: CircleX };
     case 'output-denied':
-      return { label: '已拒绝', tone: 'danger', Icon: CircleX };
+      return { labelKey: 'message.tool.status.denied', tone: 'danger', Icon: CircleX };
   }
 }
 
@@ -87,42 +91,62 @@ function getToolDetailSections(part: RenderableToolPart): ToolDetailSection[] {
   const sections: ToolDetailSection[] = [];
 
   if (part.input !== undefined) {
-    sections.push({ kind: 'input', label: '输入', text: formatToolPayload(part.input) });
+    sections.push({
+      kind: 'input',
+      labelKey: 'message.tool.detail.input',
+      text: formatToolPayload(part.input),
+    });
   }
 
   if (part.state === 'output-available') {
-    sections.push({ kind: 'output', label: '输出', text: formatToolPayload(part.output) });
+    sections.push({
+      kind: 'output',
+      labelKey: 'message.tool.detail.output',
+      text: formatToolPayload(part.output),
+    });
   }
 
   if (part.state === 'output-error') {
-    sections.push({ kind: 'error', label: '错误', text: part.errorText || '调用失败' });
+    sections.push({
+      kind: 'error',
+      labelKey: 'message.tool.detail.error',
+      text: part.errorText || '',
+    });
   }
 
   return sections;
 }
 
 function ToolStatusChip({ badge }: { badge: ToolStatusBadge }) {
-  const { Icon, label, tone } = badge;
+  const { t } = useTranslation('chat');
+  const { Icon, labelKey, tone } = badge;
   return (
     <Chip size="sm" variant="soft" color={tone} className={styles.statusChip}>
       <Icon size={STATUS_ICON_SIZE} aria-hidden="true" className={styles.statusChipIcon} />
-      <Chip.Label>{label}</Chip.Label>
+      <Chip.Label>{t(labelKey)}</Chip.Label>
     </Chip>
   );
 }
 
 function ToolCallBlock({ part, autoCollapseOnFinish = true }: ToolCallBlockProps) {
+  const { t } = useTranslation('chat');
   const badge = getToolStatusBadge(part);
   const isRunning = RUNNING_STATES.has(part.state);
-  const [userExpanded, setUserExpanded] = useState(isRunning);
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const previousStateRef = useRef<ToolPartState | null>(null);
   const { scrollToEndUnlessUserInterrupted } = useMessageScroller();
   const detailSections = getToolDetailSections(part);
   const toolName = getToolName(part);
-  const isExpanded = isRunning || userExpanded;
+  const isExpanded = isRunning || (userExpanded ?? !autoCollapseOnFinish);
   const panelId = useId();
 
-  useEffectForce(() => {
+  /**
+   * @wisepen-manual-effect
+   * 执行时机：工具调用运行状态变化时校正消息滚动位置。
+   * 不可替代原因：工具状态来自外部消息运行时，消息滚动器只提供命令式控制。
+   * cleanup：没有订阅或延迟任务，无需清理。
+   */
+  useEffect(() => {
     const prev = previousStateRef.current;
     const stateChanged = prev !== part.state;
     previousStateRef.current = part.state;
@@ -131,13 +155,11 @@ function ToolCallBlock({ part, autoCollapseOnFinish = true }: ToolCallBlockProps
 
     if (RUNNING_STATES.has(part.state)) {
       const wasRunning = prev != null && RUNNING_STATES.has(prev);
-      setUserExpanded(true);
       if (!wasRunning) scrollToEndUnlessUserInterrupted();
       return;
     }
 
     if (prev != null && FINISHED_STATES.has(part.state) && autoCollapseOnFinish) {
-      setUserExpanded(false);
       scrollToEndUnlessUserInterrupted();
     }
   }, [part.state, autoCollapseOnFinish, scrollToEndUnlessUserInterrupted]);
@@ -150,7 +172,9 @@ function ToolCallBlock({ part, autoCollapseOnFinish = true }: ToolCallBlockProps
         aria-expanded={isExpanded}
         aria-controls={panelId}
         onPress={() => {
-          if (!isRunning) setUserExpanded((prev) => !prev);
+          if (!isRunning) {
+            setUserExpanded((current) => !(current ?? !autoCollapseOnFinish));
+          }
         }}
       >
         <span className={styles.headerMain}>
@@ -171,13 +195,13 @@ function ToolCallBlock({ part, autoCollapseOnFinish = true }: ToolCallBlockProps
       {isExpanded ? (
         <div id={panelId} className={styles.panel}>
           {detailSections.length === 0 ? (
-            <p className={styles.empty}>暂无详情</p>
+            <p className={styles.empty}>{t('message.tool.detail.empty')}</p>
           ) : (
             detailSections.map((section) => (
               <section key={section.kind} className={styles.section}>
-                <h4 className={styles.sectionLabel}>{section.label}</h4>
+                <h4 className={styles.sectionLabel}>{t(section.labelKey)}</h4>
                 <pre className={section.kind === 'error' ? styles.errorText : styles.payload}>
-                  {section.text}
+                  {section.text || t('message.tool.detail.failed')}
                 </pre>
               </section>
             ))

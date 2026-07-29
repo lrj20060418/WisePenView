@@ -13,15 +13,12 @@
   overflow-y: hidden;
 }
 
-.pageHeaderWithActions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.pageHeader {
   margin-bottom: var(--space-lg);
 }
 
 .pageTitle {
-  font-size: calc(var(--font-size-heading-3) + 4px);
+  font-size: 18px;
   margin: 0 0 var(--space-xs) 0;
 }
 
@@ -29,19 +26,13 @@
   color: var(--muted);
 }
 
-.actionsRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.pageTrashButton {
-  flex-shrink: 0;
-}
-
 .detailTabs {
   margin-top: var(--space-md);
   margin-bottom: var(--space-lg);
+
+  button {
+    font-size: 14px;
+  }
 }
 
 .previewContent {

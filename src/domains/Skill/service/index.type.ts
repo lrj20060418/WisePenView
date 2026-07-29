@@ -28,9 +28,28 @@ export interface UploadSkillAssetsOptions {
   onProgress?: (progress: UploadSkillAssetProgress) => void;
 }
 
+export interface MoveSkillAssetRequest {
+  assetId: string;
+  objectKey?: string;
+  name: string;
+  path: string;
+  content?: string | Blob;
+}
+
+export interface MoveSkillAssetResult {
+  previousAssetId: string;
+  assetId: string;
+  objectKey: string;
+}
+
 export interface ISkillService {
   getSkillSummaries(groupId?: string): Promise<SkillSummary[]>;
-  createSkill(title: string, name?: string, description?: string): Promise<string>;
+  createSkill(
+    title: string,
+    name?: string,
+    description?: string,
+    pathTagId?: string
+  ): Promise<string>;
   /** 复制已发布 Skill，后端统一校验 FORK 权限。 */
   forkSkill(params: ForkSkillRequest): Promise<string>;
   getSkillDetail(resourceId: string): Promise<SkillDetail>;
@@ -40,22 +59,17 @@ export interface ISkillService {
   loadAssetContent(resourceId: string, objectKey: string, targetVersion?: number): Promise<string>;
   loadAssetBlob(resourceId: string, objectKey: string, targetVersion?: number): Promise<Blob>;
   deleteAssets(resourceId: string, draftVersion: number, assetIds: string[]): Promise<void>;
-  uploadAsset(
-    resourceId: string,
-    draftVersion: number,
-    params: UploadSkillAssetRequest
-  ): Promise<string | undefined>;
   uploadAssets(
     resourceId: string,
     draftVersion: number,
     assets: UploadSkillAssetRequest[],
     options?: UploadSkillAssetsOptions
   ): Promise<UploadSkillAssetResult[]>;
-  saveAsset(
+  moveAssets(
     resourceId: string,
     draftVersion: number,
-    params: { name: string; path: string; content: string }
-  ): Promise<string | undefined>;
+    assets: MoveSkillAssetRequest[]
+  ): Promise<MoveSkillAssetResult[]>;
 }
 
 export interface ForkSkillRequest {

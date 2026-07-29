@@ -39,8 +39,6 @@ export type {
   SearchScope,
   TagQueryLogicMode,
 } from './enum';
-export { groupSearchHits } from './service/groupSearchHits';
-export type { SearchHitGroup } from './service/groupSearchHits';
 export type {
   GetGroupResourceRequest,
   GetResourcePermissionOverviewRequest,
@@ -51,11 +49,14 @@ export type {
   RenameResourceRequest,
   ResourceListPage,
   ResourcePermissionActionOption,
+  ResourcePermissionGroupInfo,
+  ResourcePermissionHydration,
   ResourcePermissionOverview,
   ResourcePermissionResourceType,
   ResourcePermissionSource,
   ResourcePermissionSubject,
   ResourcePermissionSubjectKind,
+  ResourcePermissionUserInfo,
   SearchHitItem,
   SearchQueryRequest,
   SearchResultPage,

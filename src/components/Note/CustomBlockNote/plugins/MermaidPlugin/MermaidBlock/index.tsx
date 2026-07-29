@@ -3,10 +3,12 @@ import type { BlockConfig } from '@blocknote/core';
 import { createReactBlockSpec, type ReactCustomBlockRenderProps } from '@blocknote/react';
 import { useRequest } from 'ahooks';
 import { Check, Copy } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import AppIconButton from '@/components/Button/AppIconButton';
 import SegmentedTabs from '@/components/SegmentedTabs';
+import i18n from '@/i18n';
 import { copyText } from '@/utils/browser/copyText';
 import { useNoteEditorReadOnlyContext } from '../../../engines/editor/readOnly';
 import { renderNoteMermaidDiagram } from '../mermaidRuntime';
@@ -24,10 +26,11 @@ type MermaidView = 'code' | 'graph';
 
 function readRenderError(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
-  return '图表渲染失败，请检查 Mermaid 语法。';
+  return i18n.t('mermaid.renderFailed', { ns: 'note' });
 }
 
-function MermaidBlockView({ block, contentRef }: MermaidBlockRenderProps) {
+function MermaidBlockView({ block, contentRef, editor }: MermaidBlockRenderProps) {
+  const { t } = useTranslation('note');
   const readOnly = useNoteEditorReadOnlyContext();
   const [view, setView] = useState<MermaidView>('graph');
   const [copied, setCopied] = useState(false);
@@ -46,6 +49,37 @@ function MermaidBlockView({ block, contentRef }: MermaidBlockRenderProps) {
   );
   const result = rendered?.source === source ? rendered : undefined;
 
+  /**
+   * @wisepen-manual-effect
+   * 执行时机：编辑器选区进入当前 Mermaid 块时。
+   * 不可替代原因：源码编辑区在图形态被隐藏，必须订阅编辑器选区变化后切换到可承载原生光标的面板。
+   * cleanup：卸载时取消 BlockNote 选区订阅，避免已销毁的块视图继续更新状态。
+   */
+  useEffect(() => {
+    if (readOnly) return;
+    return editor.onSelectionChange((currentEditor) => {
+      if (currentEditor.getTextCursorPosition().block.id === block.id) {
+        setView('code');
+      }
+    });
+  }, [block.id, editor, readOnly]);
+
+  /**
+   * @wisepen-manual-effect
+   * 执行时机：源码面板由图形态切换为可见后。
+   * 不可替代原因：ProseMirror 在源码 DOM 被隐藏时已完成选区同步，需等待 React 提交可见布局后重新聚焦，才能重新绘制原生光标。
+   * cleanup：卸载或再次切换视图时取消尚未执行的 animation frame。
+   */
+  useEffect(() => {
+    if (readOnly || view !== 'code') return;
+    const frame = window.requestAnimationFrame(() => {
+      if (editor.getTextCursorPosition().block.id === block.id) {
+        editor.focus();
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [block.id, editor, readOnly, view]);
+
   const handleCopy = async () => {
     if (!(await copyText(source))) return;
     setCopied(true);
@@ -58,10 +92,10 @@ function MermaidBlockView({ block, contentRef }: MermaidBlockRenderProps) {
         <span className={styles.title}>mermaid</span>
         <div className={styles.toolbarActions} data-mermaid-toolbar-actions="">
           <SegmentedTabs
-            ariaLabel="Mermaid 展示模式"
+            ariaLabel={t('mermaid.displayMode')}
             items={[
-              { key: 'code', label: '源码' },
-              { key: 'graph', label: '图形' },
+              { key: 'code', label: t('mermaid.source') },
+              { key: 'graph', label: t('mermaid.graph') },
             ]}
             selectedKey={view}
             onSelectionChange={(key) => setView(key as MermaidView)}
@@ -76,12 +110,12 @@ function MermaidBlockView({ block, contentRef }: MermaidBlockRenderProps) {
                 <Copy size={14} aria-hidden="true" />
               )
             }
-            label={copied ? '已复制 Mermaid 源码' : '复制 Mermaid 源码'}
+            label={t(copied ? 'mermaid.copiedSource' : 'mermaid.copySource')}
             size="sm"
             isActive={copied}
             className={styles.copyButton}
             data-copied={copied}
-            tooltip={{ content: copied ? '已复制' : '复制源码' }}
+            tooltip={{ content: t(copied ? 'mermaid.copied' : 'mermaid.copy') }}
             onMouseDown={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -95,8 +129,10 @@ function MermaidBlockView({ block, contentRef }: MermaidBlockRenderProps) {
           className={view === 'graph' ? styles.preview : `${styles.preview} ${styles.panelHidden}`}
           contentEditable={false}
         >
-          {!shouldRender ? <div className={styles.status}>请输入 Mermaid 图表源码。</div> : null}
-          {shouldRender && loading ? <div className={styles.status}>正在渲染图表...</div> : null}
+          {!shouldRender ? <div className={styles.status}>{t('mermaid.empty')}</div> : null}
+          {shouldRender && loading ? (
+            <div className={styles.status}>{t('mermaid.rendering')}</div>
+          ) : null}
           {shouldRender && result?.error ? (
             <div className={styles.error}>{result.error}</div>
           ) : null}

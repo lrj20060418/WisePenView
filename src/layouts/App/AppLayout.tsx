@@ -17,7 +17,8 @@ import { useResizablePanelSize } from '@/layouts/_common/useResizablePanelSize';
 import { useAppNavigation } from '@/layouts/AppNavigation/AppNavigationContext';
 import AppNavigationControls from '@/layouts/AppNavigation/AppNavigationControls';
 import clsx from 'clsx';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   Layout,
   LayoutChangedMeta,
@@ -28,6 +29,7 @@ import { Outlet } from 'react-router-dom';
 import styles from './AppLayout.module.less';
 
 function AppLayout() {
+  const { t } = useTranslation('shell');
   const appNavigation = useAppNavigation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () =>
@@ -41,14 +43,14 @@ function AppLayout() {
   const sidebarWidth = clampSidebarWidth(storedSidebarWidth);
   const sidebarPanelSize = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth;
 
-  const persistSidebarWidthFromPanel = useCallback(() => {
+  const persistSidebarWidthFromPanel = () => {
     const currentWidth = sidebarPanelRef.current?.getSize().inPixels;
     if (currentWidth == null) return;
     const nextSidebarWidth = clampSidebarWidth(currentWidth);
     if (nextSidebarWidth > SIDEBAR_MIN_WIDTH || sidebarWidth === SIDEBAR_MIN_WIDTH) {
       setSidebarWidth(nextSidebarWidth);
     }
-  }, [setSidebarWidth, sidebarWidth]);
+  };
 
   const { density, markSidebarUserOverride } = useCompactSidebarCollapse({
     sidebarCollapsed,
@@ -61,7 +63,7 @@ function AppLayout() {
     size: sidebarPanelSize,
   });
 
-  const handleSidebarToggle = useCallback(() => {
+  const handleSidebarToggle = () => {
     markSidebarUserOverride();
     setSidebarCollapsed((collapsed) => {
       if (!collapsed) {
@@ -69,25 +71,19 @@ function AppLayout() {
       }
       return !collapsed;
     });
-  }, [markSidebarUserOverride, persistSidebarWidthFromPanel]);
+  };
 
-  const handleSidebarResize = useCallback(
-    (panelSize: PanelSize) => {
-      if (sidebarCollapsed) return;
-      pendingSidebarWidthRef.current = clampSidebarWidth(panelSize.inPixels);
-    },
-    [sidebarCollapsed]
-  );
+  const handleSidebarResize = (panelSize: PanelSize) => {
+    if (sidebarCollapsed) return;
+    pendingSidebarWidthRef.current = clampSidebarWidth(panelSize.inPixels);
+  };
 
-  const handleLayoutChanged = useCallback(
-    (_layout: Layout, meta: LayoutChangedMeta) => {
-      const pendingSidebarWidth = pendingSidebarWidthRef.current;
-      pendingSidebarWidthRef.current = null;
-      if (sidebarCollapsed || !meta.isUserInteraction || pendingSidebarWidth == null) return;
-      setSidebarWidth(pendingSidebarWidth);
-    },
-    [setSidebarWidth, sidebarCollapsed]
-  );
+  const handleLayoutChanged = (_layout: Layout, meta: LayoutChangedMeta) => {
+    const pendingSidebarWidth = pendingSidebarWidthRef.current;
+    pendingSidebarWidthRef.current = null;
+    if (sidebarCollapsed || !meta.isUserInteraction || pendingSidebarWidth == null) return;
+    setSidebarWidth(pendingSidebarWidth);
+  };
 
   return (
     <div className={styles.root} data-layout-density={density}>
@@ -117,7 +113,7 @@ function AppLayout() {
           maxSize={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_MAX_WIDTH}
           groupResizeBehavior="preserve-pixel-size"
           className={styles.leftSider}
-          aria-label="应用侧边栏"
+          aria-label={t('navigation.appSidebar')}
           aria-hidden={sidebarCollapsed ? true : undefined}
           onResize={handleSidebarResize}
         >

@@ -1,27 +1,40 @@
-import ResourcePermissionActionIcon from '@/components/Drive/common/resourcePermissionActionIcon';
-import {
-  TAG_PERMISSION_ACTION_PRESET_OPTIONS,
-  TAG_PERMISSION_ACTION_ROWS,
-  TAG_PERMISSION_RESOURCE_STRATEGIES,
-} from '@/components/Drive/common/tagPermissionPreset';
-import styles from '@/components/Drive/Modals/TagPermissionModal/style.module.less';
+import TagPermissionActionEditor from '@/components/Drive/PermissionActionEditor';
 import AppModal from '@/components/Overlay/AppModal';
 import { useGroupService } from '@/domains';
 import type { GroupResConfig } from '@/domains/Group';
-import {
-  buildTagPermissionListActionSelectionPatch,
-  isTagPermissionListActionSelected,
-  normalizeResourceActions,
-  type TagPermissionListAction,
-  type TagPermissionPresetKey,
-  type TagResourceAction,
-} from '@/domains/Tag';
+import { normalizeResourceActions, type TagResourceAction } from '@/domains/Tag';
 import { parseErrorMessage } from '@/utils/error';
-import { Button, Checkbox, toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { useRequest } from 'ahooks';
-import { Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import GroupPolicyShellCard from '../GroupPolicyShellCard';
+import styles from '../style.module.less';
+
+const PRESET_LABEL_KEYS = {
+  private: 'permission.preset.private',
+  readonly: 'permission.preset.readonly',
+  shared: 'permission.preset.shared',
+} as const;
+
+const STRATEGY_LABEL_KEYS = {
+  note: 'permission.strategy.note',
+  file: 'permission.strategy.file',
+  drawio: 'permission.strategy.drawio',
+  aiAsset: 'permission.strategy.aiAsset',
+} as const;
+
+const ACTION_LABEL_KEYS = {
+  DISCOVER: 'permission.action.DISCOVER',
+  VIEW: 'permission.action.VIEW',
+  LOAD: 'permission.action.LOAD',
+  EDIT: 'permission.action.EDIT',
+  INLINE_COMMENT: 'permission.action.INLINE_COMMENT',
+  DOWNLOAD_WATERMARK: 'permission.action.DOWNLOAD_WATERMARK',
+  DOWNLOAD_ORIGINAL: 'permission.action.DOWNLOAD_ORIGINAL',
+  FORK: 'permission.action.FORK',
+  COMMENT: 'permission.action.COMMENT',
+} as const;
 
 interface GroupDefaultAccessPermissionModalProps {
   isOpen: boolean;
@@ -31,25 +44,6 @@ interface GroupDefaultAccessPermissionModalProps {
   onSuccess: () => void;
 }
 
-function isSameActionSet(
-  left: TagResourceAction[] | undefined,
-  right: TagResourceAction[] | undefined
-): boolean {
-  const leftSet = new Set(normalizeResourceActions(left));
-  const rightSet = new Set(normalizeResourceActions(right));
-  if (leftSet.size !== rightSet.size) return false;
-  return [...leftSet].every((action) => rightSet.has(action));
-}
-
-function resolveActionPresetKey(
-  actions: TagResourceAction[]
-): Exclude<TagPermissionPresetKey, 'custom'> | 'custom' {
-  const matchedPreset = TAG_PERMISSION_ACTION_PRESET_OPTIONS.find((preset) =>
-    isSameActionSet(preset.values.grantedActions, actions)
-  );
-  return matchedPreset?.key ?? 'custom';
-}
-
 function GroupDefaultAccessPermissionModal({
   isOpen,
   groupId,
@@ -57,11 +51,11 @@ function GroupDefaultAccessPermissionModal({
   onOpenChange,
   onSuccess,
 }: GroupDefaultAccessPermissionModalProps) {
+  const { t } = useTranslation(['group', 'common']);
   const groupService = useGroupService();
   const [selectedActions, setSelectedActions] = useState<TagResourceAction[]>(() =>
     normalizeResourceActions(groupResConfig.defaultMemberActions)
   );
-  const selectedPresetKey = resolveActionPresetKey(selectedActions);
 
   const { loading: saving, run: runSave } = useRequest(
     async (actions: TagResourceAction[]) => {
@@ -73,7 +67,7 @@ function GroupDefaultAccessPermissionModal({
     {
       manual: true,
       onSuccess: () => {
-        toast.success('小组默认权限已保存');
+        toast.success(t('permission.saved'));
         onOpenChange(false);
         onSuccess();
       },
@@ -88,29 +82,11 @@ function GroupDefaultAccessPermissionModal({
     onOpenChange(nextOpen);
   };
 
-  const handlePresetChange = (presetKey: Exclude<TagPermissionPresetKey, 'custom'>) => {
-    const preset = TAG_PERMISSION_ACTION_PRESET_OPTIONS.find((item) => item.key === presetKey);
-    if (!preset) return;
-    setSelectedActions(normalizeResourceActions(preset.values.grantedActions));
-  };
-
-  const handleActionToggle = (action: TagPermissionListAction, checked: boolean) => {
-    if (saving) return;
-    setSelectedActions((current) => {
-      const patch = buildTagPermissionListActionSelectionPatch(
-        { grantedActions: current },
-        action,
-        checked
-      );
-      return normalizeResourceActions(patch.grantedActions);
-    });
-  };
-
   return (
     <AppModal
       isOpen={isOpen}
       onOpenChange={handleOpenChange}
-      title="访问策略"
+      title={t('permission.accessTitle')}
       size="lg"
       containerClassName={styles.modalContainer}
       dialogClassName={styles.modalDialog}
@@ -118,118 +94,46 @@ function GroupDefaultAccessPermissionModal({
       actions={
         <>
           <Button variant="secondary" isDisabled={saving} onPress={() => handleOpenChange(false)}>
-            取消
+            {t('actions.cancel', { ns: 'common' })}
           </Button>
           <Button variant="primary" isPending={saving} onPress={() => runSave(selectedActions)}>
-            保存
+            {t('actions.save', { ns: 'common' })}
           </Button>
         </>
       }
     >
       <div className={styles.modalFormPadding}>
         <div className={styles.advancedAccessGrid}>
-          <GroupPolicyShellCard title="访问名单" />
-          <section className={styles.permissionCard} aria-label="资源权限动作">
-            <div className={styles.presetBar}>
-              <span className={styles.presetLabel}>基于预设</span>
-              <div className={styles.presetButtons} role="group" aria-label="基于预设">
-                {TAG_PERMISSION_ACTION_PRESET_OPTIONS.map((preset) => (
-                  <Button
-                    key={preset.key}
-                    variant={selectedPresetKey === preset.key ? 'primary' : 'secondary'}
-                    size="sm"
-                    isDisabled={saving}
-                    onPress={() => handlePresetChange(preset.key)}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-              <span className={styles.currentPreset}>
-                当前预设：
-                {TAG_PERMISSION_ACTION_PRESET_OPTIONS.find(
-                  (preset) => preset.key === selectedPresetKey
-                )?.label ?? '自定义'}
-              </span>
-            </div>
-
-            <div className={styles.permissionTableShell}>
-              <table className={styles.permissionTable}>
-                <thead>
-                  <tr>
-                    <th className={styles.actionHeader}>权限动作</th>
-                    <th className={styles.toggleHeader}>开启</th>
-                    {TAG_PERMISSION_RESOURCE_STRATEGIES.map((strategy) => (
-                      <th key={strategy.key} className={styles.resourceApplicabilityHeader}>
-                        {strategy.label}适用
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TAG_PERMISSION_ACTION_ROWS.map((row) => {
-                    const selected = isTagPermissionListActionSelected(
-                      { grantedActions: selectedActions },
-                      row.action
-                    );
-                    return (
-                      <tr key={row.key}>
-                        <th className={styles.actionCell}>
-                          <span className={styles.actionName}>
-                            <ResourcePermissionActionIcon
-                              action={row.action.action}
-                              className={styles.actionIcon}
-                            />
-                            <span className={styles.actionText}>{row.label}</span>
-                          </span>
-                        </th>
-                        <td
-                          className={styles.permissionToggleCell}
-                          onClick={() => handleActionToggle(row.action, !selected)}
-                        >
-                          <Checkbox
-                            className={styles.permissionCheckbox}
-                            aria-label={row.label}
-                            isDisabled={saving}
-                            isSelected={selected}
-                            onChange={(isSelected) => handleActionToggle(row.action, isSelected)}
-                            onClick={(event) => event.stopPropagation()}
-                          />
-                        </td>
-                        {TAG_PERMISSION_RESOURCE_STRATEGIES.map((strategy) => {
-                          const supported = row.supportedStrategyKeys.includes(strategy.key);
-                          const cellClassName = !supported
-                            ? styles.unsupportedCell
-                            : selected
-                              ? styles.supportedCell
-                              : styles.deniedCell;
-                          return (
-                            <td key={strategy.key} className={cellClassName}>
-                              {!supported ? (
-                                <span aria-hidden="true">-</span>
-                              ) : selected ? (
-                                <Check
-                                  size={14}
-                                  aria-label={`${strategy.label}${row.label}已开启`}
-                                  className={styles.permissionStateIcon}
-                                />
-                              ) : (
-                                <X
-                                  size={14}
-                                  aria-label={`${strategy.label}${row.label}未开启`}
-                                  className={styles.permissionStateIcon}
-                                />
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <GroupPolicyShellCard title={t('permission.accessList')} />
+          <TagPermissionActionEditor
+            ariaLabel={t('permission.resourceActionsAria')}
+            actions={selectedActions}
+            isDisabled={saving}
+            labels={{
+              actionHeader: t('permission.actionHeader'),
+              applicable: (strategy) =>
+                t('permission.strategyApplicable', {
+                  strategy: t(STRATEGY_LABEL_KEYS[strategy.key]),
+                }),
+              basedOnPreset: t('permission.basedOnPreset'),
+              currentPreset: (preset) => t('permission.currentPreset', { preset }),
+              customPreset: t('permission.custom'),
+              disabled: (strategy, action) =>
+                t('permission.actionDisabled', {
+                  strategy: t(STRATEGY_LABEL_KEYS[strategy.key]),
+                  action,
+                }),
+              enabled: (strategy, action) =>
+                t('permission.actionEnabled', {
+                  strategy: t(STRATEGY_LABEL_KEYS[strategy.key]),
+                  action,
+                }),
+              getActionLabel: (action) => t(ACTION_LABEL_KEYS[action.key]),
+              getPresetLabel: (preset) => t(PRESET_LABEL_KEYS[preset]),
+              toggleHeader: t('permission.enabledHeader'),
+            }}
+            onActionsChange={setSelectedActions}
+          />
         </div>
       </div>
     </AppModal>

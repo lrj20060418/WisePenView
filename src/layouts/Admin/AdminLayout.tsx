@@ -14,7 +14,8 @@ import {
 } from '@/layouts/_common/SystemResizable';
 import { useResizablePanelSize } from '@/layouts/_common/useResizablePanelSize';
 import clsx from 'clsx';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   Layout,
   LayoutChangedMeta,
@@ -25,6 +26,7 @@ import { Outlet } from 'react-router-dom';
 import styles from './AdminLayout.module.less';
 
 function AdminLayout() {
+  const { t } = useTranslation('shell');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const storedSidebarWidth = useSystemLayoutStore((state) => state.adminSidebarWidth);
   const setSidebarWidth = useSystemLayoutStore((state) => state.setAdminSidebarWidth);
@@ -38,7 +40,7 @@ function AdminLayout() {
     size: sidebarPanelSize,
   });
 
-  const handleSidebarToggle = useCallback(() => {
+  const handleSidebarToggle = () => {
     setSidebarCollapsed((collapsed) => {
       if (!collapsed) {
         const currentWidth = sidebarPanelRef.current?.getSize().inPixels;
@@ -51,25 +53,19 @@ function AdminLayout() {
       }
       return !collapsed;
     });
-  }, [setSidebarWidth, sidebarWidth]);
+  };
 
-  const handleSidebarResize = useCallback(
-    (panelSize: PanelSize) => {
-      if (sidebarCollapsed) return;
-      pendingSidebarWidthRef.current = clampSidebarWidth(panelSize.inPixels);
-    },
-    [sidebarCollapsed]
-  );
+  const handleSidebarResize = (panelSize: PanelSize) => {
+    if (sidebarCollapsed) return;
+    pendingSidebarWidthRef.current = clampSidebarWidth(panelSize.inPixels);
+  };
 
-  const handleLayoutChanged = useCallback(
-    (_layout: Layout, meta: LayoutChangedMeta) => {
-      const pendingSidebarWidth = pendingSidebarWidthRef.current;
-      pendingSidebarWidthRef.current = null;
-      if (sidebarCollapsed || !meta.isUserInteraction || pendingSidebarWidth == null) return;
-      setSidebarWidth(pendingSidebarWidth);
-    },
-    [setSidebarWidth, sidebarCollapsed]
-  );
+  const handleLayoutChanged = (_layout: Layout, meta: LayoutChangedMeta) => {
+    const pendingSidebarWidth = pendingSidebarWidthRef.current;
+    pendingSidebarWidthRef.current = null;
+    if (sidebarCollapsed || !meta.isUserInteraction || pendingSidebarWidth == null) return;
+    setSidebarWidth(pendingSidebarWidth);
+  };
 
   return (
     <SystemResizablePanelGroup
@@ -85,7 +81,7 @@ function AdminLayout() {
         maxSize={sidebarCollapsed ? ADMIN_SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_MAX_WIDTH}
         groupResizeBehavior="preserve-pixel-size"
         className={styles.leftSider}
-        aria-label="管理侧边栏"
+        aria-label={t('navigation.adminSidebar')}
         onResize={handleSidebarResize}
       >
         <AdminSidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />

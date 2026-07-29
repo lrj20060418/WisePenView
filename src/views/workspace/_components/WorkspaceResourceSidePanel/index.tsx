@@ -6,7 +6,8 @@ import {
 } from '@/layouts/_common/SystemResizable';
 import { useResizablePanelSize } from '@/layouts/_common/useResizablePanelSize';
 import clsx from 'clsx';
-import { useCallback, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   Layout,
   LayoutChangedMeta,
@@ -35,6 +36,7 @@ function WorkspaceResourceSidePanel({
   config,
   children,
 }: WorkspaceResourceSidePanelProps) {
+  const { t } = useTranslation('resource');
   const storedMode = useWorkspaceResourceSidePanelStore(
     (state) => state.modeByResourceId[resourceId] ?? 'closed'
   );
@@ -50,22 +52,16 @@ function WorkspaceResourceSidePanel({
 
   useResizablePanelSize({ panelRef: sidePanelRef, size: panelSize });
 
-  const handleResize = useCallback(
-    (panelSize: PanelSize) => {
-      if (!open) return;
-      pendingWidthRef.current = panelSize.inPixels;
-    },
-    [open]
-  );
+  const handleResize = (panelSize: PanelSize) => {
+    if (!open) return;
+    pendingWidthRef.current = panelSize.inPixels;
+  };
 
-  const handleLayoutChanged = useCallback(
-    (_layout: Layout, meta: LayoutChangedMeta) => {
-      const pendingWidth = pendingWidthRef.current;
-      pendingWidthRef.current = null;
-      if (meta.isUserInteraction && open && pendingWidth != null) setWidth(pendingWidth);
-    },
-    [open, setWidth]
-  );
+  const handleLayoutChanged = (_layout: Layout, meta: LayoutChangedMeta) => {
+    const pendingWidth = pendingWidthRef.current;
+    pendingWidthRef.current = null;
+    if (meta.isUserInteraction && open && pendingWidth != null) setWidth(pendingWidth);
+  };
 
   const panelContent =
     activeMode === 'inlineComment' ? (
@@ -77,7 +73,8 @@ function WorkspaceResourceSidePanel({
         onResourceChanged={config.onResourceChanged}
       />
     ) : null;
-  const panelTitle = activeMode === 'inlineComment' ? '批注' : '评论';
+  const panelTitle =
+    activeMode === 'inlineComment' ? t('sidePanel.annotation') : t('sidePanel.comments');
 
   return (
     <div className={styles.scrollHost}>
@@ -107,7 +104,11 @@ function WorkspaceResourceSidePanel({
           minSize={open ? WORKSPACE_RESOURCE_SIDE_PANEL_MIN_WIDTH : 0}
           maxSize={open ? WORKSPACE_RESOURCE_SIDE_PANEL_MAX_WIDTH : 0}
           className={styles.sidePanel}
-          aria-label={activeMode === 'inlineComment' ? '批注栏' : '评论区'}
+          aria-label={
+            activeMode === 'inlineComment'
+              ? t('sidePanel.annotationAria')
+              : t('sidePanel.commentsAria')
+          }
           aria-hidden={!open ? true : undefined}
           onResize={handleResize}
         >

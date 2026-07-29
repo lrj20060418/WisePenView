@@ -35,7 +35,8 @@ import ResourceRenderer from '@/views/workspace/ResourceRenderer';
 import { Button } from '@heroui/react';
 import clsx from 'clsx';
 import { FolderOpen, PanelsTopLeft, X } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Layout, LayoutChangedMeta, PanelSize } from 'react-resizable-panels';
 import ZenResourceFrame from './_components/ZenResourceFrame';
 import {
@@ -76,6 +77,7 @@ function ZenResourcePane({
   onActivate,
   onRuntimeChange,
 }: ZenResourcePaneProps) {
+  const { t } = useTranslation(['workspace', 'common']);
   const setPaneTarget = useZenModeStore((state) => state.setPaneTarget);
   const setPaneLocation = useZenModeStore((state) => state.setPaneLocation);
   const clearPane = useZenModeStore((state) => state.clearPane);
@@ -83,64 +85,52 @@ function ZenResourcePane({
   const [selectedResource, setSelectedResource] = useState<DriveSelectionItem | null>(null);
   const target = normalizeZenModeTarget(pane.target);
 
-  const setLayoutConfig = useCallback(
-    (layoutConfig: ResourceHostLayoutConfig) => {
-      onRuntimeChange(pane.paneId, { layoutConfig });
-    },
-    [onRuntimeChange, pane.paneId]
-  );
-  const resetLayoutConfig = useCallback(() => {
+  const setLayoutConfig = (layoutConfig: ResourceHostLayoutConfig) => {
+    onRuntimeChange(pane.paneId, { layoutConfig });
+  };
+  const resetLayoutConfig = () => {
     onRuntimeChange(pane.paneId, { layoutConfig: {}, chatContext: undefined });
-  }, [onRuntimeChange, pane.paneId]);
-  const setChatContext = useCallback(
-    (chatContext: ResourceChatContext) => {
-      onRuntimeChange(pane.paneId, { chatContext });
-    },
-    [onRuntimeChange, pane.paneId]
-  );
-  const clearChatContext = useCallback(
-    (chatContext?: ResourceChatContext) => {
-      if (chatContext && runtime.chatContext !== chatContext) return;
-      onRuntimeChange(pane.paneId, { chatContext: undefined });
-    },
-    [onRuntimeChange, pane.paneId, runtime.chatContext]
-  );
-  const handleClosePane = useCallback(() => {
+  };
+  const setChatContext = (chatContext: ResourceChatContext) => {
+    onRuntimeChange(pane.paneId, { chatContext });
+  };
+  const clearChatContext = (chatContext?: ResourceChatContext) => {
+    if (chatContext && runtime.chatContext !== chatContext) return;
+    onRuntimeChange(pane.paneId, { chatContext: undefined });
+  };
+  const handleClosePane = () => {
     clearPane(pane.paneId);
     onRuntimeChange(pane.paneId, { layoutConfig: {}, chatContext: undefined });
-  }, [clearPane, onRuntimeChange, pane.paneId]);
-  const openResource = useCallback(
-    (next: OpenResourceTarget) => {
-      const resourceId = next.resourceId.trim();
-      if (!resourceId) return;
-      const resourceType = resolveResourceKind(next.resourceType);
-      const viewer = resolveResourceViewer({
-        resourceType: next.resourceType ?? resourceType,
-        viewer: next.viewer,
+  };
+  const openResource = (next: OpenResourceTarget) => {
+    const resourceId = next.resourceId.trim();
+    if (!resourceId) return;
+    const resourceType = resolveResourceKind(next.resourceType);
+    const viewer = resolveResourceViewer({
+      resourceType: next.resourceType ?? resourceType,
+      viewer: next.viewer,
+    });
+    setPaneTarget(pane.paneId, {
+      resourceId,
+      resourceType,
+      resourceName: next.resourceName,
+      viewer,
+    });
+    if ('parentNodeId' in next.driveLocation) {
+      setPaneLocation(pane.paneId, {
+        scope: next.driveLocation.scope,
+        resource: {
+          resourceId,
+          parentNodeId: next.driveLocation.parentNodeId,
+          ...(next.driveLocation.nodeId ? { nodeId: next.driveLocation.nodeId } : {}),
+        },
       });
-      setPaneTarget(pane.paneId, {
-        resourceId,
-        resourceType,
-        resourceName: next.resourceName,
-        viewer,
-      });
-      if ('parentNodeId' in next.driveLocation) {
-        setPaneLocation(pane.paneId, {
-          scope: next.driveLocation.scope,
-          resource: {
-            resourceId,
-            parentNodeId: next.driveLocation.parentNodeId,
-            ...(next.driveLocation.nodeId ? { nodeId: next.driveLocation.nodeId } : {}),
-          },
-        });
-      } else {
-        setPaneLocation(pane.paneId, { scope: next.driveLocation.scope });
-      }
-      onActivate(pane.paneId);
-    },
-    [onActivate, pane.paneId, setPaneLocation, setPaneTarget]
-  );
-  const resourceHostContext = useMemo<ResourceHostContextValue>(() => {
+    } else {
+      setPaneLocation(pane.paneId, { scope: next.driveLocation.scope });
+    }
+    onActivate(pane.paneId);
+  };
+  const resourceHostContext = (() => {
     return {
       hostId: pane.paneId,
       layoutConfig: runtime.layoutConfig,
@@ -156,30 +146,16 @@ function ZenResourcePane({
       setChatContext,
       clearChatContext,
     };
-  }, [
-    clearChatContext,
-    openResource,
-    pane.paneId,
-    resetLayoutConfig,
-    runtime.layoutConfig,
-    setChatContext,
-    setLayoutConfig,
-    target?.resourceId,
-    target?.resourceType,
-    target?.viewer,
-  ]);
+  })() satisfies ResourceHostContextValue;
 
   const handlePickerOpenChange = (open: boolean) => {
     setPickerOpen(open);
     if (!open) setSelectedResource(null);
   };
 
-  const handleTargetChange = useCallback(
-    (nextTarget: ResourceTarget) => {
-      setPaneTarget(pane.paneId, nextTarget);
-    },
-    [pane.paneId, setPaneTarget]
-  );
+  const handleTargetChange = (nextTarget: ResourceTarget) => {
+    setPaneTarget(pane.paneId, nextTarget);
+  };
 
   const handleConfirmResource = () => {
     if (!selectedResource?.resourceId || !selectedResource.parentNodeId) return;
@@ -198,7 +174,8 @@ function ZenResourcePane({
 
   const runtimeHeader =
     runtime.layoutConfig.header === false ? undefined : runtime.layoutConfig.header;
-  const paneTitle = target?.resourceName ?? runtimeHeader?.resource?.resourceName ?? '资源版面';
+  const paneTitle =
+    target?.resourceName ?? runtimeHeader?.resource?.resourceName ?? t('zen.resourcePane');
 
   return (
     <section
@@ -207,17 +184,17 @@ function ZenResourcePane({
       onPointerDown={() => onActivate(pane.paneId)}
     >
       <div className={styles.paneTitleBar}>
-        <span className={styles.paneTitle}>{target ? paneTitle : '空白版面'}</span>
+        <span className={styles.paneTitle}>{target ? paneTitle : t('zen.emptyPane')}</span>
         <span className={styles.paneActions}>
           <AppIconButton
             icon={<FolderOpen size={15} aria-hidden="true" />}
-            label={target ? '替换资源' : '选择资源'}
+            label={target ? t('zen.replaceResource') : t('zen.selectResource')}
             onPress={() => setPickerOpen(true)}
           />
           {target ? (
             <AppIconButton
               icon={<X size={15} aria-hidden="true" />}
-              label="关闭资源"
+              label={t('zen.closeResource')}
               onPress={handleClosePane}
             />
           ) : null}
@@ -242,7 +219,7 @@ function ZenResourcePane({
         ) : (
           <button type="button" className={styles.emptySlot} onClick={() => setPickerOpen(true)}>
             <FolderOpen size={24} aria-hidden="true" />
-            <span>从云盘选择文件</span>
+            <span>{t('zen.selectFromDrive')}</span>
           </button>
         )}
       </div>
@@ -250,7 +227,7 @@ function ZenResourcePane({
       <AppModal
         isOpen={pickerOpen}
         onOpenChange={handlePickerOpenChange}
-        title="选择版面资源"
+        title={t('zen.selectTitle')}
         size="md"
         contentMode="dialog"
       >
@@ -266,10 +243,10 @@ function ZenResourcePane({
         </AppModal.Body>
         <AppModal.Footer>
           <Button variant="secondary" onPress={() => handlePickerOpenChange(false)}>
-            取消
+            {t('actions.cancel', { ns: 'common' })}
           </Button>
           <Button variant="primary" isDisabled={!selectedResource} onPress={handleConfirmResource}>
-            打开
+            {t('actions.open', { ns: 'common' })}
           </Button>
         </AppModal.Footer>
       </AppModal>
@@ -278,6 +255,7 @@ function ZenResourcePane({
 }
 
 function ZenModeLayout() {
+  const { t } = useTranslation('workspace');
   const appNavigation = useAppNavigation();
   const panes = useZenModeStore((state) => state.panes);
   const activePaneId = useZenModeStore((state) => state.activePaneId);
@@ -292,53 +270,44 @@ function ZenModeLayout() {
   const pendingPrimaryPanePercentageRef = useRef<number | null>(null);
   const pendingChatWidthRef = useRef<number | null>(null);
 
-  const handleRuntimeChange = useCallback((paneId: ZenPaneId, runtime: Partial<ZenPaneRuntime>) => {
+  const handleRuntimeChange = (paneId: ZenPaneId, runtime: Partial<ZenPaneRuntime>) => {
     setRuntimeByPaneId((current) => ({
       ...current,
       [paneId]: { ...current[paneId], ...runtime },
     }));
-  }, []);
+  };
 
-  const handleResourcePaneResize = useCallback(
-    (size: PanelSize, paneId: string | number | undefined) => {
-      if (paneId !== ZEN_PANE_IDS[0]) return;
-      pendingPrimaryPanePercentageRef.current = size.asPercentage;
-    },
-    []
-  );
+  const handleResourcePaneResize = (size: PanelSize, paneId: string | number | undefined) => {
+    if (paneId !== ZEN_PANE_IDS[0]) return;
+    pendingPrimaryPanePercentageRef.current = size.asPercentage;
+  };
 
-  const handleResourceLayoutChanged = useCallback(
-    (_layout: Layout, meta: LayoutChangedMeta) => {
-      const percentage = pendingPrimaryPanePercentageRef.current;
-      pendingPrimaryPanePercentageRef.current = null;
-      if (meta.isUserInteraction && percentage != null) {
-        setPrimaryPanePercentage(percentage);
-      }
-    },
-    [setPrimaryPanePercentage]
-  );
+  const handleResourceLayoutChanged = (_layout: Layout, meta: LayoutChangedMeta) => {
+    const percentage = pendingPrimaryPanePercentageRef.current;
+    pendingPrimaryPanePercentageRef.current = null;
+    if (meta.isUserInteraction && percentage != null) {
+      setPrimaryPanePercentage(percentage);
+    }
+  };
 
-  const handleChatResize = useCallback((size: PanelSize) => {
+  const handleChatResize = (size: PanelSize) => {
     pendingChatWidthRef.current = size.inPixels;
-  }, []);
+  };
 
-  const handleShellLayoutChanged = useCallback(
-    (_layout: Layout, meta: LayoutChangedMeta) => {
-      const width = pendingChatWidthRef.current;
-      pendingChatWidthRef.current = null;
-      if (meta.isUserInteraction && width != null) setChatWidth(width);
-    },
-    [setChatWidth]
-  );
+  const handleShellLayoutChanged = (_layout: Layout, meta: LayoutChangedMeta) => {
+    const width = pendingChatWidthRef.current;
+    pendingChatWidthRef.current = null;
+    if (meta.isUserInteraction && width != null) setChatWidth(width);
+  };
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = () => {
     clearCurrentSession();
     clearNewChatSessionStore();
-  }, [clearCurrentSession]);
+  };
 
   const activeTarget = panes[activePaneId].target;
   const activeRuntime = runtimeByPaneId[activePaneId];
-  const activeChatProvider = useMemo(() => {
+  const activeChatProvider = (() => {
     if (activeRuntime.layoutConfig.chatStateProvider) {
       return activeRuntime.layoutConfig.chatStateProvider;
     }
@@ -348,14 +317,14 @@ function ZenModeLayout() {
       resourceType: activeTarget.resourceType,
       viewer: activeTarget.viewer,
     });
-  }, [activeRuntime.layoutConfig.chatStateProvider, activeTarget]);
+  })();
 
   return (
     <div className={styles.root}>
       <header className={styles.zenBar}>
         <AppIconButton
           icon={<X size={17} aria-hidden="true" />}
-          label="退出 Zen Mode"
+          label={t('shell.exitZen')}
           onPress={appNavigation.goBack}
         />
         <PanelsTopLeft size={16} aria-hidden="true" />
@@ -424,7 +393,6 @@ function ZenModeLayout() {
             onResize={handleChatResize}
           >
             <ChatPanel
-              collapsed={false}
               showCollapseButton={false}
               onNewChat={handleNewChat}
               resourceChat={{

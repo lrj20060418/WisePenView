@@ -162,20 +162,10 @@ export const createDriveServices = (
     return rootTag;
   };
 
-  const ensureSharedFolder: IDriveService['ensureSharedFolder'] = async () => {
-    const roots = await readRawRoots(undefined, { refresh: true });
+  const getSharedFolderTagId: IDriveService['getSharedFolderTagId'] = async () => {
+    const roots = await readRawRoots();
     const existingSharedTag = findSharedFolderTag(roots);
-    if (existingSharedTag) {
-      return existingSharedTag.tagId;
-    }
-
-    const personalRoot = await getPersonalRootTag();
-    const tagId = await tagService.addTag({
-      parentId: personalRoot.tagId,
-      tagName: DRIVE_SHARED_TAG_NAME,
-    });
-    clearCache();
-    return tagId;
+    return existingSharedTag?.tagId;
   };
 
   const getRootNode: IDriveService['getRootNode'] = async (params) => {
@@ -788,10 +778,6 @@ export const createDriveServices = (
     }
   };
 
-  const moveToFolder: IDriveService['moveToFolder'] = async (params) => {
-    await moveNodeToFolder(params);
-  };
-
   const resolveBatchMoveSourceIds = (params: {
     nodeIds: string[];
     targetFolderNodeId: string;
@@ -951,12 +937,12 @@ export const createDriveServices = (
     listNodeChildren,
     getNodePath,
     getResourceNode,
-    moveToFolder,
+    moveToFolder: moveNodeToFolder,
     createLink,
     moveNodesToFolder,
     removeNode,
     renameNode,
     createFolder,
-    ensureSharedFolder,
+    getSharedFolderTagId,
   };
 };

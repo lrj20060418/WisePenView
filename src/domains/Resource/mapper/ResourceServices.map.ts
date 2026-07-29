@@ -14,6 +14,7 @@ import type {
   ResourceSpecifiedUserGrantedActionsApiResponse,
 } from '../apis/ResourceApi.type';
 import {
+  areResourcePermissionActionsEqual,
   coerceResourceActions,
   filterSupportedResourcePermissionActions,
   getSupportedResourcePermissionActions,
@@ -30,8 +31,11 @@ import type {
   GetUserResourcesRequest,
   ResourceListPage,
   ResourcePermissionActionOption,
+  ResourcePermissionGroupInfo,
+  ResourcePermissionHydration,
   ResourcePermissionOverview,
   ResourcePermissionSubject,
+  ResourcePermissionUserInfo,
   SearchHitItem,
   SearchResultPage,
   UpdateResourceActionPermissionRequest,
@@ -112,20 +116,12 @@ const mapResourceTagBindsFromApi = (
 const resolveUserDisplayName = (
   userInfo: UserDisplayBase | undefined,
   fallbackId: string
-): string =>
-  userInfo?.realName?.trim() ||
-  userInfo?.nickname?.trim() ||
-  (fallbackId ? `用户 ${fallbackId}` : '用户');
+): string => userInfo?.realName?.trim() || userInfo?.nickname?.trim() || fallbackId;
 
 const resolveGroupDisplayName = (
   groupInfo: ResourceGroupDisplayBaseApiResponse | undefined,
   fallbackId: string
-): string => groupInfo?.groupName?.trim() || (fallbackId ? `小组 ${fallbackId}` : '小组');
-
-const resolveGroupMemberSubjectName = (
-  groupId: string,
-  groupInfo?: ResourceGroupDisplayBaseApiResponse
-): string => `${resolveGroupDisplayName(groupInfo, groupId)} 的成员`;
+): string => groupInfo?.groupName?.trim() || fallbackId;
 
 const isGrantedActionListItem = (
   value: unknown
@@ -317,13 +313,33 @@ const mapPermissionActionOptions = (
   return supportedActions.map((action) => ({
     action,
     key: RESOURCE_ACTION.getKey(action) ?? String(action),
-    label: RESOURCE_ACTION.labels[action] ?? String(action),
+    label: RESOURCE_ACTION.getKey(action) ?? String(action),
     supported: true,
   }));
 };
 
+const filterPermissionActionsByOptions = (
+  actions: ResourceAction[] | null | undefined,
+  actionOptions: ResourcePermissionActionOption[]
+): ResourceAction[] =>
+  filterSupportedResourcePermissionActions(
+    actions,
+    actionOptions.filter((option) => option.supported).map((option) => option.action)
+  );
+
+const arePermissionActionsEqualByOptions = (
+  left: ResourceAction[] | null | undefined,
+  right: ResourceAction[] | null | undefined,
+  actionOptions: ResourcePermissionActionOption[]
+): boolean =>
+  areResourcePermissionActionsEqual(
+    left,
+    right,
+    actionOptions.filter((option) => option.supported).map((option) => option.action)
+  );
+
 const resolveOwnerName = (ownerInfo: UserDisplayBase | undefined, ownerId?: string): string =>
-  ownerInfo?.realName?.trim() || ownerInfo?.nickname?.trim() || ownerId || '所有者';
+  ownerInfo?.realName?.trim() || ownerInfo?.nickname?.trim() || ownerId || '';
 
 const mapResourcePermissionOverviewFromApi = (
   raw: ResourceItemApiResponse,
@@ -346,7 +362,7 @@ const mapResourcePermissionOverviewFromApi = (
     kind: 'owner',
     source: 'owner',
     name: resolveOwnerName(ownerInfo, resourceInfo.ownerId),
-    description: '所有者',
+    description: '',
     avatar: ownerInfo?.avatar,
     userId: resourceInfo.ownerId,
     effectiveActions: ownerActions,
@@ -376,8 +392,8 @@ const mapResourcePermissionOverviewFromApi = (
       id: `group:${groupId}:tag`,
       kind: 'group',
       source: 'tag',
-      name: resolveGroupMemberSubjectName(groupId),
-      description: '继承自资源所在标签的权限',
+      name: groupId,
+      description: '',
       groupId,
       primaryTagId: bind.primaryTagId,
       effectiveActions: [],
@@ -393,8 +409,8 @@ const mapResourcePermissionOverviewFromApi = (
       id: `group:${groupId}:override`,
       kind: 'group',
       source: 'resourceOverride',
-      name: resolveGroupMemberSubjectName(groupId, groupInfo),
-      description: groupInfo?.groupDesc ?? '已覆盖标签策略，仅对此资源生效',
+      name: resolveGroupDisplayName(groupInfo, groupId),
+      description: groupInfo?.groupDesc ?? '',
       avatar: groupInfo?.groupCoverUrl ?? undefined,
       groupId,
       primaryTagId: primaryTag?.tagId,
@@ -411,7 +427,7 @@ const mapResourcePermissionOverviewFromApi = (
       kind: 'user',
       source: 'specifiedUser',
       name: resolveUserDisplayName(userInfo, userId),
-      description: '由您邀请而获得的权限',
+      description: '',
       avatar: userInfo?.avatar,
       userId,
       effectiveActions: filteredActions,
@@ -426,6 +442,142 @@ const mapResourcePermissionOverviewFromApi = (
     subjects,
     supportedActions,
     actionOptions,
+  };
+};
+
+const resolvePermissionUserDisplayName = (
+  userInfo: ResourcePermissionUserInfo,
+  fallbackName: string
+): string =>
+  userInfo.realName?.trim() ||
+  userInfo.nickname?.trim() ||
+  userInfo.username.trim() ||
+  fallbackName;
+
+const mergePermissionSubjectMetadata = (
+  subject: ResourcePermissionSubject,
+  userInfo: ResourcePermissionUserInfo | undefined,
+  groupInfo: ResourcePermissionGroupInfo | undefined
+): ResourcePermissionSubject => {
+  let nextSubject = subject;
+  if (userInfo) {
+    const nextName = resolvePermissionUserDisplayName(userInfo, subject.name);
+    const nextAvatar = userInfo.avatar?.trim() || subject.avatar;
+    if (nextSubject.name !== nextName || nextSubject.avatar !== nextAvatar) {
+      nextSubject = {
+        ...nextSubject,
+        name: nextName,
+        avatar: nextAvatar,
+      };
+    }
+  }
+
+  if (groupInfo) {
+    const groupName = groupInfo.groupName.trim();
+    const groupDescription = groupInfo.groupDesc.trim();
+    const nextName = groupName || nextSubject.name;
+    const nextDescription =
+      nextSubject.source === 'resourceOverride' && groupDescription
+        ? groupDescription
+        : nextSubject.description;
+    const nextAvatar = groupInfo.groupCoverUrl.trim() || nextSubject.avatar;
+    if (
+      nextSubject.name !== nextName ||
+      nextSubject.description !== nextDescription ||
+      nextSubject.avatar !== nextAvatar
+    ) {
+      nextSubject = {
+        ...nextSubject,
+        name: nextName,
+        description: nextDescription,
+        avatar: nextAvatar,
+      };
+    }
+  }
+
+  return nextSubject;
+};
+
+const mergePermissionSubjectInheritedActions = (
+  subject: ResourcePermissionSubject,
+  inheritedActions: ResourceAction[] | undefined,
+  actionOptions: ResourcePermissionActionOption[]
+): ResourcePermissionSubject => {
+  if (!subject.groupId || !subject.primaryTagId || !inheritedActions) return subject;
+  const normalizedInheritedActions = filterPermissionActionsByOptions(
+    inheritedActions,
+    actionOptions
+  );
+
+  if (subject.source === 'resourceOverride') {
+    const matchesTag = arePermissionActionsEqualByOptions(
+      subject.editableActions,
+      normalizedInheritedActions,
+      actionOptions
+    );
+    if (matchesTag) {
+      return {
+        ...subject,
+        id: `group:${subject.groupId}:tag`,
+        source: 'tag',
+        description: '',
+        editableActions: normalizedInheritedActions,
+        effectiveActions: normalizedInheritedActions,
+        inheritedActions: normalizedInheritedActions,
+      };
+    }
+  }
+
+  if (subject.source === 'tag') {
+    return {
+      ...subject,
+      description: '',
+      editableActions: normalizedInheritedActions,
+      effectiveActions: normalizedInheritedActions,
+      inheritedActions: normalizedInheritedActions,
+    };
+  }
+
+  return {
+    ...subject,
+    inheritedActions: normalizedInheritedActions,
+  };
+};
+
+/** 二次补全失败时不覆盖原始字段，避免展示数据请求失败导致权限主体消失。 */
+const mergeResourcePermissionSubject = (
+  subject: ResourcePermissionSubject,
+  hydration: ResourcePermissionHydration,
+  actionOptions: ResourcePermissionActionOption[]
+): ResourcePermissionSubject => {
+  const withMetadata = mergePermissionSubjectMetadata(
+    subject,
+    subject.userId ? hydration.userInfoById.get(subject.userId) : undefined,
+    subject.groupId ? hydration.groupInfoById.get(subject.groupId) : undefined
+  );
+  return mergePermissionSubjectInheritedActions(
+    withMetadata,
+    hydration.inheritedActionsBySubjectId.get(subject.id),
+    actionOptions
+  );
+};
+
+export const mergeResourcePermissionHydration = (
+  overview: ResourcePermissionOverview,
+  hydration: ResourcePermissionHydration
+): ResourcePermissionOverview => {
+  const actionOptions = overview.actionOptions;
+  const subjects = overview.subjects.map((subject) =>
+    mergeResourcePermissionSubject(subject, hydration, actionOptions)
+  );
+  const owner = overview.owner
+    ? mergeResourcePermissionSubject(overview.owner, hydration, actionOptions)
+    : overview.owner;
+
+  return {
+    ...overview,
+    owner,
+    subjects,
   };
 };
 
@@ -468,5 +620,6 @@ export const ResourceServicesMap = {
   mapChangeResourceActionPermissionRequest,
   mapChangeResourceActionPermissionRequestFromSubjects,
   mapResourcePermissionOverviewFromApi,
+  mergeResourcePermissionHydration,
   mapSearchResultPageFromApi,
 };
