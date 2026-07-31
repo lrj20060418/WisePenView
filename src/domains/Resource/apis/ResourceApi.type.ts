@@ -73,6 +73,23 @@ export interface ResourceItemApiResponse {
   resourceAccessRole?: 'OWNER' | 'OWNER_SPECIFIED' | 'GROUP_ADMIN' | 'GROUP_MEMBER' | 'NONE';
   overrideGrantedActions?: ResourceGroupGrantedActionsApiResponse[] | null;
   specifiedUsersGrantedActions?: ResourceSpecifiedUserGrantedActionsApiResponse[] | null;
+  marketSaleInfos?: Record<string, ResourceMarketSaleInfoApiResponse> | null;
+}
+
+export interface ResourceMarketSaleTierApiResponse {
+  offerId?: string;
+  price?: number;
+  grantedActions?: ResourceActionApiList | null;
+}
+
+export interface ResourceMarketSaleInfoApiResponse {
+  reviewActions?: ResourceActionApiList | null;
+  reviewContentPercentage?: number;
+  marketSaleTiers?: ResourceMarketSaleTierApiResponse[] | null;
+  status?: string;
+  offerVersion?: number;
+  auditMessage?: string;
+  auditAt?: string;
 }
 
 export type ResourceListPageApiResponse = PageR<ResourceItemApiResponse>;

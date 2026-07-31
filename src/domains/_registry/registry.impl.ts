@@ -20,6 +20,7 @@ import { createGroupServices } from '@/domains/Group/service/GroupServices.impl'
 import { createImageServices } from '@/domains/Image/service/ImageServices.impl';
 import { createInlineCommentServices } from '@/domains/InlineComment/service/InlineCommentServices.impl';
 import { createInteractServices } from '@/domains/Interact/service/InteractServices.impl';
+import { createMarketServices } from '@/domains/Market/service/MarketServices.impl';
 import { createNoteServices } from '@/domains/Note/service/NoteServices.impl';
 import { createQuotaServices } from '@/domains/Quota/service/QuotaServices.impl';
 import { createResourceServices } from '@/domains/Resource/service/ResourceServices.impl';
@@ -47,6 +48,10 @@ const walletService = createWalletServices();
 
 // Level 1：依赖 Level 0
 const noteService = createNoteServices({ resourceService: resourceService });
+const marketService = createMarketServices({
+  noteService: noteService,
+  documentService: documentService,
+});
 const skillService = createSkillServices({
   resourceService: resourceService,
   userService: userService,
@@ -75,6 +80,7 @@ const servicesValue: ServicesContextValue = {
   imageService: imageService,
   inlineCommentService: inlineCommentService,
   interactService: interactService,
+  marketService: marketService,
   noteService: noteService,
   quotaService: quotaService,
   resourceService: resourceService,

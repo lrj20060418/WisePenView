@@ -68,6 +68,8 @@ export interface SyncTitleRequest {
 
 export interface GetNoteInfoRequest {
   resourceId: string;
+  /** 集市场景传入售卖 offerVersion，对齐后端 targetVersion */
+  targetVersion?: number;
 }
 
 export interface GetDrawIoLatestSnapshotRequest {

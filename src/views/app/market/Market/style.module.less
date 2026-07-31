@@ -1,0 +1,18 @@
+.pageContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-width: var(--layout-compact-max-width);
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-xl) var(--space-lg);
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+@media (max-width: 640px) {
+  .pageContainer {
+    padding: var(--space-md);
+  }
+}

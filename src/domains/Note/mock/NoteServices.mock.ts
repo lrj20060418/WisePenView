@@ -9,7 +9,6 @@ import type {
   SyncTitleRequest,
 } from '@/domains/Note';
 import { useResourceDisplayNameStore } from '@/domains/Resource/store/useResourceDisplayNameStore';
-import { NOTE_AI_DIFF_PREVIEW_MOCK } from './aiDiffPreview.mockdata';
 
 /** Mock 占位：与实现层一致，同步更新展示名 store */
 const syncTitle = async (params: SyncTitleRequest): Promise<void> => {
@@ -21,14 +20,44 @@ const createNote = async (_params: CreateNoteRequest): Promise<CreateNoteRespons
   return { resourceId: '123' };
 };
 
-const getNoteInfoDisplay = async (_params: GetNoteInfoRequest): Promise<NoteInfoDisplayData> => {
+const getNoteInfoDisplay = async (params: GetNoteInfoRequest): Promise<NoteInfoDisplayData> => {
   return {
-    noteTitle: 'AI Diff 样式预览',
-    authors: [],
-    lastEditedAtText: '暂无',
-    version: 0,
-    canCollaborativeEdit: true,
-    aiDiffPreview: NOTE_AI_DIFF_PREVIEW_MOCK,
+    noteTitle: `笔记 ${params.resourceId}`,
+    ownerId: 'u-1',
+    authors: [{ id: 'u-1', name: '林知夏' }],
+    lastEditedAtText: '2026-05-18 10:20:00',
+    version: params.targetVersion ?? 1,
+    canCollaborativeEdit: false,
+    resourceInfo: {
+      resourceId: params.resourceId,
+      resourceName: `笔记 ${params.resourceId}`,
+      ownerId: 'u-1',
+      ownerInfo: {
+        nickname: '林知夏',
+        realName: '林知夏',
+        avatar: '',
+        identityType: 1,
+      },
+      resourceType: 'note',
+      preview: '采访准备与选题 · 提问设计与追问技巧（mock 预览）。',
+      likeCount: 28,
+      favoriteCount: 9,
+      commentCount: 3,
+      marketSaleInfos: {
+        'mg-1': {
+          status: 'PUBLISHED',
+          offerVersion: params.targetVersion ?? 1,
+          reviewContentPercentage: 20,
+          marketSaleTiers: [{ offerId: 'tier-note', price: 12 }],
+        },
+        'mg-news': {
+          status: 'PUBLISHED',
+          offerVersion: params.targetVersion ?? 1,
+          reviewContentPercentage: 20,
+          marketSaleTiers: [{ offerId: 'tier-note-2', price: 12 }],
+        },
+      },
+    },
   };
 };
 

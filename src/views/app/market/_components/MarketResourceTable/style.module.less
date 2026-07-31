@@ -1,0 +1,28 @@
+.panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--space-2xl) * 10);
+  max-height: min(70vh, 40rem);
+  overflow: hidden;
+}
+
+.table {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: transparent;
+}
+
+.nameColumn:global(.table__column),
+.nameColumn:global(.table__cell) {
+  width: 40%;
+  min-width: 16rem;
+  max-width: 40%;
+}

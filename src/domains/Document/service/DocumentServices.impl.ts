@@ -8,6 +8,7 @@ import { DocumentServicesMap } from '../mapper/DocumentServices.map';
 import type {
   DocDisplayInfoResponse,
   DocumentAllowedExtension,
+  GetDocInfoRequest,
   IDocumentService,
   PendingDocItem,
   UploadDocumentParams,
@@ -99,8 +100,12 @@ const cancelPendingDoc = async (documentId: string): Promise<void> => {
   await DocumentApi.cancelDocProcess({ documentId });
 };
 
-const getDocInfo = async (resourceId: string): Promise<DocDisplayInfoResponse> => {
-  const data = await DocumentApi.getDocInfo({ resourceId });
+const getDocInfo = async (params: GetDocInfoRequest | string): Promise<DocDisplayInfoResponse> => {
+  const request = typeof params === 'string' ? { resourceId: params } : params;
+  const data = await DocumentApi.getDocInfo({
+    resourceId: request.resourceId,
+    ...(request.targetVersion != null ? { targetVersion: request.targetVersion } : {}),
+  });
   return DocumentServicesMap.mapGetDocInfoFromApi(data);
 };
 

@@ -4,6 +4,7 @@ const enUSShell = {
     newChat: 'New chat',
     drive: 'Documents and Drive',
     groups: 'My groups',
+    market: 'Resource market',
     back: 'Back',
     forward: 'Forward',
     expandSidebar: 'Expand sidebar',

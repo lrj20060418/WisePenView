@@ -65,12 +65,18 @@ export interface IDocumentService {
   retryPendingDoc(documentId: string): Promise<void>;
   /** 取消待处理文档 */
   cancelPendingDoc(documentId: string): Promise<void>;
-  /** 获取文档详情信息（用于预览页展示） */
-  getDocInfo(resourceId: string): Promise<DocDisplayInfoResponse>;
+  /** 获取文档详情信息（用于预览页展示）；可传 targetVersion 对齐集市 offerVersion */
+  getDocInfo(params: GetDocInfoRequest | string): Promise<DocDisplayInfoResponse>;
   /** 复制已有文档，后端统一校验 FORK 权限。 */
   forkDocument(params: ForkDocumentRequest): Promise<string>;
   /** 获取 ONLYOFFICE 编辑器初始化配置 */
   getOnlyOfficeEditorConfig(resourceId: string): Promise<OnlyOfficeEditorConfigResponse>;
+}
+
+export interface GetDocInfoRequest {
+  resourceId: string;
+  /** 集市场景传入售卖 offerVersion，对齐后端 targetVersion */
+  targetVersion?: number;
 }
 
 export interface ForkDocumentRequest {

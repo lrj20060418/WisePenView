@@ -2,6 +2,8 @@ export type {
   ResourceAccessRole,
   ResourceIconType,
   ResourceItem,
+  ResourceMarketSaleInfo,
+  ResourceMarketSaleTier,
   ResourceTagBind,
   ResourceTagInfo,
 } from './entity/resource';

@@ -1,5 +1,6 @@
 import type {
   DocDisplayInfoResponse,
+  GetDocInfoRequest,
   IDocumentService,
   OnlyOfficeEditorConfigResponse,
   PendingDocItem,
@@ -42,8 +43,14 @@ const cancelPendingDoc = async (_documentId: string): Promise<void> => {
   await delay(200);
 };
 
-const getDocInfo = async (documentId: string): Promise<DocDisplayInfoResponse> => {
+const getDocInfo = async (
+  documentIdOrParams: GetDocInfoRequest | string
+): Promise<DocDisplayInfoResponse> => {
   await delay(200);
+  const documentId =
+    typeof documentIdOrParams === 'string' ? documentIdOrParams : documentIdOrParams.resourceId;
+  const offerVersion =
+    typeof documentIdOrParams === 'object' ? documentIdOrParams.targetVersion : undefined;
   return {
     docMetaInfo: {
       uploadMeta: {
@@ -56,6 +63,7 @@ const getDocInfo = async (documentId: string): Promise<DocDisplayInfoResponse> =
         status: 'SUCCESS',
       },
       maxPreviewPages: 20,
+      version: offerVersion,
     },
     resourceInfo: {
       resourceId: documentId,
@@ -66,6 +74,24 @@ const getDocInfo = async (documentId: string): Promise<DocDisplayInfoResponse> =
         identityType: 0,
       },
       resourceType: 'pdf',
+      preview: '这是一份可预览的文档摘要（mock）。',
+      likeCount: 12,
+      favoriteCount: 4,
+      commentCount: 2,
+      marketSaleInfos: {
+        'mg-1': {
+          status: 'PUBLISHED',
+          offerVersion: offerVersion ?? 1,
+          reviewContentPercentage: 20,
+          marketSaleTiers: [{ offerId: 'tier-doc', price: 18 }],
+        },
+        'mg-cs': {
+          status: 'PUBLISHED',
+          offerVersion: offerVersion ?? 1,
+          reviewContentPercentage: 15,
+          marketSaleTiers: [{ offerId: 'tier-doc-2', price: 8 }],
+        },
+      },
     },
   };
 };

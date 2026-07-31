@@ -37,6 +37,63 @@
       "inviteCode": "DEF456",
       "tokenUsed": 500,
       "tokenBalance": 1500
+    },
+    {
+      "groupId": "mg-1",
+      "groupName": "新闻学院资料集市",
+      "groupDesc": "采访、写作、伦理与融媒体课程资料",
+      "groupCoverUrl": "/market-covers/doc-blue.svg",
+      "groupType": 3,
+      "ownerId": "1",
+      "ownerInfo": {
+        "nickname": "Mock User",
+        "realName": "张三",
+        "avatar": "",
+        "identityType": 1
+      },
+      "memberCount": 286,
+      "createTime": "2025-09-01T00:00:00.000Z",
+      "inviteCode": "MKT001",
+      "tokenUsed": 0,
+      "tokenBalance": 0
+    },
+    {
+      "groupId": "mg-2",
+      "groupName": "计算机学院资料集市",
+      "groupDesc": "算法、系统与项目实践资料分享",
+      "groupCoverUrl": "/market-covers/doc-teal.svg",
+      "groupType": 3,
+      "ownerId": "1",
+      "ownerInfo": {
+        "nickname": "李四",
+        "realName": "李四",
+        "avatar": "",
+        "identityType": 1
+      },
+      "memberCount": 512,
+      "createTime": "2025-10-01T00:00:00.000Z",
+      "inviteCode": "MKT002",
+      "tokenUsed": 0,
+      "tokenBalance": 0
+    },
+    {
+      "groupId": "mg-3",
+      "groupName": "跨院选修资料集市",
+      "groupDesc": "通识与跨院课程笔记合集",
+      "groupCoverUrl": "/market-covers/doc-amber.svg",
+      "groupType": 3,
+      "ownerId": "1",
+      "ownerInfo": {
+        "nickname": "王五",
+        "realName": "王五",
+        "avatar": "",
+        "identityType": 1
+      },
+      "memberCount": 164,
+      "createTime": "2025-11-01T00:00:00.000Z",
+      "inviteCode": "MKT003",
+      "tokenUsed": 0,
+      "tokenBalance": 0
     }
   ],
   "groupDetail": {

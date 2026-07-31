@@ -10,6 +10,7 @@ import type { IGroupService } from '@/domains/Group';
 import type { IImageService } from '@/domains/Image';
 import type { IInlineCommentService } from '@/domains/InlineComment';
 import type { IInteractService } from '@/domains/Interact';
+import type { IMarketService } from '@/domains/Market';
 import type { INoteService } from '@/domains/Note';
 import type { IQuotaService } from '@/domains/Quota';
 import type { IResourceService } from '@/domains/Resource';
@@ -45,6 +46,7 @@ export const useImageService = (): IImageService => useServicesContext().imageSe
 export const useInlineCommentService = (): IInlineCommentService =>
   useServicesContext().inlineCommentService;
 export const useInteractService = (): IInteractService => useServicesContext().interactService;
+export const useMarketService = (): IMarketService => useServicesContext().marketService;
 export const useNoteService = (): INoteService => useServicesContext().noteService;
 export const useQuotaService = (): IQuotaService => useServicesContext().quotaService;
 export const useResourceService = (): IResourceService => useServicesContext().resourceService;

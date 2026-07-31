@@ -4,6 +4,7 @@ const zhCNShell = {
     newChat: '新建对话',
     drive: '文档与云盘',
     groups: '我的小组',
+    market: '资料集市',
     back: '后退',
     forward: '前进',
     expandSidebar: '展开侧边栏',

@@ -24,6 +24,13 @@ const TaskCenter = lazy(() => import('@/views/admin/TaskCenter'));
 const Home = lazy(() => import('@/views/app/home'));
 const Drive = lazy(() => import('@/views/app/drive/Drive'));
 const MyGroup = lazy(() => import('@/views/app/group/MyGroup'));
+const Market = lazy(() => import('@/views/app/market/Market'));
+const MarketBrowse = lazy(() => import('@/views/app/market/MarketBrowse'));
+const MarketMine = lazy(() => import('@/views/app/market/MarketMine'));
+const MarketCart = lazy(() => import('@/views/app/market/MarketCart'));
+const MarketPublish = lazy(() => import('@/views/app/market/MarketPublish'));
+const MarketManage = lazy(() => import('@/views/app/market/MarketManage'));
+const MarketItem = lazy(() => import('@/views/app/market/MarketItem'));
 const GroupDetail = lazy(() => import('@/views/app/group/GroupDetail'));
 const Account = lazy(() => import('@/views/app/profile/Account'));
 const Usage = lazy(() => import('@/views/app/profile/Usage'));
@@ -171,6 +178,48 @@ const router = createBrowserRouter([
               {
                 path: 'my-group/:id',
                 element: <GroupDetail />,
+              },
+              {
+                path: 'market',
+                element: <Market />,
+                children: [
+                  {
+                    index: true,
+                    element: <MarketBrowse />,
+                  },
+                  {
+                    path: 'group/:groupId',
+                    element: <MarketBrowse />,
+                  },
+                  {
+                    path: 'group/:groupId/folder/:folderId',
+                    element: <MarketBrowse />,
+                  },
+                  {
+                    path: 'mine',
+                    element: <MarketMine />,
+                  },
+                  {
+                    path: 'cart',
+                    element: <MarketCart />,
+                  },
+                  {
+                    path: 'publish',
+                    element: <MarketPublish />,
+                  },
+                  {
+                    path: 'publish/:listingId',
+                    element: <MarketPublish />,
+                  },
+                  {
+                    path: 'manage',
+                    element: <MarketManage />,
+                  },
+                  {
+                    path: 'item/:listingId',
+                    element: <MarketItem />,
+                  },
+                ],
               },
               {
                 path: 'profile/usage',

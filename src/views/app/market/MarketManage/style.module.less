@@ -1,0 +1,216 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-heading-3);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(var(--layout-sidebar-min-width), 0.9fr) minmax(0, 2fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.statusCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.statusCardActive {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.statusIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--surface);
+  border-radius: var(--radius-4xl);
+}
+
+.statusCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+
+  strong {
+    font-size: var(--font-size-sm);
+  }
+
+  span {
+    color: var(--muted);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.statusCount {
+  font-size: var(--font-size-lg);
+}
+
+.listPane {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--space-2xl) * 5);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns:
+    calc(var(--space-2xl) + var(--space-md))
+    minmax(0, 1.4fr)
+    auto
+    auto
+    auto
+    auto;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.thumb {
+  width: calc(var(--space-2xl) + var(--space-md));
+  height: calc(var(--space-2xl) + var(--space-md));
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--surface-tertiary);
+}
+
+.thumbPlaceholder {
+  width: calc(var(--space-2xl) + var(--space-md));
+  height: calc(var(--space-2xl) + var(--space-md));
+  border-radius: var(--radius-md);
+  background: var(--surface-tertiary);
+}
+
+.meta {
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 var(--space-2xs);
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  p {
+    margin: 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: var(--font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.price {
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.time {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  justify-content: flex-end;
+}
+
+.statusPublished {
+  color: var(--success-foreground);
+  background: var(--success);
+}
+
+.statusPending {
+  color: var(--warning-foreground, var(--foreground));
+  background: color-mix(in srgb, var(--warning) 25%, var(--surface));
+}
+
+.statusRejected {
+  color: var(--danger-foreground, var(--accent-foreground));
+  background: color-mix(in srgb, var(--danger) 25%, var(--surface));
+}
+
+.statusOffShelf {
+  color: var(--muted);
+  background: var(--surface-tertiary);
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: calc(var(--space-2xl) + var(--space-md)) minmax(0, 1fr);
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+  }
+}

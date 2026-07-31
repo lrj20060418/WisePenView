@@ -6,6 +6,7 @@ import enUSCommon from './locales/en-US/common';
 import enUSDrive from './locales/en-US/drive';
 import enUSErrors from './locales/en-US/errors';
 import enUSGroup from './locales/en-US/group';
+import enUSMarket from './locales/en-US/market';
 import enUSNote from './locales/en-US/note';
 import enUSProfile from './locales/en-US/profile';
 import enUSResource from './locales/en-US/resource';
@@ -22,6 +23,7 @@ import zhCNCommon from './locales/zh-CN/common';
 import zhCNDrive from './locales/zh-CN/drive';
 import zhCNErrors from './locales/zh-CN/errors';
 import zhCNGroup from './locales/zh-CN/group';
+import zhCNMarket from './locales/zh-CN/market';
 import zhCNNote from './locales/zh-CN/note';
 import zhCNProfile from './locales/zh-CN/profile';
 import zhCNResource from './locales/zh-CN/resource';
@@ -46,6 +48,7 @@ export const I18N_NAMESPACES = {
   RESOURCE: 'resource',
   CHAT: 'chat',
   GROUP: 'group',
+  MARKET: 'market',
   WALLET: 'wallet',
   PROFILE: 'profile',
   WORKSPACE: 'workspace',
@@ -68,6 +71,7 @@ export const resources = {
     [I18N_NAMESPACES.RESOURCE]: zhCNResource,
     [I18N_NAMESPACES.CHAT]: zhCNChat,
     [I18N_NAMESPACES.GROUP]: zhCNGroup,
+    [I18N_NAMESPACES.MARKET]: zhCNMarket,
     [I18N_NAMESPACES.WALLET]: zhCNWallet,
     [I18N_NAMESPACES.PROFILE]: zhCNProfile,
     [I18N_NAMESPACES.WORKSPACE]: zhCNWorkspace,
@@ -86,6 +90,7 @@ export const resources = {
     [I18N_NAMESPACES.RESOURCE]: enUSResource,
     [I18N_NAMESPACES.CHAT]: enUSChat,
     [I18N_NAMESPACES.GROUP]: enUSGroup,
+    [I18N_NAMESPACES.MARKET]: enUSMarket,
     [I18N_NAMESPACES.WALLET]: enUSWallet,
     [I18N_NAMESPACES.PROFILE]: enUSProfile,
     [I18N_NAMESPACES.WORKSPACE]: enUSWorkspace,

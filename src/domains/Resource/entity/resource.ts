@@ -25,6 +25,21 @@ export interface ResourceTagBind {
   tags?: Record<string, ResourceTagInfo | null | undefined>;
 }
 
+/** 集市售卖档位（对齐 MarketSaleTierResponse，挂在资源列表项上） */
+export interface ResourceMarketSaleTier {
+  offerId: string;
+  price: number;
+}
+
+/** 集市售卖信息（对齐 MarketSaleInfoResponse） */
+export interface ResourceMarketSaleInfo {
+  status: string;
+  offerVersion?: number;
+  reviewContentPercentage?: number;
+  marketSaleTiers: ResourceMarketSaleTier[];
+  auditMessage?: string;
+}
+
 /** 供前端展示与业务编排使用的稳定资源实体 */
 export interface ResourceItem {
   resourceId: string;
@@ -52,6 +67,11 @@ export interface ResourceItem {
   currentActions?: ResourceAction[] | null;
   /** 当前用户对该资源的访问角色（详情接口返回） */
   resourceAccessRole?: ResourceAccessRole;
+  /**
+   * 按 groupId 索引的集市售卖信息（listResources / 详情可能返回）。
+   * key 为集市组 id。
+   */
+  marketSaleInfos?: Record<string, ResourceMarketSaleInfo>;
   // ---- 权限配置字段 ----
   /** 资源级组覆盖权限，key 为 groupId，仅 owner 查询资源详情时返回 */
   overrideGrantedActions?: Record<string, ResourceAction[]> | null;

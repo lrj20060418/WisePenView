@@ -13,6 +13,7 @@ export {
   useImageService,
   useInlineCommentService,
   useInteractService,
+  useMarketService,
   useNoteService,
   useQuotaService,
   useResourceService,

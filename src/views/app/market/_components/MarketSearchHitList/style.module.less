@@ -1,0 +1,19 @@
+.emptyList {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--space-2xl) * 5);
+  padding: var(--space-xl) 0;
+}
+
+.hitList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+@media (max-width: 960px) {
+  .hitList {
+    grid-template-columns: 1fr;
+  }
+}

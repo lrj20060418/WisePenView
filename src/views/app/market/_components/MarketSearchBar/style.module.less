@@ -1,0 +1,27 @@
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.inputWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.inputWrap :global(input) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}

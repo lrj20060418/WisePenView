@@ -41,7 +41,9 @@ const buildStressMockItems = (count: number): ResourceItem[] =>
     return {
       resourceId: `mock-stress-${String(n).padStart(4, '0')}`,
       resourceName: `压力测试文档 ${n}.pdf`,
-      ownerInfo: {},
+      ownerInfo: {
+        nickname: n % 2 === 0 ? '林知夏' : 'Mock User',
+      },
       resourceType: 'pdf',
       ownerId: '1',
       size: 2048 + n * 100,
@@ -125,6 +127,59 @@ const filterByType = (rows: ResourceItem[], resourceType?: string): ResourceItem
   return rows;
 };
 
+const MARKET_MOCK_GROUP_IDS = ['mg-1', 'mg-2', 'mg-3'] as const;
+const MARKET_MOCK_STATUSES = [
+  'PENDING_REVIEW',
+  'PUBLISHED',
+  'REJECTED',
+  'OFF_SHELF',
+  'PUBLISHED',
+  'BANNED',
+] as const;
+
+/** 为个人资源注入多样售卖态，便于 Manage / Mine 在 mock 下调 UI */
+const injectPersonalMarketSaleInfos = (rows: ResourceItem[]): ResourceItem[] => {
+  let marketIndex = 0;
+  return rows.map((item) => {
+    if (item.resourceId.startsWith('mock-stress-')) return item;
+    if (item.marketSaleInfos && Object.keys(item.marketSaleInfos).length > 0) return item;
+    if (marketIndex >= 12) return item;
+    const idx = marketIndex;
+    marketIndex += 1;
+    const groupId = MARKET_MOCK_GROUP_IDS[idx % MARKET_MOCK_GROUP_IDS.length];
+    const status = MARKET_MOCK_STATUSES[idx % MARKET_MOCK_STATUSES.length];
+    const folderTagId = 'tag-study-tech';
+    return {
+      ...item,
+      preview: item.preview ?? `${item.resourceName} — 集市售卖预览摘要`,
+      tagBinds: [
+        ...(item.tagBinds ?? []),
+        {
+          groupId,
+          primaryTagId: folderTagId,
+          tags: { [folderTagId]: { tagName: '技术' } },
+        },
+      ],
+      marketSaleInfos: {
+        ...(item.marketSaleInfos ?? {}),
+        [groupId]: {
+          status,
+          offerVersion: 1,
+          reviewContentPercentage: 20,
+          auditMessage:
+            status === 'REJECTED' ? '内容不完整，请补充目录与示例页后重提。' : undefined,
+          marketSaleTiers: [
+            {
+              offerId: `mock-tier-${item.resourceId}`,
+              price: 8 + (idx % 5) * 4,
+            },
+          ],
+        },
+      },
+    };
+  });
+};
+
 const getUserResources = async (params: GetUserResourcesRequest): Promise<ResourceListPage> => {
   await delay(200);
   let rows = fullMockPersonalResourceList;
@@ -136,7 +191,11 @@ const getUserResources = async (params: GetUserResourcesRequest): Promise<Resour
     rows = personalAgentResources;
     return paginateList(rows, params.page, params.size);
   }
-  return paginateList(filterByType(rows, params.resourceType), params.page, params.size);
+  return paginateList(
+    injectPersonalMarketSaleInfos(filterByType(rows, params.resourceType)),
+    params.page,
+    params.size
+  );
 };
 
 const getGroupResources = async (params: GetGroupResourceRequest): Promise<ResourceListPage> => {
@@ -157,11 +216,39 @@ const getGroupResources = async (params: GetGroupResourceRequest): Promise<Resou
     const list = groupAgents.slice(start, start + params.size);
     return { list, total, page: params.page, size: params.size, totalPage };
   }
-  return paginateList(
-    filterByType(fullMockGroupResourceList, params.resourceType),
-    params.page,
-    params.size
-  );
+
+  let rows = filterByType(fullMockGroupResourceList, params.resourceType);
+  const tagIds = params.tagIds ?? [];
+  if (tagIds.length > 0) {
+    const filtered = rows.filter((item) =>
+      tagIds.some(
+        (tagId) =>
+          item.mainTagId === tagId || (item.currentTags != null && tagId in item.currentTags)
+      )
+    );
+    // 无标签命中时仍返回列表，保证集市叶子文件夹在 mock 下可演示
+    rows = filtered.length > 0 ? filtered : rows;
+  }
+
+  const withSale = rows.map((item, index) => ({
+    ...item,
+    marketSaleInfos: {
+      ...(item.marketSaleInfos ?? {}),
+      [params.groupId]: {
+        status: 'PUBLISHED',
+        offerVersion: 1,
+        reviewContentPercentage: 20,
+        marketSaleTiers: [
+          {
+            offerId: `mock-tier-${item.resourceId}`,
+            price: 6 + (index % 5) * 3,
+          },
+        ],
+      },
+    },
+  }));
+
+  return paginateList(withSale, params.page, params.size);
 };
 
 const renameResource = async (params: RenameResourceRequest): Promise<void> => {

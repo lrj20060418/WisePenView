@@ -9,6 +9,7 @@ export type {
   DocDisplayInfoResponse,
   DocumentProcessStatus,
   ForkDocumentRequest,
+  GetDocInfoRequest,
   IDocumentService,
   OnlyOfficeEditorConfig,
   OnlyOfficeEditorConfigResponse,

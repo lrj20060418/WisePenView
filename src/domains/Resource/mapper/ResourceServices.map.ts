@@ -1,4 +1,4 @@
-import type { ResourceItem, ResourceTagBind } from '@/domains/Resource';
+import type { ResourceItem, ResourceMarketSaleInfo, ResourceTagBind } from '@/domains/Resource';
 import type { UserDisplayBase } from '@/domains/User';
 import { normalizeUserDisplayBaseFromApi } from '@/domains/User/mapper/userEnum.mapper';
 import { normalizeId } from '@/utils/normalize/normalizeId';
@@ -109,6 +109,30 @@ const mapResourceTagBindsFromApi = (
     tags: bind.tags,
   }));
 
+const mapMarketSaleInfosFromApi = (
+  raw: ResourceItemApiResponse['marketSaleInfos']
+): Record<string, ResourceMarketSaleInfo> | undefined => {
+  if (raw == null) return undefined;
+  const entries = Object.entries(raw)
+    .map(([groupId, info]) => {
+      const key = normalizeId(groupId);
+      if (!key || info == null) return null;
+      const sale: ResourceMarketSaleInfo = {
+        status: typeof info.status === 'string' ? info.status : '',
+        offerVersion: normalizeNonNegativeNumber(info.offerVersion),
+        reviewContentPercentage: normalizeNonNegativeNumber(info.reviewContentPercentage),
+        marketSaleTiers: (info.marketSaleTiers ?? []).map((tier) => ({
+          offerId: tier.offerId ?? '',
+          price: normalizeNonNegativeNumber(tier.price) ?? 0,
+        })),
+        auditMessage: info.auditMessage,
+      };
+      return [key, sale] as const;
+    })
+    .filter((entry): entry is readonly [string, ResourceMarketSaleInfo] => Boolean(entry));
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
 const resolveUserDisplayName = (
   userInfo: UserDisplayBase | undefined,
   fallbackId: string
@@ -189,6 +213,7 @@ const mapResourceItemFromApi = (
     tagBinds: mapResourceTagBindsFromApi(raw.tagBinds),
     currentActions: coerceResourceActions(raw.currentActions),
     resourceAccessRole: raw.resourceAccessRole,
+    marketSaleInfos: mapMarketSaleInfosFromApi(raw.marketSaleInfos),
     overrideGrantedActions: normalizeResourceActionMap(raw.overrideGrantedActions),
     specifiedUsersGrantedActions: normalizeResourceActionMap(raw.specifiedUsersGrantedActions),
     readCount: normalizeNonNegativeNumber(interactionInfo?.readCount),

@@ -1,0 +1,121 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(calc(var(--space-2xs) * -0.5));
+  }
+
+  &:focus-visible {
+    outline: var(--space-2xs) solid var(--accent);
+    outline-offset: var(--space-2xs);
+  }
+}
+
+.cover {
+  position: relative;
+  width: 100%;
+  height: calc(var(--space-2xl) * 2 + var(--space-lg));
+  overflow: hidden;
+  background: var(--surface-tertiary);
+}
+
+.coverImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-md);
+}
+
+.title {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.metaDivider {
+  color: var(--border);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: auto;
+  padding-top: var(--space-xs);
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.price {
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.onSaleBadge {
+  color: var(--success-foreground);
+  background: var(--success);
+}
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.statItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
