@@ -97,65 +97,97 @@ function Register() {
     }
   );
 
+  /** 单字段校验规则，返回首个未通过的原因，供输入、失焦与提交共用 */
+  const validateField = (field: RegisterField, values: RegisterFormValues): string | undefined => {
+    switch (field) {
+      case 'username': {
+        const username = values.username.trim();
+        return runFieldValidation([
+          { test: () => username.length > 0, message: t('register.usernameRequired') },
+          {
+            test: () => !CAMPUS_NO_PATTERN.test(username),
+            message: t('register.usernameIsCampusNo'),
+          },
+          {
+            test: () =>
+              username.length >= USERNAME_MIN_LENGTH && username.length <= USERNAME_MAX_LENGTH,
+            message: t('register.usernameLength'),
+          },
+          {
+            test: () => USERNAME_LETTER_PATTERN.test(username),
+            message: t('register.usernameContainsLetter'),
+          },
+          {
+            test: () => USERNAME_ALLOWED_PATTERN.test(username),
+            message: t('register.usernamePattern'),
+          },
+        ]);
+      }
+      case 'password':
+        return runFieldValidation([
+          { test: () => values.password.length > 0, message: t('register.passwordRequired') },
+          { test: () => values.password.length >= 9, message: t('register.passwordMinLength') },
+          {
+            test: () => /[a-zA-Z]/.test(values.password),
+            message: t('register.passwordContainsLetter'),
+          },
+          {
+            test: () => /[0-9]/.test(values.password),
+            message: t('register.passwordContainsNumber'),
+          },
+        ]);
+      case 'confirmPassword':
+        return runFieldValidation([
+          {
+            test: () => values.confirmPassword.length > 0,
+            message: t('register.confirmPasswordRequired'),
+          },
+          {
+            test: () => values.confirmPassword === values.password,
+            message: t('register.confirmPasswordMismatch'),
+          },
+        ]);
+      case 'inviteCode':
+        return runFieldValidation([
+          {
+            test: () => {
+              const inviteCode = normalizeInviteCode(values.inviteCode);
+              return inviteCode.length === 0 || INVITE_CODE_PATTERN.test(inviteCode);
+            },
+            message: t('register.inviteCodeInvalid'),
+          },
+        ]);
+      default:
+        return undefined;
+    }
+  };
+
+  /** 输入时实时校验当前字段；密码变更时同步重算确认密码，避免提示滞后 */
   const updateFormValue = (field: RegisterField, value: string) => {
-    setFormValues((prev) => ({ ...prev, [field]: value }));
-    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+    const nextValues = { ...formValues, [field]: value };
+    setFormValues(nextValues);
+    const fieldsToValidate: RegisterField[] =
+      field === 'password' ? ['password', 'confirmPassword'] : [field];
+    setFormErrors((prev) => {
+      const nextErrors = { ...prev };
+      fieldsToValidate.forEach((key) => {
+        nextErrors[key] = validateField(key, nextValues);
+      });
+      return nextErrors;
+    });
+  };
+
+  /** 失焦时校验当前字段，保证未输入也能立即得到提示 */
+  const handleFieldBlur = (field: RegisterField) => {
+    setFormErrors((prev) => ({ ...prev, [field]: validateField(field, formValues) }));
   };
 
   const validateForm = () => {
-    const username = formValues.username.trim();
     const nextErrors: FieldErrors<RegisterField> = {
-      username: runFieldValidation([
-        { test: () => username.length > 0, message: t('register.usernameRequired') },
-        {
-          test: () => !CAMPUS_NO_PATTERN.test(username),
-          message: t('register.usernameIsCampusNo'),
-        },
-        {
-          test: () =>
-            username.length >= USERNAME_MIN_LENGTH && username.length <= USERNAME_MAX_LENGTH,
-          message: t('register.usernameLength'),
-        },
-        {
-          test: () => USERNAME_LETTER_PATTERN.test(username),
-          message: t('register.usernameContainsLetter'),
-        },
-        {
-          test: () => USERNAME_ALLOWED_PATTERN.test(username),
-          message: t('register.usernamePattern'),
-        },
-      ]),
-      password: runFieldValidation([
-        { test: () => formValues.password.length > 0, message: t('register.passwordRequired') },
-        { test: () => formValues.password.length >= 9, message: t('register.passwordMinLength') },
-        {
-          test: () => /[a-zA-Z]/.test(formValues.password),
-          message: t('register.passwordContainsLetter'),
-        },
-        {
-          test: () => /[0-9]/.test(formValues.password),
-          message: t('register.passwordContainsNumber'),
-        },
-      ]),
-      confirmPassword: runFieldValidation([
-        {
-          test: () => formValues.confirmPassword.length > 0,
-          message: t('register.confirmPasswordRequired'),
-        },
-        {
-          test: () => formValues.confirmPassword === formValues.password,
-          message: t('register.confirmPasswordMismatch'),
-        },
-      ]),
-      inviteCode: runFieldValidation([
-        {
-          test: () => {
-            const inviteCode = normalizeInviteCode(formValues.inviteCode);
-            return inviteCode.length === 0 || INVITE_CODE_PATTERN.test(inviteCode);
-          },
-          message: t('register.inviteCodeInvalid'),
-        },
-      ]),
+      username: validateField('username', formValues),
+      password: validateField('password', formValues),
+      confirmPassword: validateField('confirmPassword', formValues),
+      inviteCode: validateField('inviteCode', formValues),
     };
     setFormErrors(nextErrors);
     return !hasFieldErrors(nextErrors);
@@ -186,6 +218,7 @@ function Register() {
           name="username"
           value={formValues.username}
           onChange={(value) => updateFormValue('username', value)}
+          onBlur={() => handleFieldBlur('username')}
           errorMessage={formErrors.username}
           isRequired
         >
@@ -202,6 +235,7 @@ function Register() {
           name="password"
           value={formValues.password}
           onChange={(value) => updateFormValue('password', value)}
+          onBlur={() => handleFieldBlur('password')}
           description={t('common.passwordRules')}
           errorMessage={formErrors.password}
           isRequired
@@ -220,6 +254,7 @@ function Register() {
           name="confirmPassword"
           value={formValues.confirmPassword}
           onChange={(value) => updateFormValue('confirmPassword', value)}
+          onBlur={() => handleFieldBlur('confirmPassword')}
           errorMessage={formErrors.confirmPassword}
           isRequired
         >
@@ -237,6 +272,7 @@ function Register() {
           name="inviteCode"
           value={formValues.inviteCode}
           onChange={(value) => updateFormValue('inviteCode', normalizeInviteCode(value))}
+          onBlur={() => handleFieldBlur('inviteCode')}
           errorMessage={formErrors.inviteCode}
         >
           <AuthIconField
