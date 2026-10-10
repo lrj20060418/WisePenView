@@ -6,7 +6,8 @@ import { COLOR_SCHEME_ICON_SRC, useColorScheme } from '@/theme';
 
 import styles from './style.module.less';
 
-function Welcome() {
+/** 默认问候标题区（Logo + 文案）；可通过 Host 的 hero 插槽替换。 */
+function WelcomeTitle() {
   const { t } = useTranslation('chat');
   const { colorScheme } = useColorScheme();
   const userService = useUserService();
@@ -28,4 +29,4 @@ function Welcome() {
   );
 }
 
-export default Welcome;
+export default WelcomeTitle;

@@ -121,15 +121,23 @@ function ChatInputContent({
   );
 }
 
-function ChatInput(props: ChatInputProps) {
+function ChatInput({ useExternalStore = false, ...props }: ChatInputProps) {
+  const content = (
+    <ChatInputFileProvider getUploadSessionId={props.getUploadSessionId}>
+      <ChatInputContent {...props} />
+    </ChatInputFileProvider>
+  );
+
+  if (useExternalStore) {
+    return content;
+  }
+
   return (
     <ChatInputStoreProvider
       sessionId={props.sessionId}
       promoteDraftToolSelection={props.promoteDraftToolSelection}
     >
-      <ChatInputFileProvider getUploadSessionId={props.getUploadSessionId}>
-        <ChatInputContent {...props} />
-      </ChatInputFileProvider>
+      {content}
     </ChatInputStoreProvider>
   );
 }
