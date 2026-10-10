@@ -34,7 +34,7 @@ const enUSAuth = {
     passwordMinLength: 'Password must be at least 9 characters',
     passwordContainsLetter: 'Password must contain letters',
     passwordContainsNumber: 'Password must contain numbers',
-    passwordPlaceholder: 'Enter password',
+    passwordPlaceholder: 'At least 9 characters, with letters and numbers',
     confirmPasswordLabel: 'Confirm Password',
     confirmPasswordRequired: 'Please enter password again',
     confirmPasswordMismatch: 'The two passwords do not match',

@@ -236,7 +236,6 @@ function Register() {
           value={formValues.password}
           onChange={(value) => updateFormValue('password', value)}
           onBlur={() => handleFieldBlur('password')}
-          description={t('common.passwordRules')}
           errorMessage={formErrors.password}
           isRequired
         >

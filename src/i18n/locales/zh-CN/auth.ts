@@ -34,7 +34,7 @@ const zhCNAuth = {
     passwordMinLength: '密码至少长度为9位',
     passwordContainsLetter: '密码必须包含字母',
     passwordContainsNumber: '密码必须包含数字',
-    passwordPlaceholder: '输入密码',
+    passwordPlaceholder: '至少 9 位，需包含字母和数字',
     confirmPasswordLabel: '确认密码',
     confirmPasswordRequired: '请再次输入密码',
     confirmPasswordMismatch: '两次输入的密码不一致',
