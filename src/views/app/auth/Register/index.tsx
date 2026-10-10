@@ -26,8 +26,14 @@ import ServiceAgreement from '@/views/app/auth/_components/ServiceAgreement/inde
 import AuthIconField from '../_common/AuthIconField';
 import auth from '../_common/style.module.less';
 
+const USERNAME_MIN_LENGTH = 4;
 const USERNAME_MAX_LENGTH = 20;
-const USERNAME_PATTERN = /^[a-zA-Z0-9_]{4,20}$/;
+/** 用户名允许的字符：字母、数字或下划线 */
+const USERNAME_ALLOWED_PATTERN = /^[a-zA-Z0-9_]+$/;
+/** 用户名必须包含字母，用于排除纯数字（学工号） */
+const USERNAME_LETTER_PATTERN = /[a-zA-Z]/;
+/** 学工号格式：11 位数字，或 5 位数字 + XH + 4 位数字（与后端校验保持一致） */
+const CAMPUS_NO_PATTERN = /^(\d{11}|\d{5}XH\d{4})$/;
 const INVITE_CODE_MAX_LENGTH = 16;
 const INVITE_CODE_PATTERN = /^[A-Z0-9]{4,16}$/;
 type RegisterFormValues = Omit<RegisterRequest, 'inviteCode'> & {
@@ -101,7 +107,23 @@ function Register() {
     const nextErrors: FieldErrors<RegisterField> = {
       username: runFieldValidation([
         { test: () => username.length > 0, message: t('register.usernameRequired') },
-        { test: () => USERNAME_PATTERN.test(username), message: t('register.usernamePattern') },
+        {
+          test: () => !CAMPUS_NO_PATTERN.test(username),
+          message: t('register.usernameIsCampusNo'),
+        },
+        {
+          test: () =>
+            username.length >= USERNAME_MIN_LENGTH && username.length <= USERNAME_MAX_LENGTH,
+          message: t('register.usernameLength'),
+        },
+        {
+          test: () => USERNAME_LETTER_PATTERN.test(username),
+          message: t('register.usernameContainsLetter'),
+        },
+        {
+          test: () => USERNAME_ALLOWED_PATTERN.test(username),
+          message: t('register.usernamePattern'),
+        },
       ]),
       password: runFieldValidation([
         { test: () => formValues.password.length > 0, message: t('register.passwordRequired') },
