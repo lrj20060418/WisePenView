@@ -97,8 +97,32 @@ function Register() {
     }
   );
 
+  /** 判断字段是否为空，用于区分「未填写」与「已填写但不合规」 */
+  const isFieldEmpty = (field: RegisterField, values: RegisterFormValues): boolean => {
+    switch (field) {
+      case 'username':
+        return values.username.trim().length === 0;
+      case 'password':
+        return values.password.length === 0;
+      case 'confirmPassword':
+        return values.confirmPassword.length === 0;
+      case 'inviteCode':
+        return values.inviteCode.trim().length === 0;
+      default:
+        return false;
+    }
+  };
+
   /** 单字段校验规则，返回首个未通过的原因，供输入、失焦与提交共用 */
-  const validateField = (field: RegisterField, values: RegisterFormValues): string | undefined => {
+  const validateField = (
+    field: RegisterField,
+    values: RegisterFormValues,
+    options: { withRequired?: boolean } = {}
+  ): string | undefined => {
+    // 填写过程中未填写不报红，必填提示只在提交时给出，避免满屏红框
+    if (!options.withRequired && isFieldEmpty(field, values)) {
+      return undefined;
+    }
     switch (field) {
       case 'username': {
         const username = values.username.trim();
@@ -177,17 +201,17 @@ function Register() {
     });
   };
 
-  /** 失焦时校验当前字段，保证未输入也能立即得到提示 */
+  /** 失焦时校验当前字段；未填写的字段不报红，必填提示留到提交时 */
   const handleFieldBlur = (field: RegisterField) => {
     setFormErrors((prev) => ({ ...prev, [field]: validateField(field, formValues) }));
   };
 
   const validateForm = () => {
     const nextErrors: FieldErrors<RegisterField> = {
-      username: validateField('username', formValues),
-      password: validateField('password', formValues),
-      confirmPassword: validateField('confirmPassword', formValues),
-      inviteCode: validateField('inviteCode', formValues),
+      username: validateField('username', formValues, { withRequired: true }),
+      password: validateField('password', formValues, { withRequired: true }),
+      confirmPassword: validateField('confirmPassword', formValues, { withRequired: true }),
+      inviteCode: validateField('inviteCode', formValues, { withRequired: true }),
     };
     setFormErrors(nextErrors);
     return !hasFieldErrors(nextErrors);
